@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Zmart AI",
-  description: "Zmart AI — agente de IA",
+  description: "Agentes de voz con IA para negocios, integrados con GoHighLevel",
 };
 
 export default function RootLayout({

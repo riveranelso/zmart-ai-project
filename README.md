@@ -1,35 +1,31 @@
 # Zmart AI
 
-Voice AI para compañías: contestación de llamadas, calificación de leads (CRM)
-y reportes. Construido con Next.js, TypeScript, Prisma y el SDK de Anthropic.
+Agentes de voz con IA para negocios. Zmart AI usa **GoHighLevel (GHL)** como
+sistema de datos: contactos, llamadas, citas y pipeline de leads. Este
+repositorio es el sitio web + dashboard que consulta esos datos.
 
-## Cómo funciona
-
-1. **Vapi** atiende las llamadas entrantes/salientes como agente de voz.
-2. Al terminar una llamada, Vapi envía un webhook a `/api/webhooks/vapi`.
-3. Zmart AI transcribe la llamada (si no viene ya transcrita), usa Claude
-   para calificar al lead (`src/lib/qualifyLead.ts`) y guarda todo en la
-   base de datos (`Company`, `Lead`, `Call`).
-4. El CRM (`/api/leads`) y los reportes (`/api/reports`) exponen esos datos.
+Construido con Next.js, TypeScript y Tailwind CSS. Sin base de datos propia:
+GoHighLevel es la fuente de verdad.
 
 ## Estructura del proyecto
 
 ```
-prisma/
-  schema.prisma       # Modelos Company, Lead, Call
 src/
   app/
-    api/
-      webhooks/vapi/   # Recibe eventos de llamadas de Vapi
-      leads/           # CRUD de leads (CRM)
-      reports/         # Reportes agregados por compañía
-    page.tsx           # Landing page
+    page.tsx              # Landing page pública
+    dashboard/
+      layout.tsx           # Shell con sidebar
+      page.tsx              # Overview
+      contacts/page.tsx     # Contactos (GHL Contacts API)
+      calls/page.tsx         # Llamadas (GHL Conversations API)
+      appointments/page.tsx  # Citas (GHL Calendars API)
+      leads/page.tsx         # Leads / pipeline (GHL Opportunities API)
   lib/
-    anthropic.ts       # Cliente de la API de Anthropic
-    prisma.ts          # Cliente de Prisma
-    qualifyLead.ts      # Calificación de leads con Claude
-    voice/vapi.ts       # Verificación de webhook y tipos de Vapi
-  components/          # Componentes UI
+    gohighlevel.ts         # Cliente de la API de GoHighLevel
+  components/
+    dashboard/
+      Sidebar.tsx
+      EmptyState.tsx
 ```
 
 ## Setup
@@ -38,28 +34,29 @@ src/
    ```bash
    npm install
    ```
-2. Copiar `.env.example` a `.env` y completar las variables:
+2. Copiar `.env.example` a `.env` y completar las credenciales de GoHighLevel:
    ```bash
    cp .env.example .env
    ```
-   - `ANTHROPIC_API_KEY`: clave de Anthropic para calificar leads.
-   - `DATABASE_URL`: cadena de conexión a Postgres.
-   - `VAPI_WEBHOOK_SECRET`: secreto para validar los webhooks de Vapi.
-3. Sincronizar el esquema con la base de datos:
-   ```bash
-   npm run db:push
-   ```
-4. Levantar el servidor de desarrollo:
+   - `GHL_API_KEY`: token de una Private Integration en GoHighLevel (Settings
+     → Private Integrations) con acceso a Contacts, Calendars, Opportunities
+     y Conversations.
+   - `GHL_LOCATION_ID`: ID de la sub-cuenta (location) de GoHighLevel.
+3. Levantar el servidor de desarrollo:
    ```bash
    npm run dev
    ```
 
-La app queda disponible en `http://localhost:3000`.
+Sin credenciales configuradas, el dashboard muestra un estado vacío en cada
+sección en vez de fallar.
+
+La app queda disponible en `http://localhost:3000` (landing) y
+`http://localhost:3000/dashboard`.
 
 ## Pendiente / siguientes pasos
 
-- Configurar el agente de voz en Vapi y apuntar su webhook a
-  `/api/webhooks/vapi` (ajustar el mapeo de campos del payload según la
-  API real de Vapi).
-- Autenticación y manejo de múltiples compañías (multi-tenant).
-- Dashboard del CRM y reportes en el frontend (hoy solo son endpoints).
+- Probar y ajustar `src/lib/gohighlevel.ts` contra la API real de
+  GoHighLevel (los nombres de campos pueden variar según la versión).
+- Autenticación para el dashboard (hoy es de acceso libre).
+- Soporte multi-location si Zmart AI atiende a más de un negocio con la
+  misma instancia.
