@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#182449">
+<title>Pioneer Legal Consulting — Rep Certification</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --ink:#182449; --ink-soft:#2b3a68; --paper:#EEF1F6; --card:#FFFFFF;
+    --brass:#B8862B; --brass-light:#E7C877; --slate:#57607A; --slate-light:#8891A6;
+    --good:#2F7A55; --bad:#B23A32; --line:#DDE2EC;
+    --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'SF Mono', 'Courier New', Courier, monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0; overflow-x:hidden; width:100%;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); min-height:100vh; -webkit-font-smoothing:antialiased; font-size:16px;}
+  .app{max-width:760px;margin:0 auto;padding:0 0 60px; width:100%;}
+
+  .callbar{ position:sticky; top:0; z-index:50; background:var(--ink); color:#fff; display:flex; align-items:center; gap:12px; padding:12px 16px; box-shadow:0 2px 10px rgba(0,0,0,0.15); }
+  .callbar.pulse-good{ animation:pulseGood .5s ease; }
+  .callbar.pulse-bad{ animation:pulseBad .4s ease; }
+  @keyframes pulseGood{ 0%{background:var(--good);} 100%{background:var(--ink);} }
+  @keyframes pulseBad{ 0%{background:var(--bad);} 20%{transform:translateX(-4px);} 40%{transform:translateX(4px);} 60%{transform:translateX(-3px);} 100%{background:var(--ink);transform:translateX(0);} }
+  .callbar .avatar{ width:34px;height:34px;border-radius:50%; background:var(--brass);color:var(--ink); display:flex;align-items:center;justify-content:center; font-weight:700; font-size:12px; flex-shrink:0; }
+  .callbar .who{ line-height:1.2; }
+  .callbar .who .name{font-size:13px;font-weight:600;}
+  .callbar .who .sub{font-size:11px;color:#c7cee0;}
+  .callbar .wave{ display:flex; align-items:center; gap:2px; height:16px; margin-left:auto;}
+  .callbar .wave span{ width:3px; background:var(--brass-light); border-radius:2px; animation:wave 1s ease-in-out infinite; }
+  .callbar .wave span:nth-child(1){height:6px;animation-delay:.0s;}
+  .callbar .wave span:nth-child(2){height:12px;animation-delay:.15s;}
+  .callbar .wave span:nth-child(3){height:16px;animation-delay:.3s;}
+  .callbar .wave span:nth-child(4){height:9px;animation-delay:.45s;}
+  .callbar .wave span:nth-child(5){height:14px;animation-delay:.6s;}
+  @keyframes wave{ 0%,100%{transform:scaleY(0.5);} 50%{transform:scaleY(1);} }
+  .callbar .timer{ font-family:var(--mono); font-size:13px; color:var(--brass-light); margin-left:14px; letter-spacing:0.5px;}
+
+  .stats{ display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 0; }
+  .stat{ background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-family:var(--mono); font-size:11.5px; color:var(--slate); display:flex; gap:5px; align-items:baseline; }
+  .stat b{ font-family:var(--sans); font-size:14px; color:var(--ink); }
+  .stat .flame{color:#C1622B;}
+  .stat .cert{color:var(--good);}
+
+  .acronymbanner{ margin:12px 16px 0; padding:16px 18px; background:var(--card); border:1px solid var(--line); border-radius:10px; display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
+  .acronymbanner .word{ font-family:var(--serif); font-weight:700; letter-spacing:1px; }
+  .acronymbanner .word.a1{ color:var(--ink); font-size:30px; }
+  .acronymbanner .word.a2{ color:var(--brass); font-size:30px; }
+  .acronymbanner .arrow{ font-size:22px; color:var(--slate-light); }
+  @media (max-width:480px){ .acronymbanner .word.a1, .acronymbanner .word.a2{ font-size:21px; } }
+
+  .progresswrap{ padding:10px 16px 0; }
+  .progresslabel{ font-size:11.5px; color:var(--slate); font-family:var(--mono); margin-bottom:5px; display:flex; justify-content:space-between; }
+  .progressbar{ height:7px; background:#fff; border:1px solid var(--line); border-radius:100px; overflow:hidden; }
+  .progressbar > div{ height:100%; background:var(--brass); transition:width .25s ease; }
+
+  .main{ padding:14px 16px 0; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 18px 18px; box-shadow:0 1px 3px rgba(20,30,60,0.05); }
+  .eyebrow{ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--brass); margin-bottom:6px; }
+  h1.level-title{ font-family:var(--serif); font-size:21px; margin:0 0 4px; color:var(--ink); }
+  .qtype-pill{ display:inline-block; background:var(--paper); border:1px solid var(--line); color:var(--ink-soft); font-size:11px; padding:4px 10px; border-radius:100px; margin-bottom:14px; font-weight:600; }
+  .prompt{ font-size:17px; line-height:1.55; margin-bottom:16px; }
+
+  .seqrow{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .seqchip{ background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:13px; color:var(--ink-soft); display:flex; gap:6px; align-items:center; }
+  .seqchip .L{ font-family:var(--serif); font-weight:700; color:var(--brass); font-size:17px; }
+  .seqchip.blank{ border:2px dashed var(--bad); color:var(--bad); font-weight:700; }
+
+  .options{ display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .opt{ text-align:left; background:#fff; border:2px solid var(--line); border-radius:10px; padding:16px 16px; font-size:15.5px; cursor:pointer; color:var(--ink); min-height:52px; }
+  .opt:active{ transform:scale(0.99); }
+  .opt.correct{ border-color:var(--good); background:#eef8f1; }
+  .opt.incorrect{ border-color:var(--bad); background:#fbecea; }
+  .opt:disabled{ cursor:default; }
+
+  .textrow{ display:flex; gap:8px; margin-top:6px; }
+  .textrow input{ flex:1; padding:16px 14px; border:2px solid var(--line); border-radius:10px; font-size:16px; font-family:var(--sans); color:var(--ink); }
+  .textrow input:focus{ outline:none; border-color:var(--brass); }
+
+  .btn{ background:var(--ink); color:#fff; border:none; border-radius:10px; padding:15px 20px; font-size:15px; font-weight:600; cursor:pointer; min-height:48px; }
+  .btn:active{ transform:scale(0.99); }
+  .btn.brass{ background:var(--brass); color:var(--ink); }
+  .btn.ghost{ background:transparent; color:var(--ink); border:2px solid var(--line); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.lang, .btn.modbtn{ display:block; width:100%; text-align:left; padding:20px 20px; font-size:17px; margin-bottom:12px; }
+  .btn.wide{ width:100%; }
+
+  .orderlist{ list-style:none; padding:0; margin:6px 0; display:flex; flex-direction:column; gap:8px;}
+  .orderlist li{ background:#fff; border:2px solid var(--line); border-radius:10px; padding:14px 14px; font-size:14.5px; cursor:grab; display:flex; gap:10px; align-items:center; }
+  .orderlist li .idx{ font-family:var(--mono); color:var(--slate-light); }
+  .orderlist li.dragging{ opacity:.4; }
+
+  .matchgrid{ display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
+  .matchcol{ flex:1; min-width:130px; display:flex; flex-direction:column; gap:8px; }
+  .matchcard{ background:#fff; border:2px solid var(--line); border-radius:10px; padding:12px 10px; font-size:13.5px; cursor:pointer; text-align:center; }
+  .matchcard.letter{ font-family:var(--serif); font-weight:700; font-size:20px; color:var(--ink); }
+  .matchcard.selected{ border-color:var(--brass); background:#FBF6E9; }
+  .matchcard.locked{ border-color:var(--good); background:#eef8f1; opacity:.7; cursor:default; }
+  .matchcard.wrong{ border-color:var(--bad); background:#fbecea; }
+
+  .coach{ margin-top:16px; padding:16px 16px; border-radius:10px; border:2px solid var(--line); background:#F9FAFC; font-size:14.5px; line-height:1.55; display:none; }
+  .coach.show{ display:block; }
+  .coach.good{ border-color:var(--good); background:#eef8f1; }
+  .coach.bad{ border-color:var(--bad); background:#fbecea; }
+  .coach .verdict{ font-weight:700; margin-bottom:4px; font-size:15.5px; }
+  .coach .verdict.good{ color:var(--good); }
+  .coach .verdict.bad{ color:var(--bad); }
+  .coach .reinforce{ margin-top:9px; font-family:var(--serif); font-weight:700; color:var(--ink-soft); font-size:13.5px; }
+  .hl{ background:#FDEFC7; padding:1px 5px; border-radius:4px; font-weight:700; }
+  .hl-question{ color:#2b5b8f; text-decoration:underline; text-decoration-color:#a9c6e0; }
+  .hl-trust{ background:#e9f7ee; color:var(--good); padding:1px 4px; border-radius:4px; }
+  .hl-emotion{ background:#f3ecf9; color:#6b3fa0; padding:1px 4px; border-radius:4px; }
+  .hl-cta{ background:#fdf1cf; color:#8a660f; font-weight:700; padding:1px 4px; border-radius:4px; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+  .legend span{ font-size:11px; padding:3px 8px; border-radius:100px; }
+
+  .footer-nav{ display:flex; justify-content:space-between; gap:10px; margin-top:18px; }
+  .badgebar{ display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 0; }
+  .badge{ font-size:11px; background:#fff; border:1px solid var(--brass-light); color:var(--brass); padding:5px 10px; border-radius:100px; font-weight:600; }
+  .badge.cert{ border-color:var(--good); color:var(--good); }
+
+  .intro, .final, .langscreen, .modscreen{ padding:16px 16px 40px; }
+  .intro .card, .final .card, .langscreen .card, .modscreen .card{ padding:26px 22px; }
+  .intro h1{ font-family:var(--serif); font-size:25px; margin:0 0 10px; }
+  .intro p{ color:var(--slate); line-height:1.6; font-size:15px; }
+  .intro ul{ color:var(--slate); font-size:14px; line-height:1.7; padding-left:20px; }
+  .scorewrap{ margin-top:18px; }
+  .scorerow{ display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:6px; }
+  .bar{ height:8px; background:var(--paper); border-radius:100px; overflow:hidden; margin-bottom:12px;}
+  .bar > div{ height:100%; background:var(--brass); }
+  .grade{ font-family:var(--serif); font-size:48px; color:var(--ink); }
+  .stampline{ font-family:var(--mono); font-size:12px; color:var(--slate); }
+  .passtrack{ display:flex; gap:8px; margin:10px 0; }
+  .passdot{ width:24px;height:24px;border-radius:50%; border:2px solid var(--line); display:flex;align-items:center;justify-content:center; font-size:11px; color:var(--slate-light);}
+  .passdot.filled{ background:var(--good); border-color:var(--good); color:#fff; }
+  .weaklist{ list-style:none; padding:0; margin:6px 0; }
+  .weaklist li{ padding:8px 10px; background:var(--paper); border-radius:8px; margin-bottom:6px; font-size:13.5px; }
+  .weaklist .L{ font-family:var(--serif); font-weight:700; color:var(--brass); margin-right:6px; }
+
+  .installhint{ font-size:11.5px; color:var(--slate-light); margin-top:10px; padding:10px 12px; background:var(--paper); border-radius:8px; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* =========================================================
+   PIONEER LEGAL CONSULTING — REP CERTIFICATION
+   Module 1: CONNECT→CLOSE / CONECTA→CIERRA methodology
+   Module 2: Restored exact phone-script training
+   Shared engine, shared scoring, shared certification gate.
+   ========================================================= */
+
+const METHODS = {
+  en: {
+    labelConnect:"CONNECT", labelClose:"CLOSE",
+    connect: [
+      {letter:"C", step:"Connect"},
+      {letter:"O", step:"Offer Protection"},
+      {letter:"N", step:"Name the Pain"},
+      {letter:"N", step:"Nurture Hope"},
+      {letter:"E", step:"Earn a Yes"},
+      {letter:"C", step:"Confirm Eligibility"},
+      {letter:"T", step:"Trigger Reflection"}
+    ],
+    close: [
+      {letter:"C", step:"Capture the Story"},
+      {letter:"L", step:"Legitimize"},
+      {letter:"O", step:"Offer the Solution"},
+      {letter:"S", step:"Schedule the Review"},
+      {letter:"E", step:"End with Two Choices"}
+    ]
+  },
+  es: {
+    labelConnect:"CONECTA", labelClose:"CIERRA",
+    connect: [
+      {letter:"C", step:"Contacta"},
+      {letter:"O", step:"Ofrece Ayuda"},
+      {letter:"N", step:"Nombra el Problema"},
+      {letter:"E", step:"Enciende Esperanza"},
+      {letter:"C", step:"Confirma que Califica"},
+      {letter:"T", step:"Toca la Reflexión"},
+      {letter:"A", step:"Abre la Historia"}
+    ],
+    close: [
+      {letter:"C", step:"Comprende (Valida)"},
+      {letter:"I", step:"Inspira Confianza"},
+      {letter:"E", step:"Explica la Solución"},
+      {letter:"R", step:"Reserva la Cita"},
+      {letter:"R", step:"Reafirma la Decisión", detail:"Después de agendar la cita, refuerza brevemente que el propietario tomó la decisión correcta. No es un segundo cierre — es reforzar la confianza para reducir cancelaciones. Ejemplo: \\\"Excelente decisión. Nuestro especialista revisará todo con usted y le explicará exactamente cuáles son sus opciones.\\\""},
+      {letter:"A", step:"Alternativa A o B"}
+    ]
+  }
+};
+
+/* Restored exact phone script, split into two phases so it can run
+   through the same engine as the methodology module. English lines
+   are the ones supplied verbatim; Spanish lines are a translation
+   made for this training tool — not yet supervisor-approved. */
+const SCRIPTS = {
+  en: {
+    labelConnect:"OPENING", labelClose:"BOOKING",
+    connect: [
+      {letter:"G1", step:"Hi, is this [First Name]?", stage:"Greeting"},
+      {letter:"G2", step:"Great. My name is [Rep] with Pioneer Legal Consulting.", stage:"Introduction"},
+      {letter:"P1", step:"We're HELPING homeowners who were promised one thing with their solar system but ended up experiencing something completely different.", stage:"Purpose"},
+      {letter:"P2", step:"I just wanted to see if we may be able to HELP you too.", stage:"Purpose"},
+      {letter:"PM", step:"Do you have a quick minute?", stage:"Questions"},
+      {letter:"Q1", step:"Are you still making payments on your solar system?", stage:"Questions"},
+      {letter:"Q2", step:"Knowing what you know today, would you still have signed that agreement?", stage:"Questions"},
+      {letter:"D",  step:"Can you tell me what happened?", stage:"Questions"}
+    ],
+    close: [
+      {letter:"V1", step:"I understand.", stage:"Trust Building"},
+      {letter:"V2", step:"Thank you for sharing that.", stage:"Trust Building"},
+      {letter:"T",  step:"That's exactly why we're reaching out.", stage:"Transition"},
+      {letter:"B1", step:"Based on what you've shared, the next step is a FREE case review with one of our specialists.", stage:"Appointment"},
+      {letter:"B2", step:"They'll review your situation and explain whether you may have options.", stage:"Appointment"},
+      {letter:"CL", step:"I have an opening today at 3:30 or tomorrow at 10:00. Which works better?", stage:"Closing"}
+    ]
+  },
+  es: {
+    labelConnect:"APERTURA", labelClose:"RESERVA",
+    connect: [
+      {letter:"G1", step:"Hola, ¿hablo con [Nombre]?", stage:"Saludo"},
+      {letter:"G2", step:"Perfecto. Mi nombre es [Representante], de Pioneer Legal Consulting.", stage:"Presentación"},
+      {letter:"P1", step:"Estamos AYUDANDO a propietarios de casa a quienes les prometieron una cosa con su sistema solar, pero terminaron con algo completamente diferente.", stage:"Propósito"},
+      {letter:"P2", step:"Quería ver si también podemos AYUDARLE a usted.", stage:"Propósito"},
+      {letter:"PM", step:"¿Tiene un minuto rápido?", stage:"Preguntas"},
+      {letter:"Q1", step:"¿Todavía está haciendo pagos de su sistema solar?", stage:"Preguntas"},
+      {letter:"Q2", step:"Sabiendo lo que sabe hoy, ¿habría firmado ese contrato de todos modos?", stage:"Preguntas"},
+      {letter:"D",  step:"¿Me puede contar qué fue lo que pasó?", stage:"Preguntas"}
+    ],
+    close: [
+      {letter:"V1", step:"Entiendo.", stage:"Genera Confianza"},
+      {letter:"V2", step:"Gracias por compartir eso.", stage:"Genera Confianza"},
+      {letter:"T",  step:"Por eso exactamente le estamos llamando.", stage:"Transición"},
+      {letter:"B1", step:"Con base en lo que me compartió, el siguiente paso es una revisión de caso GRATUITA con uno de nuestros especialistas.", stage:"Cita"},
+      {letter:"B2", step:"Ellos van a revisar su situación y le explicarán si usted podría tener opciones.", stage:"Cita"},
+      {letter:"CL", step:"Tengo disponibilidad hoy a las 3:30 o mañana a las 10:00. ¿Cuál le funciona mejor?", stage:"Cierre"}
+    ]
+  }
+};
+
+const OBJECTIONS = {
+  en: [
+    {homeowner:"I'm busy.", options:["Totally understand — Based on what you've shared, the next step is a FREE case review with one of our specialists.","This will only take two seconds, I promise, just hear me out!","I understand. That's exactly why we're reaching out. I have an opening today at 3:30 or tomorrow at 10:00. Which works better?"], correctIndex:2, explain:"Acknowledge briefly, then use the approved transition + two-option close — respect their time without dropping the ask."},
+    {homeowner:"I'm not interested.", options:["Are you sure? A lot of homeowners say that at first.","I understand. We're HELPING homeowners who were promised one thing with their solar system but ended up experiencing something completely different.","Okay, sorry to bother you."], correctIndex:1, explain:"Validate briefly, then restate the HELP line calmly — it re-frames the call without pressuring them."},
+    {homeowner:"Just send me some information.", options:["Of course — Based on what you've shared, the next step is a FREE case review with one of our specialists. I have an opening today at 3:30 or tomorrow at 10:00. Which works better?","I can't do that, I need you to book now.","Sure, what's your email?"], correctIndex:0, explain:"Redirect gently back to the FREE case review and the two-option close, using only approved language."},
+    {homeowner:"My spouse handles this.", options:["That's fine, I understand. I have an opening today at 3:30 or tomorrow at 10:00. Which works better?","That doesn't matter, this call is with you.","Can I get their number instead?"], correctIndex:0, explain:"Validate, then still offer the two concrete times — the case review can often include both homeowners."},
+    {homeowner:"How did you get my information?", options:["I can't share that.","I understand you'd want to know that. We're HELPING homeowners who were promised one thing with their solar system but ended up experiencing something completely different.","That's confidential, don't worry about it."], correctIndex:1, explain:"Validate the concern honestly, then re-anchor on the HELP purpose — don't get defensive."},
+    {homeowner:"I'm happy with my solar.", options:["I understand. Knowing what you know today, would you still have signed that agreement?","A lot of people think that until it's too late.","Are you sure about that?"], correctIndex:0, explain:"Validate, then use the reflection question — non-confrontational, lets them self-assess."}
+  ],
+  es: [
+    {homeowner:"Estoy ocupado(a).", options:["Entiendo totalmente — Con base en lo que me compartió, el siguiente paso es una revisión de caso GRATUITA con uno de nuestros especialistas.","¡Esto solo tomará dos segundos, lo prometo, solo escúcheme!","Entiendo. Por eso exactamente le estamos llamando. Tengo disponibilidad hoy a las 3:30 o mañana a las 10:00. ¿Cuál le funciona mejor?"], correctIndex:2, explain:"Reconoce brevemente, luego usa la transición aprobada + el cierre de dos opciones."},
+    {homeowner:"No me interesa.", options:["¿Está seguro(a)? Muchos propietarios dicen eso al principio.","Entiendo. Estamos AYUDANDO a propietarios de casa a quienes les prometieron una cosa con su sistema solar, pero terminaron con algo completamente diferente.","Está bien, disculpe la molestia."], correctIndex:1, explain:"Valida brevemente, luego repite con calma la línea de AYUDA."},
+    {homeowner:"Solo envíeme información.", options:["Claro que sí — Con base en lo que me compartió, el siguiente paso es una revisión de caso GRATUITA. Tengo disponibilidad hoy a las 3:30 o mañana a las 10:00. ¿Cuál le funciona mejor?","No puedo hacer eso, necesito que agende ahora.","Claro, ¿cuál es su correo electrónico?"], correctIndex:0, explain:"Redirige con suavidad hacia la revisión de caso GRATUITA y el cierre de dos opciones."},
+    {homeowner:"Mi esposo(a) se encarga de eso.", options:["Está bien, entiendo. Tengo disponibilidad hoy a las 3:30 o mañana a las 10:00. ¿Cuál le funciona mejor?","Eso no importa, esta llamada es con usted.","¿Me puede dar su número en su lugar?"], correctIndex:0, explain:"Valida, y aun así ofrece los dos horarios concretos."},
+    {homeowner:"¿Cómo obtuvo mi información?", options:["No puedo compartir eso.","Entiendo que quiera saber eso. Estamos AYUDANDO a propietarios de casa a quienes les prometieron una cosa con su sistema solar, pero terminaron con algo completamente diferente.","Eso es confidencial, no se preocupe."], correctIndex:1, explain:"Valida la inquietud con honestidad, y vuelve a anclar en el propósito de AYUDA."},
+    {homeowner:"Estoy contento(a) con mi sistema solar.", options:["Entiendo. Sabiendo lo que sabe hoy, ¿habría firmado ese contrato de todos modos?","Mucha gente piensa eso hasta que ya es tarde.","¿Está seguro(a) de eso?"], correctIndex:0, explain:"Valida, y usa la pregunta de reflexión — no es confrontacional."}
+  ]
+};
+
+const SYNONYMS = {
+  en: { "connect":["connect"], "close":["close"], "opening":["opening"], "booking":["booking"] },
+  es: { "conecta":["conecta","conectar"], "cierra":["cierra","cerrar"], "apertura":["apertura"], "reserva":["reserva"] }
+};
+
+const UI = {
+  en: {
+    dir:"ltr",
+    pickLang:"Choose your training language / Elige el idioma",
+    pickModule:"What do you want to train right now?",
+    module1Title:"Module 1 — Methodology", module1Sub:"CONNECT → CLOSE — the psychological framework behind the call.",
+    module2Title:"Module 2 — Script Training", module2Sub:"The exact words. Every line, in order, from memory.",
+    startBtn:"Start Training →",
+    introTitle:"Learn it. Own it.",
+    introBodyMethod:"This session has one goal: burn CONNECT → CLOSE into memory so it's automatic on a live call.",
+    introBodyScript:"This session has one goal: know the exact script cold — every line, every order, no hesitation.",
+    introLi1:"One question at a time. No answer shown until you commit.",
+    introLi2:"Multiple choice, ordering, and matching — minimal typing.",
+    introLi3:"Progressive levels, each harder than the last.",
+    introLi4:"Certification requires 90%+ AND three passing runs in a row.",
+    offline:"Works fully offline once loaded — no internet needed after the first open.",
+    installHint:"Installable as an app (Add to Home Screen) when hosted online — opened as a plain file, it still works, just without the install prompt.",
+    legendQ:"Question", legendTrust:"Trust-building", legendEmo:"Emotional", legendCta:"Call to action",
+    xp:"XP", streak:"Streak", best:"Best", accuracy:"Accuracy", passes:"Passes",
+    exit:"Exit to Menu", next:"Next →", submit:"Submit", submitOrder:"Submit Order",
+    correct:"✓ Correct", incorrect:"✗ Not quite",
+    levelNames:["Letter → Step","Step → Letter","Order the Sequence","Missing Step","Complete Recall"],
+    levelNamesScript:["Line ID","Stage → Line","Order the Call","Missing Line","Objections","Full Call Recall"],
+    resultsTitle:"Session Complete", byLevel:"By Level", strengths:"Strengths", weaknesses:"Needs Work",
+    weakestSteps:"Weakest Steps", weakestLetters:"Weakest Letters",
+    noData:"No data recorded.", noWeak:"No major weak spots this run.", noStrength:"Keep practicing — no level hit 80% yet.",
+    backMenu:"Back to Menu", runAgain:"Run It Again (New Shuffle)", changeModule:"Choose a Different Module",
+    certTitle:"🏅 Certified", certBody:"Three consecutive runs at 90%+. You've earned certification for this module.",
+    fullCertTitle:"🏆 Fully Certified — Methodology + Script",
+    passLabel:"Consecutive 90%+ passes",
+    typeAnswer:"Type your answer...", inputHint:"Spelling, spacing, capitalization and accents are all forgiven — just the right word matters.",
+    matchInstruction:"Tap a letter, then tap its matching step.",
+    reinforceLine: (m)=> `Remember: ${m.labelConnect} → ${m.labelClose}`,
+    letterInWord: (word,pos,letter)=> `In <b>${word}</b>, position <b>${pos}</b> is <span class="hl">${letter}</span>. What does it stand for?`,
+    stepToLetter: (word,step)=> `In <b>${word}</b>, which item does this belong to?<br><i>"${step}"</i>`,
+    orderPrompt: (word)=> `Put every item of <b>${word}</b> in the correct order.`,
+    missingPrompt: (word)=> `One item is missing from <b>${word}</b>. Which one belongs in the blank?`,
+    recallPrompt: (word)=> `Match every item of <b>${word}</b> — from memory.`,
+    acronymRecogPrompt: (which)=> `What is the name of the ${which} phase?`,
+    firstPhase:"first", secondPhase:"second",
+    typedPrompt: (word)=> `Type the word for the ${word} phase.`,
+    reviewBtn:"📖 Review", reviewTitle:"Full Review", backToResults:"← Back to Results",
+    reviewSub:"One more look before your next attempt.",
+    time:"Time",
+    pickMode:"How do you want to train?",
+    modeLearn:"📘 Learn", modeLearnSub:"See it taught, in order. No timer, no grading.",
+    modePractice:"✏️ Practice", modePracticeSub:"Work the sequence with hints and instant coaching. Doesn't count toward certification.",
+    modeQuiz:"🎯 Quiz", modeQuizSub:"Fully randomized recall test. Only Quiz results count toward certification.",
+    learnDone:"You've been through the full sequence.", learnDoneBtn:"Start Practice →",
+    learnOf: (n,total)=> `${n} of ${total}`,
+    learnPrev:"← Back", learnNext:"Next →",
+    hintBtn:"💡 Hint", hintShown: (letter)=> `Starts with the letter <b>${letter}</b>.`,
+    practiceComplete:"Practice Complete", practiceNote:"This session doesn't count toward certification — it's for building the sequence in memory.",
+    practiceAgain:"Practice Again", readyForQuiz:"Ready for Quiz →",
+    recommendTitle:"Before your next Quiz attempt...",
+    recommendLearn:"Consider going back to Learn Mode — a few foundational pieces still need to click into place.",
+    recommendPractice:"You're close — a Practice round or two should tighten up the sequence before your next Quiz attempt.",
+    goLearn:"Go to Learn Mode", goPractice:"Go to Practice Mode",
+    modeBack:"← Change Mode"
+  },
+  es: {
+    dir:"ltr",
+    pickLang:"Choose your training language / Elige el idioma",
+    pickModule:"¿Qué quieres entrenar ahora?",
+    module1Title:"Módulo 1 — Metodología", module1Sub:"CONECTA → CIERRA — el marco psicológico detrás de la llamada.",
+    module2Title:"Módulo 2 — Guion", module2Sub:"Las palabras exactas. Cada línea, en orden, de memoria.",
+    startBtn:"Comenzar Entrenamiento →",
+    introTitle:"Apréndelo. Domínalo.",
+    introBodyMethod:"Esta sesión tiene un solo objetivo: grabar CONECTA → CIERRA en tu memoria hasta que sea automático.",
+    introBodyScript:"Esta sesión tiene un solo objetivo: dominar el guion exacto — cada línea, cada orden, sin dudar.",
+    introLi1:"Una pregunta a la vez. No se muestra la respuesta hasta que la envíes.",
+    introLi2:"Opción múltiple, orden y emparejamiento — casi nada de escritura.",
+    introLi3:"Niveles progresivos, cada uno más difícil que el anterior.",
+    introLi4:"La certificación requiere 90%+ Y tres sesiones aprobadas seguidas.",
+    offline:"Funciona completamente sin conexión una vez cargado — no necesita internet después de la primera vez.",
+    installHint:"Se puede instalar como app (Agregar a pantalla de inicio) si se aloja en línea — abierto como archivo simple, funciona igual, solo sin el aviso de instalación.",
+    legendQ:"Pregunta", legendTrust:"Genera confianza", legendEmo:"Emocional", legendCta:"Llamado a la acción",
+    xp:"XP", streak:"Racha", best:"Mejor", accuracy:"Precisión", passes:"Aprobadas",
+    exit:"Salir al Menú", next:"Siguiente →", submit:"Enviar", submitOrder:"Enviar Orden",
+    correct:"✓ Correcto", incorrect:"✗ No exactamente",
+    levelNames:["Letra → Paso","Paso → Letra","Ordena la Secuencia","Paso Faltante","Recuerdo Completo"],
+    levelNamesScript:["Identifica la Línea","Etapa → Línea","Ordena la Llamada","Línea Faltante","Objeciones","Recuerdo Completo de la Llamada"],
+    resultsTitle:"Sesión Completa", byLevel:"Por Nivel", strengths:"Fortalezas", weaknesses:"Necesita Trabajo",
+    weakestSteps:"Pasos Más Débiles", weakestLetters:"Letras Más Débiles",
+    noData:"No se registraron datos.", noWeak:"No hay puntos débiles importantes en esta sesión.", noStrength:"Sigue practicando — ningún nivel llegó al 80% todavía.",
+    backMenu:"Volver al Menú", runAgain:"Repetir (Nueva Mezcla)", changeModule:"Elegir Otro Módulo",
+    certTitle:"🏅 Certificado", certBody:"Tres sesiones consecutivas con 90%+. Has ganado la certificación de este módulo.",
+    fullCertTitle:"🏆 Totalmente Certificado — Metodología + Guion",
+    passLabel:"Aprobaciones consecutivas de 90%+",
+    typeAnswer:"Escribe tu respuesta...", inputHint:"Ortografía, espacios, mayúsculas y acentos se perdonan — solo importa la palabra correcta.",
+    matchInstruction:"Toca una letra y luego su elemento correspondiente.",
+    reinforceLine: (m)=> `Recuerda: ${m.labelConnect} → ${m.labelClose}`,
+    letterInWord: (word,pos,letter)=> `En <b>${word}</b>, la posición <b>${pos}</b> es <span class="hl">${letter}</span>. ¿Qué significa?`,
+    stepToLetter: (word,step)=> `En <b>${word}</b>, ¿a qué elemento pertenece esto?<br><i>"${step}"</i>`,
+    orderPrompt: (word)=> `Pon todos los elementos de <b>${word}</b> en el orden correcto.`,
+    missingPrompt: (word)=> `Falta un elemento en <b>${word}</b>. ¿Cuál va en el espacio en blanco?`,
+    recallPrompt: (word)=> `Empareja cada elemento de <b>${word}</b> — de memoria.`,
+    acronymRecogPrompt: (which)=> `¿Cómo se llama la ${which} fase?`,
+    firstPhase:"primera", secondPhase:"segunda",
+    typedPrompt: (word)=> `Escribe la palabra de la fase ${word}.`,
+    reviewBtn:"📖 Repaso", reviewTitle:"Repaso Completo", backToResults:"← Volver a Resultados",
+    reviewSub:"Una última mirada antes de tu próximo intento.",
+    time:"Tiempo",
+    pickMode:"¿Cómo quieres entrenar?",
+    modeLearn:"📘 Aprender", modeLearnSub:"Míralo enseñado, en orden. Sin cronómetro, sin calificación.",
+    modePractice:"✏️ Practicar", modePracticeSub:"Trabaja la secuencia con pistas y guía inmediata. No cuenta para la certificación.",
+    modeQuiz:"🎯 Quiz", modeQuizSub:"Prueba de recuerdo totalmente aleatoria. Solo el Quiz cuenta para la certificación.",
+    learnDone:"Has pasado por toda la secuencia.", learnDoneBtn:"Comenzar Práctica →",
+    learnOf: (n,total)=> `${n} de ${total}`,
+    learnPrev:"← Atrás", learnNext:"Siguiente →",
+    hintBtn:"💡 Pista", hintShown: (letter)=> `Comienza con la letra <b>${letter}</b>.`,
+    practiceComplete:"Práctica Completa", practiceNote:"Esta sesión no cuenta para la certificación — es para grabar la secuencia en tu memoria.",
+    practiceAgain:"Practicar de Nuevo", readyForQuiz:"Listo para el Quiz →",
+    recommendTitle:"Antes de tu próximo intento de Quiz...",
+    recommendLearn:"Considera volver al Modo Aprender — todavía faltan algunas piezas básicas por asentarse.",
+    recommendPractice:"Estás cerca — una o dos rondas de Práctica deberían afinar la secuencia antes de tu próximo Quiz.",
+    goLearn:"Ir a Modo Aprender", goPractice:"Ir a Modo Práctica",
+    modeBack:"← Cambiar Modo"
+  }
+};
+
+/* ---------- helpers ---------- */
+function norm(s){
+  return s.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,'').trim();
+}
+function fuzzyMatch(input, target, lang, synKey){
+  const a = norm(input);
+  if(a === norm(target)) return true;
+  const list = (SYNONYMS[lang] && SYNONYMS[lang][synKey]) || [];
+  return list.some(s=>norm(s)===a);
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function pickDistractors(pool, excludeStep, n){
+  return shuffle(pool.filter(p=>p.step!==excludeStep)).slice(0,n);
+}
+
+const HL_PATTERNS = {
+  en: { cta:[/which works better/i,/today at/i,/tomorrow at/i], trust:[/pioneer legal consulting/i,/free case review/i,/specialists?/i,/quick minute/i,/\boptions\b/i], emotion:[/understand/i,/thank you/i,/frustrat/i] },
+  es: { cta:[/cuál le funciona mejor/i,/hoy a las/i,/mañana a las/i], trust:[/pioneer legal consulting/i,/revisión de caso/i,/especialista/i,/minuto rápido/i,/\bopciones\b/i], emotion:[/entiendo/i,/gracias/i,/frustrad/i] }
+};
+function highlightScript(text, lang){
+  if(!text) return text;
+  if(/\?\s*$/.test(text.trim())) return `<span class="hl-question">${text}</span>`;
+  const p = HL_PATTERNS[lang] || HL_PATTERNS.en;
+  for(const re of p.cta) if(re.test(text)) return `<span class="hl-cta">${text}</span>`;
+  for(const re of p.trust) if(re.test(text)) return `<span class="hl-trust">${text}</span>`;
+  for(const re of p.emotion) if(re.test(text)) return `<span class="hl-emotion">${text}</span>`;
+  return text;
+}
+function fmtStep(text){
+  if(state.module==='script') return highlightScript(text, state.lang);
+  return text;
+}
+
+/* ---------- sound (Web Audio, no files) ---------- */
+let audioCtx = null;
+function beep(freqs, dur){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    let t = audioCtx.currentTime;
+    freqs.forEach((f)=>{
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      o.frequency.value = f; o.type='sine';
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.12,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t+dur); t += dur*0.6;
+    });
+  }catch(e){}
+}
+function soundGood(){ beep([523.25,659.25,783.99], 0.16); }
+function soundBad(){ beep([220,180], 0.18); }
+
+/* ---------- persistence ---------- */
+function loadPassStreak(){
+  try{
+    const raw = localStorage.getItem('plc_pass_streaks');
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function savePassStreak(){
+  try{ localStorage.setItem('plc_pass_streaks', JSON.stringify(passStreaks)); }catch(e){}
+}
+let passStreaks = loadPassStreak(); // { "en_methodology":0, "en_script":0, "es_methodology":0, "es_script":0 }
+function psKey(lang, mod){ return lang+"_"+mod; }
+function getPS(lang, mod){ return passStreaks[psKey(lang,mod)] || 0; }
+function setPS(lang, mod, val){ passStreaks[psKey(lang,mod)] = val; savePassStreak(); }
+
+/* ---------- LEVEL / QUESTION GENERATION (shared by both modules) ---------- */
+function genLevel1(data, t, randomize){
+  const qs = [];
+  [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
+    list.forEach((item,idx)=>{
+      const distractors = pickDistractors(list, item.step, 3).map(d=>d.step);
+      const options = randomize ? shuffle([item.step, ...distractors]) : [item.step, ...distractors];
+      qs.push({ type:t.levelNames[0], engine:"mc",
+        prompt: t.letterInWord(word, idx+1, item.letter),
+        options, correctIndex: options.indexOf(item.step),
+        explain: `${item.letter} = ${item.step}.` + (item.detail?` ${item.detail}`:''),
+        word, trackItem:{word, letter:item.letter, step:item.step}
+      });
+    });
+  });
+  const words = [data.labelConnect, data.labelClose];
+  const decoys = shuffle(["ALPHA","BRAVO","DELTA","OMEGA","PRIME","FLOW","FASE-X","PLAN-Z"]);
+  [data.labelConnect, data.labelClose].forEach((w,i)=>{
+    const opts = randomize ? shuffle([w, ...decoys.slice(i*3,i*3+3)]) : [w, ...decoys.slice(i*3,i*3+3)];
+    qs.push({ type:"Acronym Recognition", engine:"mc",
+      prompt: t.acronymRecogPrompt(i===0?t.firstPhase:t.secondPhase),
+      options: opts, correctIndex: opts.indexOf(w),
+      explain: `${w} is the ${i===0?t.firstPhase:t.secondPhase} phase.`, word:w
+    });
+  });
+  return qs;
+}
+function genLevel2(data, t, randomize){
+  const qs = [];
+  [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
+    const uniqueLetters = [...new Set(list.map(i=>i.letter))];
+    list.forEach(item=>{
+      const options = randomize ? shuffle(uniqueLetters) : uniqueLetters.slice();
+      qs.push({ type:t.levelNames[1], engine:"mc",
+        prompt: t.stepToLetter(word, item.step),
+        options, correctIndex: options.indexOf(item.letter),
+        explain: `"${item.step}" = ${item.letter}.` + (item.detail?` ${item.detail}`:''),
+        word, trackItem:{word, letter:item.letter, step:item.step}
+      });
+    });
+  });
+  return qs;
+}
+function genLevel3(data, t){
+  return [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].map(([list,word])=>({
+    type:t.levelNames[2], engine:"order",
+    prompt: t.orderPrompt(word),
+    items: list.map(i=>`${i.letter} — ${i.step}`),
+    correctOrder: list.map((_,i)=>i),
+    explain: `${word}: ` + list.map(i=>i.letter).join("") + " — " + list.map(i=>i.step).join(" → "),
+    word
+  }));
+}
+function genLevel4(data, t, randomize){
+  const qs = [];
+  [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
+    const hideIdxs = shuffle(list.map((_,i)=>i)).slice(0,2);
+    hideIdxs.forEach(hideIdx=>{
+      const chips = list.map((item,i)=> i===hideIdx ? {blank:true} : {letter:item.letter, step:item.step});
+      const distractors = pickDistractors(list, list[hideIdx].step, 2).map(d=>d.step);
+      const options = randomize ? shuffle([list[hideIdx].step, ...distractors]) : [list[hideIdx].step, ...distractors];
+      qs.push({ type:t.levelNames[3], engine:"mc-seq",
+        prompt: t.missingPrompt(word),
+        chips, options, correctIndex: options.indexOf(list[hideIdx].step),
+        explain: `${word} position ${hideIdx+1} (${list[hideIdx].letter}) = ${list[hideIdx].step}.` + (list[hideIdx].detail?` ${list[hideIdx].detail}`:''),
+        word, trackItem:{word, letter:list[hideIdx].letter, step:list[hideIdx].step}
+      });
+    });
+  });
+  return qs;
+}
+function genLevel5(data, t){
+  const qs = [];
+  [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
+    qs.push({ type:t.levelNames[4]||t.levelNamesScript[5], engine:"match",
+      prompt: t.recallPrompt(word),
+      letters: shuffle(list.map((i,idx)=>({id:idx, text:i.letter}))),
+      steps: shuffle(list.map((i,idx)=>({id:idx, text:i.step}))),
+      pairs: list.map((i,idx)=>idx),
+      explain: `${word}: ` + list.map(i=>`${i.letter}=${i.step}`).join(", ") + (list.some(i=>i.detail)?" "+list.filter(i=>i.detail).map(i=>i.detail).join(" "):""), word
+    });
+  });
+  qs.push({ type:"Recall", engine:"fill",
+    prompt: t.typedPrompt(t.firstPhase), answer: data.labelConnect, synKey: data.labelConnect.toLowerCase(),
+    explain: `${data.labelConnect} is the first phase.`, word: data.labelConnect
+  });
+  qs.push({ type:"Recall", engine:"fill",
+    prompt: t.typedPrompt(t.secondPhase), answer: data.labelClose, synKey: data.labelClose.toLowerCase(),
+    explain: `${data.labelClose} is the second phase.`, word: data.labelClose
+  });
+  return qs;
+}
+function genObjections(lang, t, randomize){
+  return OBJECTIONS[lang].map(o=>{
+    const paired = o.options.map((txt,i)=>({txt, orig:i}));
+    const opts = randomize ? shuffle(paired) : paired;
+    return { type:"Objection Handling", engine:"mc", homeowner:o.homeowner,
+      prompt: state.lang==='es' ? "Mejor respuesta:" : "Best response:",
+      options: opts.map(x=>x.txt), correctIndex: opts.findIndex(x=>x.orig===o.correctIndex),
+      explain: o.explain, word: state.lang==='es'?"Objeciones":"Objections" };
+  });
+}
+
+function buildLevels(data, t, isScript, lang, quizMode){
+  const names = isScript ? t.levelNamesScript : t.levelNames;
+  const levels = [
+    {id:1, name:names[0], questions: quizMode ? shuffle(genLevel1(data,t,true)) : genLevel1(data,t,false)},
+    {id:2, name:names[1], questions: quizMode ? shuffle(genLevel2(data,t,true)) : genLevel2(data,t,false)},
+    {id:3, name:names[2], questions: quizMode ? shuffle(genLevel3(data,t)) : genLevel3(data,t)},
+    {id:4, name:names[3], questions: quizMode ? shuffle(genLevel4(data,t,true)) : genLevel4(data,t,false)}
+  ];
+  if(isScript){
+    levels.push({id:5, name:names[4], questions: quizMode ? shuffle(genObjections(lang,t,true)) : genObjections(lang,t,false)});
+    levels.push({id:6, name:names[5], questions: quizMode ? shuffle(genLevel5(data,t)) : genLevel5(data,t)});
+  } else {
+    levels.push({id:5, name:names[4], questions: quizMode ? shuffle(genLevel5(data,t)) : genLevel5(data,t)});
+  }
+  if(quizMode){
+    // Quiz mode: interleave every question type together into one continuous, fully
+    // randomized run (question order + answer order + question types all randomized).
+    const flat = [];
+    levels.forEach(l=>{ l.questions.forEach(q=>{ q._levelName = l.name; flat.push(q); }); });
+    return [{ id:1, name: (lang==='es'?'Quiz':'Quiz'), questions: shuffle(flat) }];
+  }
+  return levels;
+}
+
+/* ---------- STATE ---------- */
+let state = {};
+function freshState(){
+  return {
+    screen:"lang", lang:null, module:null, mode:null, t:null, data:null,
+    levels:[], levelIdx:0, qIdx:0, answered:false, learnIdx:0, hintShown:false,
+    xp:0, streak:0, bestStreak:0, correctCount:0, totalCount:0, totalPlanned:0,
+    catScore:{}, itemStats:{}, levelDone:new Set(), badges:new Set(),
+    startTime:null, timerHandle:null,
+    matchSel:{letter:null, step:null}, matchLocked:new Set()
+  };
+}
+state = freshState();
+
+const appEl = document.getElementById('app');
+function render(){
+  if(state.screen==="lang") return renderLang();
+  if(state.screen==="modsel") return renderModSel();
+  if(state.screen==="modeSel") return renderModeSel();
+  if(state.screen==="learn") return renderLearn();
+  if(state.screen==="intro") return renderIntro();
+  if(state.screen==="level") return renderLevel();
+  if(state.screen==="results") return renderResults();
+  if(state.screen==="review") return renderReview();
+}
+
+function renderLang(){
+  appEl.innerHTML = `
+  <div class="langscreen">
+    <div class="card">
+      <div class="eyebrow">Pioneer Legal Consulting</div>
+      <h1 style="font-family:var(--serif);font-size:24px;margin:0 0 16px;">Choose your training language / Elige el idioma</h1>
+      <button class="btn lang" onclick="selectLang('en')">🇺🇸 English</button>
+      <button class="btn lang" onclick="selectLang('es')">🇪🇸 Español</button>
+    </div>
+  </div>`;
+}
+function selectLang(lang){
+  state.lang = lang; state.t = UI[lang]; state.screen = "modsel"; render();
+}
+
+function renderModSel(){
+  const t = state.t, lang = state.lang;
+  const m = METHODS[lang];
+  const fullCert = getPS(lang,'methodology')>=3 && getPS(lang,'script')>=3;
+  appEl.innerHTML = `
+  <div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>
+  <div class="modscreen">
+    <div class="card">
+      <div class="eyebrow">Pioneer Legal Consulting</div>
+      <h1 style="font-family:var(--serif);font-size:23px;margin:0 0 16px;">${t.pickModule}</h1>
+      ${fullCert ? `<div class="badge cert" style="display:block;margin-bottom:16px;padding:10px 14px;font-size:13px;">${t.fullCertTitle}</div>` : ''}
+      <button class="btn modbtn brass" onclick="selectModule('methodology')">
+        <div style="font-weight:700;">${t.module1Title}</div>
+        <div style="font-weight:400;font-size:13px;margin-top:4px;">${t.module1Sub}</div>
+        <div style="font-size:11px;margin-top:8px;opacity:.75;">${t.passLabel}: ${getPS(lang,'methodology')}/3</div>
+      </button>
+      <button class="btn modbtn" style="background:var(--ink);color:#fff;" onclick="selectModule('script')">
+        <div style="font-weight:700;">${t.module2Title}</div>
+        <div style="font-weight:400;font-size:13px;margin-top:4px;color:#c7cee0;">${t.module2Sub}</div>
+        <div style="font-size:11px;margin-top:8px;opacity:.75;">${t.passLabel}: ${getPS(lang,'script')}/3</div>
+      </button>
+    </div>
+  </div>`;
+}
+function selectModule(mod){
+  state.module = mod;
+  state.data = mod==='methodology' ? METHODS[state.lang] : SCRIPTS[state.lang];
+  state.screen = "modeSel"; render();
+}
+
+function renderModeSel(){
+  const m = state.data, t = state.t;
+  appEl.innerHTML = `
+  <div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>
+  <div class="modscreen">
+    <div class="card">
+      <div class="eyebrow">${state.module==='script' ? t.module2Title : t.module1Title}</div>
+      <h1 style="font-family:var(--serif);font-size:23px;margin:0 0 16px;">${t.pickMode}</h1>
+      <button class="btn modbtn" style="background:var(--ink);color:#fff;" onclick="selectMode('learn')">
+        <div style="font-weight:700;">${t.modeLearn}</div>
+        <div style="font-weight:400;font-size:13px;margin-top:4px;color:#c7cee0;">${t.modeLearnSub}</div>
+      </button>
+      <button class="btn modbtn" style="background:#fff;border:2px solid var(--line);color:var(--ink);" onclick="selectMode('practice')">
+        <div style="font-weight:700;">${t.modePractice}</div>
+        <div style="font-weight:400;font-size:13px;margin-top:4px;color:var(--slate);">${t.modePracticeSub}</div>
+      </button>
+      <button class="btn modbtn brass" onclick="selectMode('quiz')">
+        <div style="font-weight:700;">${t.modeQuiz}</div>
+        <div style="font-weight:400;font-size:13px;margin-top:4px;">${t.modeQuizSub}</div>
+        <div style="font-size:11px;margin-top:8px;opacity:.75;">${t.passLabel}: ${getPS(state.lang,state.module)}/3</div>
+      </button>
+      <div class="footer-nav" style="margin-top:6px;"><button class="btn ghost" onclick="goModSel()">${t.changeModule}</button></div>
+    </div>
+  </div>`;
+}
+function selectMode(mode){
+  state.mode = mode;
+  if(mode==='learn'){
+    state.learnIdx = 0;
+    state.screen = "learn";
+  } else {
+    state.screen = "intro";
+  }
+  render();
+}
+
+function renderIntro(){
+  const m = state.data, t = state.t, isScript = state.module==='script', isQuiz = state.mode==='quiz';
+  appEl.innerHTML = `
+  <div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>
+  <div class="intro">
+    <div class="card">
+      <div class="eyebrow">${isScript ? state.t.module2Title : state.t.module1Title} · ${isQuiz ? t.modeQuiz.replace(/^\S+\s/,'') : t.modePractice.replace(/^\S+\s/,'')}</div>
+      <h1>${t.introTitle}</h1>
+      <p>${isScript ? t.introBodyScript : t.introBodyMethod}</p>
+      <ul>
+        <li>${t.introLi1}</li>
+        <li>${t.introLi2}</li>
+        <li>${t.introLi3}</li>
+        <li>${isQuiz ? t.introLi4 : t.modePracticeSub}</li>
+      </ul>
+      ${isScript ? `<div class="legend">
+        <span class="hl-question">${t.legendQ}</span>
+        <span class="hl-trust">${t.legendTrust}</span>
+        <span class="hl-emotion">${t.legendEmo}</span>
+        <span class="hl-cta">${t.legendCta}</span>
+      </div>` : ''}
+      ${isQuiz ? `<div class="passtrack">${[0,1,2].map(i=>`<div class="passdot ${i<getPS(state.lang,state.module)?'filled':''}">${i<getPS(state.lang,state.module)?'✓':i+1}</div>`).join('')}</div>
+      <div class="stampline">${t.passLabel}: ${getPS(state.lang,state.module)}/3</div>` : `<p style="font-size:12.5px;color:var(--slate-light);">${t.practiceNote}</p>`}
+      <div style="margin-top:18px;"><button class="btn brass wide" onclick="beginTraining()">${t.startBtn}</button></div>
+      <div class="footer-nav" style="margin-top:10px;"><button class="btn ghost" onclick="goModeSel()">${t.modeBack}</button></div>
+      <p style="margin-top:14px;font-size:12px;color:var(--slate-light);">${t.offline}</p>
+      <div class="installhint">📲 ${t.installHint}</div>
+    </div>
+  </div>`;
+}
+
+function buildLearnCards(){
+  const m = state.data;
+  const cards = [];
+  m.connect.forEach((item,i)=> cards.push({...item, phase:m.labelConnect, pos:i+1, total:m.connect.length}));
+  m.close.forEach((item,i)=> cards.push({...item, phase:m.labelClose, pos:i+1, total:m.close.length}));
+  return cards;
+}
+function renderLearn(){
+  const t = state.t, m = state.data;
+  const cards = buildLearnCards();
+  if(state.learnIdx >= cards.length){
+    appEl.innerHTML = `
+    <div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>
+    <div class="intro"><div class="card">
+      <div class="eyebrow">${state.module==='script' ? t.module2Title : t.module1Title}</div>
+      <h1>${t.learnDone}</h1>
+      <div class="footer-nav" style="margin-top:18px;">
+        <button class="btn ghost" onclick="goModeSel()">${t.modeBack}</button>
+        <button class="btn brass" onclick="selectMode('practice')">${t.learnDoneBtn}</button>
+      </div>
+    </div></div>`;
+    return;
+  }
+  const c = cards[state.learnIdx];
+  const isFirstOfPhase = c.pos===1;
+  const color = c.phase===m.labelConnect ? 'var(--ink)' : 'var(--brass)';
+  appEl.innerHTML = `
+  <div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>
+  <div class="main">
+    <div class="card">
+      <div class="eyebrow">${state.module==='script' ? t.module2Title : t.module1Title} · ${t.learnOf(state.learnIdx+1, cards.length)}</div>
+      ${isFirstOfPhase ? `<div style="font-family:var(--serif);font-weight:700;font-size:22px;color:${color};margin-bottom:14px;">${c.phase}</div>` : ''}
+      ${c.stage ? `<div class="qtype-pill">${c.stage}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:20px;margin:10px 0 18px;">
+        <div style="font-family:var(--serif);font-weight:700;font-size:56px;color:${color};line-height:1;">${c.letter}</div>
+        <div style="font-size:20px;font-weight:600;color:var(--ink);line-height:1.35;">${fmtStep(c.step)}</div>
+      </div>
+      ${c.detail ? `<div style="font-size:14px;color:var(--slate);line-height:1.6;background:var(--paper);padding:12px 14px;border-radius:8px;">${c.detail}</div>` : ''}
+      <div class="progressbar" style="margin-top:20px;"><div style="width:${Math.round(((state.learnIdx+1)/cards.length)*100)}%"></div></div>
+      <div class="footer-nav">
+        <button class="btn ghost" onclick="learnPrev()" ${state.learnIdx===0?'disabled':''}>${t.learnPrev}</button>
+        <button class="btn brass" onclick="learnNext()">${t.learnNext}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function learnNext(){ state.learnIdx++; render(); }
+function learnPrev(){ if(state.learnIdx>0){ state.learnIdx--; render(); } }
+function goModeSel(){ state.screen="modeSel"; render(); }
+
+function beginTraining(){
+  const quizMode = state.mode==='quiz';
+  state.levels = buildLevels(state.data, state.t, state.module==='script', state.lang, quizMode);
+  state.levelIdx=0; state.qIdx=0; state.answered=false; state.hintShown=false;
+  state.xp=0; state.streak=0; state.bestStreak=0; state.correctCount=0; state.totalCount=0;
+  state.catScore={}; state.itemStats={}; state.levelDone=new Set(); state.badges=new Set();
+  state.levels.forEach(l=>state.catScore[l.name]={correct:0,total:0});
+  state.totalPlanned = state.levels.reduce((s,l)=>s+l.questions.length,0);
+  state.startTime = null;
+  state.screen="level";
+  startClock();
+  render();
+}
+
+function currentLevel(){ return state.levels[state.levelIdx]; }
+function currentQuestion(){ return currentLevel().questions[state.qIdx]; }
+
+function startClock(){
+  if(state.timerHandle) clearInterval(state.timerHandle);
+  if(!state.startTime) state.startTime = Date.now();
+  state.timerHandle = setInterval(()=>{
+    const el = document.getElementById('timerText');
+    if(el){
+      const elapsed = Math.floor((Date.now()-state.startTime)/1000);
+      el.textContent = String(Math.floor(elapsed/60)).padStart(2,'0')+":"+String(elapsed%60).padStart(2,'0');
+    }
+  },1000);
+}
+function elapsedStr(){
+  const elapsed = state.startTime ? Math.floor((Date.now()-state.startTime)/1000) : 0;
+  return String(Math.floor(elapsed/60)).padStart(2,'0')+":"+String(elapsed%60).padStart(2,'0');
+}
+
+function renderCallBar(){
+  return `<div class="callbar" id="callbar">
+    <div class="avatar">PLC</div>
+    <div class="who"><div class="name">${state.module==='script' ? (state.lang==='es'?'Guion':'Script') : (state.lang==='es'?'Metodología':'Methodology')}</div><div class="sub">${state.data ? state.data.labelConnect+' → '+state.data.labelClose : ''}</div></div>
+    <div class="wave"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="timer" id="timerText">${elapsedStr()}</div>
+  </div>`;
+}
+function renderAcronymBanner(){
+  const m = state.data;
+  return `<div class="acronymbanner"><span class="word a1">${m.labelConnect}</span><span class="arrow">→</span><span class="word a2">${m.labelClose}</span></div>`;
+}
+function renderStats(){
+  const t = state.t;
+  const acc = state.totalCount ? Math.round((state.correctCount/state.totalCount)*100) : 0;
+  return `<div class="stats">
+    <div class="stat">${t.xp} <b>${state.xp}</b></div>
+    <div class="stat"><span class="flame">🔥</span> ${t.streak} <b>${state.streak}</b></div>
+    <div class="stat">${t.best} <b>${state.bestStreak}</b></div>
+    <div class="stat">${t.accuracy} <b>${acc}%</b></div>
+    ${state.mode==='quiz' ? `<div class="stat">${t.passes} <b class="cert">${getPS(state.lang,state.module)}/3</b></div>` : ''}
+  </div>`;
+}
+function renderBadges(){
+  if(state.badges.size===0) return '';
+  return `<div class="badgebar">` + [...state.badges].map(b=>`<div class="badge ${b.cert?'cert':''}">🏅 ${b.name||b}</div>`).join('') + `</div>`;
+}
+function renderProgress(){
+  const lvl = currentLevel();
+  const pct = state.totalPlanned ? Math.round((state.totalCount/state.totalPlanned)*100) : 0;
+  return `<div class="progresswrap">
+    <div class="progresslabel"><span>Level ${lvl.id}/${state.levels.length} · ${lvl.name}</span><span>${pct}%</span></div>
+    <div class="progressbar"><div style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function renderQuestionBody(q){
+  let body = `<div class="qtype-pill">${q.type}</div>`;
+  if(q.homeowner){ body += `<div class="prompt" style="font-style:italic;color:var(--slate);">"${q.homeowner}"</div>`; }
+  body += `<div class="prompt">${q.prompt}</div>`;
+  if(q.engine==="mc-seq"){
+    body += `<div class="seqrow">` + q.chips.map(c=> c.blank
+      ? `<div class="seqchip blank">?</div>`
+      : `<div class="seqchip"><span class="L">${c.letter}</span> ${fmtStep(c.step)}</div>`
+    ).join('') + `</div>`;
+  }
+  return body;
+}
+
+function renderLevel(){
+  const lvl = currentLevel(), q = currentQuestion(), t = state.t;
+  let controls = '';
+  if(q.engine==="mc" || q.engine==="mc-seq"){
+    controls = `<div class="options">` + q.options.map((opt,i)=>`<button class="opt" onclick="answerMC(${i})" id="opt${i}">${fmtStep(opt)}</button>`).join('') + `</div>`;
+  } else if(q.engine==="fill"){
+    controls = `<div class="textrow">
+      <input type="text" id="fillInput" placeholder="${t.typeAnswer}" autocomplete="off" autocapitalize="off" onkeydown="if(event.key==='Enter')answerFill()">
+      <button class="btn brass" onclick="answerFill()">${t.submit}</button>
+    </div><p style="font-size:11px;color:var(--slate-light);margin-top:6px;">${t.inputHint}</p>`;
+  } else if(q.engine==="order"){
+    if(!q._shuffled) q._shuffled = shuffle(q.items.map((txt,i)=>({txt, orig:i})));
+    controls = `<ul class="orderlist" id="orderList">` + q._shuffled.map((it,i)=>
+      `<li draggable="true" data-orig="${it.orig}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropItem(event)"><span class="idx">${i+1}.</span> ${fmtStep(it.txt)}</li>`
+    ).join('') + `</ul><button class="btn brass wide" onclick="answerOrder()">${t.submitOrder}</button>`;
+  } else if(q.engine==="match"){
+    state.matchSel = {letter:null, step:null}; state.matchLocked = new Set();
+    controls = `<p style="font-size:12.5px;color:var(--slate);margin-bottom:8px;">${t.matchInstruction}</p>
+      <div class="matchgrid">
+        <div class="matchcol" id="letterCol">` + q.letters.map(l=>`<div class="matchcard letter" data-id="${l.id}" onclick="matchClick('letter',${l.id})">${l.text}</div>`).join('') + `</div>
+        <div class="matchcol" id="stepCol">` + q.steps.map(s=>`<div class="matchcard" data-id="${s.id}" onclick="matchClick('step',${s.id})">${fmtStep(s.text)}</div>`).join('') + `</div>
+      </div>
+      <div id="matchStatus" style="margin-top:10px;font-size:12px;color:var(--slate);"></div>`;
+  }
+  const hintTarget = q.trackItem ? q.trackItem.letter : (q.answer ? q.answer[0] : null);
+  const hintHtml = (state.mode==='practice' && hintTarget) ? `
+    <div style="margin-top:10px;">
+      <button class="btn ghost" onclick="showHint('${hintTarget.replace(/'/g,"\\'")}')" ${state.hintShown?'disabled':''}>${t.hintBtn}</button>
+      <div id="hintBox" style="font-size:13px;color:var(--slate);margin-top:8px;"></div>
+    </div>` : '';
+
+  appEl.innerHTML = `
+    ${renderCallBar()}
+    ${renderStats()}
+    ${renderAcronymBanner()}
+    ${renderProgress()}
+    ${renderBadges()}
+    <div class="main">
+      <div class="card">
+        <h1 class="level-title">Q${state.qIdx+1} / ${lvl.questions.length}</h1>
+        ${renderQuestionBody(q)}
+        ${controls}
+        ${hintHtml}
+        <div class="coach" id="coachBox"></div>
+        <div class="footer-nav">
+          <button class="btn ghost" onclick="goIntro()">${t.exit}</button>
+          <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">${t.next}</button>
+        </div>
+      </div>
+    </div>`;
+  startClock();
+}
+
+let dragSrc=null;
+function dragStart(e){ dragSrc=e.target; e.target.classList.add('dragging'); }
+function dragOver(e){ e.preventDefault(); }
+function dropItem(e){
+  e.preventDefault();
+  const target = e.target.closest('li'); if(!target||target===dragSrc) return;
+  const list = document.getElementById('orderList');
+  const items = [...list.children];
+  const srcIdx = items.indexOf(dragSrc), tgtIdx = items.indexOf(target);
+  if(srcIdx<tgtIdx) target.after(dragSrc); else target.before(dragSrc);
+  dragSrc.classList.remove('dragging');
+  [...list.children].forEach((li,i)=>{ li.querySelector('.idx').textContent=(i+1)+"."; });
+}
+
+function pulseBar(good){
+  const bar=document.getElementById('callbar');
+  if(bar){ bar.classList.add(good?'pulse-good':'pulse-bad'); setTimeout(()=>bar.classList.remove(good?'pulse-good':'pulse-bad'),500); }
+}
+function bumpCat(cat, correct){
+  if(!state.catScore[cat]) state.catScore[cat]={correct:0,total:0};
+  state.catScore[cat].total++; if(correct) state.catScore[cat].correct++;
+}
+function bumpItem(item, correct){
+  if(!item) return;
+  const key = item.word+"|"+item.letter+"|"+item.step;
+  if(!state.itemStats[key]) state.itemStats[key] = {letter:item.letter, step:item.step, word:item.word, correct:0, total:0};
+  state.itemStats[key].total++; if(correct) state.itemStats[key].correct++;
+}
+function registerAnswer(correct, cat, item){
+  state.totalCount++; bumpCat(cat, correct); bumpItem(item, correct);
+  if(correct){ state.correctCount++; state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak); state.xp += 10 + Math.min(state.streak,5)*2; soundGood(); }
+  else { state.streak=0; state.xp+=2; soundBad(); }
+}
+function showCoach(correct, explain, correctText){
+  const t = state.t;
+  const m = METHODS[state.lang]; // always reinforce the overarching methodology, even in script module
+  const box = document.getElementById('coachBox');
+  box.className = "coach show " + (correct?"good":"bad");
+  box.innerHTML = `<div class="verdict ${correct?'good':'bad'}">${correct?t.correct:t.incorrect}</div>
+    ${!correct && correctText ? `<div style="margin-bottom:4px;"><b>${state.lang==='es'?'Respuesta correcta':'Correct answer'}:</b> <span class="hl">${fmtStep(correctText)}</span></div>` : ''}
+    <div>${explain}</div>
+    <div class="reinforce">${t.reinforceLine(m)}</div>`;
+  document.getElementById('nextBtn').style.display='inline-block';
+  pulseBar(correct);
+}
+function lockOptions(){ document.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; }); }
+function showHint(letter){
+  state.hintShown = true;
+  const box = document.getElementById('hintBox');
+  if(box) box.innerHTML = state.t.hintShown(letter);
+  const btn = document.querySelector('.btn.ghost[onclick^="showHint"]');
+  if(btn) btn.disabled = true;
+}
+
+function answerMC(i){
+  if(state.answered) return; state.answered=true;
+  const q = currentQuestion();
+  const correct = i===q.correctIndex;
+  document.getElementById('opt'+i).classList.add(correct?'correct':'incorrect');
+  if(!correct) document.getElementById('opt'+q.correctIndex).classList.add('correct');
+  lockOptions();
+  registerAnswer(correct, q._levelName || currentLevel().name, q.trackItem);
+  showCoach(correct, q.explain, correct?null:q.options[q.correctIndex]);
+}
+function answerFill(){
+  if(state.answered) return;
+  const val = document.getElementById('fillInput').value; if(!val.trim()) return;
+  state.answered=true;
+  const q = currentQuestion();
+  const correct = fuzzyMatch(val, q.answer, state.lang, q.synKey);
+  document.getElementById('fillInput').disabled=true;
+  registerAnswer(correct, q._levelName || currentLevel().name, q.trackItem);
+  showCoach(correct, q.explain, correct?null:q.answer);
+}
+function answerOrder(){
+  if(state.answered) return;
+  const q = currentQuestion();
+  const order = [...document.getElementById('orderList').children].map(li=>parseInt(li.dataset.orig));
+  const correct = JSON.stringify(order)===JSON.stringify(q.correctOrder);
+  state.answered=true;
+  registerAnswer(correct, q._levelName || currentLevel().name, q.trackItem);
+  showCoach(correct, q.explain, correct?null:q.items.join(" → "));
+  document.querySelectorAll('#orderList li').forEach(li=>li.setAttribute('draggable','false'));
+}
+function matchClick(kind, id){
+  if(state.matchLocked.has(kind+id)) return;
+  state.matchSel[kind] = id;
+  document.querySelectorAll(`#${kind==='letter'?'letterCol':'stepCol'} .matchcard`).forEach(c=>c.classList.remove('selected'));
+  document.querySelector(`#${kind==='letter'?'letterCol':'stepCol'} [data-id="${id}"]`).classList.add('selected');
+  if(state.matchSel.letter!=null && state.matchSel.step!=null){
+    const q = currentQuestion();
+    const correct = state.matchSel.letter === state.matchSel.step;
+    const letterEl = document.querySelector(`#letterCol [data-id="${state.matchSel.letter}"]`);
+    const stepEl = document.querySelector(`#stepCol [data-id="${state.matchSel.step}"]`);
+    registerAnswer(correct, q._levelName || currentLevel().name, null);
+    if(correct){
+      letterEl.classList.add('locked'); stepEl.classList.add('locked');
+      letterEl.classList.remove('selected'); stepEl.classList.remove('selected');
+      state.matchLocked.add('letter'+state.matchSel.letter); state.matchLocked.add('step'+state.matchSel.step);
+    } else {
+      letterEl.classList.add('wrong'); stepEl.classList.add('wrong');
+      setTimeout(()=>{ letterEl.classList.remove('wrong','selected'); stepEl.classList.remove('wrong','selected'); }, 500);
+    }
+    state.matchSel = {letter:null, step:null};
+    const totalPairs = q.pairs.length;
+    const done = state.matchLocked.size/2;
+    const statusEl = document.getElementById('matchStatus');
+    if(statusEl) statusEl.textContent = `${done} / ${totalPairs}`;
+    if(done===totalPairs){ showCoach(true, q.explain, null); }
+  }
+}
+
+function nextQuestion(){
+  const lvl = currentLevel();
+  state.answered=false; state.hintShown=false; state.qIdx++;
+  if(state.qIdx >= lvl.questions.length){
+    state.levelDone.add(lvl.id);
+    state.qIdx=0; state.levelIdx++;
+    if(state.levelIdx >= state.levels.length){ finishSession(); return; }
+  }
+  render();
+}
+
+function finishSession(){
+  const overallAcc = state.totalCount ? Math.round((state.correctCount/state.totalCount)*100) : 0;
+  if(state.mode==='quiz'){
+    let ps = getPS(state.lang, state.module);
+    if(overallAcc>=90){ ps++; } else { ps=0; }
+    setPS(state.lang, state.module, ps);
+    if(ps>=3) state.badges.add({name: state.t.certTitle.replace('🏅 ',''), cert:true});
+  }
+  state.screen="results";
+  render();
+}
+
+function goIntro(){
+  if(state.timerHandle) clearInterval(state.timerHandle);
+  const lang = state.lang, mod = state.module, mode = state.mode;
+  state = freshState();
+  state.lang = lang; state.t = UI[lang]; state.module = mod; state.mode = mode;
+  state.data = mod ? (mod==='methodology'?METHODS[lang]:SCRIPTS[lang]) : null;
+  state.screen = mod ? "intro" : "modsel";
+  render();
+}
+function goModSel(){
+  if(state.timerHandle) clearInterval(state.timerHandle);
+  const lang = state.lang;
+  state = freshState();
+  state.lang = lang; state.t = UI[lang]; state.screen = "modsel";
+  render();
+}
+
+function renderResults(){
+  if(state.timerHandle) clearInterval(state.timerHandle);
+  const t = state.t;
+  const overallAcc = state.totalCount ? Math.round((state.correctCount/state.totalCount)*100) : 0;
+  let grade="F"; if(overallAcc>=90) grade="A"; else if(overallAcc>=80) grade="B"; else if(overallAcc>=70) grade="C"; else if(overallAcc>=60) grade="D";
+
+  const rows = Object.keys(state.catScore).map(name=>{
+    const s = state.catScore[name]||{correct:0,total:0};
+    const pct = s.total ? Math.round((s.correct/s.total)*100) : 0;
+    return {name, pct, total:s.total};
+  }).filter(r=>r.total>0);
+  const strengths = rows.filter(r=>r.pct>=80).map(r=>r.name);
+  const weaknesses = rows.filter(r=>r.pct<70).map(r=>r.name);
+  const rowsHtml = rows.map(r=>`<div class="scorerow"><span>${r.name}</span><span>${r.pct}%</span></div><div class="bar"><div style="width:${r.pct}%"></div></div>`).join('');
+
+  const items = Object.values(state.itemStats).filter(i=>i.correct<i.total);
+  const weakestSteps = shuffle(items).sort((a,b)=>((a.total-a.correct)/a.total) < ((b.total-b.correct)/b.total) ? 1 : -1).slice(0,4);
+  const letterAgg = {};
+  Object.values(state.itemStats).forEach(i=>{
+    if(!letterAgg[i.letter]) letterAgg[i.letter]={letter:i.letter, correct:0, total:0};
+    letterAgg[i.letter].correct += i.correct; letterAgg[i.letter].total += i.total;
+  });
+  const weakestLetters = Object.values(letterAgg).filter(i=>i.correct<i.total).sort((a,b)=>((a.total-a.correct)/a.total) < ((b.total-b.correct)/b.total) ? 1 : -1).slice(0,4);
+
+  const ps = getPS(state.lang, state.module);
+  const certified = ps>=3;
+  const fullCert = getPS(state.lang,'methodology')>=3 && getPS(state.lang,'script')>=3;
+  const isQuiz = state.mode==='quiz';
+
+  let recommendHtml = '';
+  if(isQuiz && overallAcc<90){
+    if(overallAcc<60){
+      recommendHtml = `<div class="coach show bad" style="margin-top:16px;">
+        <div class="verdict bad">${t.recommendTitle}</div>
+        <div>${t.recommendLearn}</div>
+        <div style="margin-top:10px;"><button class="btn brass" onclick="selectMode('learn')">${t.goLearn}</button></div>
+      </div>`;
+    } else {
+      recommendHtml = `<div class="coach show bad" style="margin-top:16px;">
+        <div class="verdict bad">${t.recommendTitle}</div>
+        <div>${t.recommendPractice}</div>
+        <div style="margin-top:10px;"><button class="btn brass" onclick="selectMode('practice')">${t.goPractice}</button></div>
+      </div>`;
+    }
+  }
+
+  appEl.innerHTML = `
+  ${renderCallBar()}
+  ${renderAcronymBanner()}
+  <div class="final">
+    <div class="card">
+      <div class="eyebrow">${isQuiz ? t.resultsTitle : t.practiceComplete}</div>
+      ${isQuiz ? `<div class="grade">${grade} <span style="font-size:19px;color:var(--slate);font-family:var(--sans);">· ${overallAcc}/100</span></div>` : `<div class="grade" style="font-size:34px;">${overallAcc}% <span style="font-size:16px;color:var(--slate);font-family:var(--sans);">${t.accuracy.toLowerCase()}</span></div>`}
+      <div class="stampline">XP: ${state.xp} · ${t.best} ${t.streak.toLowerCase()}: ${state.bestStreak} · ${t.time}: ${elapsedStr()} · ${state.totalCount} ${state.lang==='es'?'preguntas':'questions'}</div>
+      ${!isQuiz ? `<p style="font-size:12.5px;color:var(--slate-light);margin-top:8px;">${t.practiceNote}</p>` : ''}
+
+      ${isQuiz ? `<div class="passtrack">${[0,1,2].map(i=>`<div class="passdot ${i<ps?'filled':''}">${i<ps?'✓':i+1}</div>`).join('')}</div>
+      <div class="stampline">${t.passLabel}: ${ps}/3</div>` : ''}
+
+      ${isQuiz && certified ? `<div class="badge cert" style="display:inline-block;margin:14px 0;font-size:13px;padding:10px 16px;">${t.certTitle}<br><span style="font-weight:400;">${t.certBody}</span></div>` : ''}
+      ${isQuiz && fullCert ? `<div class="badge cert" style="display:block;margin:8px 0;font-size:13px;padding:10px 16px;">${t.fullCertTitle}</div>` : ''}
+      ${recommendHtml}
+
+      <div class="scorewrap">
+        <h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.byLevel}</h3>
+        ${rowsHtml || `<p style="color:var(--slate)">${t.noData}</p>`}
+      </div>
+
+      ${weakestSteps.length ? `<h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weakestSteps}</h3>
+        <ul class="weaklist">${weakestSteps.map(i=>`<li><span class="L">${i.letter}</span>${fmtStep(i.step)} — ${i.correct}/${i.total}</li>`).join('')}</ul>` : ''}
+      ${weakestLetters.length ? `<h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weakestLetters}</h3>
+        <ul class="weaklist">${weakestLetters.map(i=>`<li><span class="L">${i.letter}</span>${i.correct}/${i.total}</li>`).join('')}</ul>` : ''}
+
+      <div style="margin-top:14px;">
+        <h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.strengths}</h3>
+        <p>${strengths.length?strengths.join(", "):t.noStrength}</p>
+        <h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weaknesses}</h3>
+        <p>${weaknesses.length?weaknesses.join(", "):t.noWeak}</p>
+      </div>
+      ${renderBadges()}
+      <div style="margin-top:18px;">
+        <button class="btn brass wide" style="font-size:16px;padding:16px;" onclick="openReview()">${t.reviewBtn}</button>
+      </div>
+      <div class="footer-nav" style="margin-top:14px;">
+        <button class="btn ghost" onclick="goModeSel()">${t.modeBack}</button>
+        ${isQuiz ? `<button class="btn" onclick="beginTraining()">${t.runAgain}</button>` : `<button class="btn" onclick="beginTraining()">${t.practiceAgain}</button>`}
+      </div>
+      ${!isQuiz ? `<div style="margin-top:10px;"><button class="btn brass wide" onclick="selectMode('quiz')">${t.readyForQuiz}</button></div>` : ''}
+    </div>
+  </div>`;
+}
+
+function openReview(){ state.screen="review"; render(); }
+function closeReview(){ state.screen="results"; render(); }
+function renderReview(){
+  const m = state.data, t = state.t;
+  function block(list, word, color){
+    return `<div style="margin-bottom:22px;">
+      <div style="font-family:var(--serif);font-weight:700;font-size:26px;color:${color};margin-bottom:10px;">${word}</div>
+      ${list.map(i=>`
+        <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);">
+          <div style="font-family:var(--serif);font-weight:700;font-size:26px;color:${color};width:56px;text-align:center;flex-shrink:0;">${i.letter}</div>
+          <div>
+            <div style="font-size:15.5px;font-weight:600;color:var(--ink);">${fmtStep(i.step)}</div>
+            ${i.detail ? `<div style="font-size:12.5px;color:var(--slate);margin-top:3px;line-height:1.5;">${i.detail}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+  appEl.innerHTML = `
+  ${renderCallBar()}
+  ${renderAcronymBanner()}
+  <div class="final">
+    <div class="card">
+      <div class="eyebrow">${t.reviewTitle}</div>
+      <p style="color:var(--slate);font-size:14px;margin-top:0;">${t.reviewSub}</p>
+      ${block(m.connect, m.labelConnect, 'var(--ink)')}
+      <div style="text-align:center;font-size:26px;color:var(--slate-light);margin:6px 0 22px;">↓</div>
+      ${block(m.close, m.labelClose, 'var(--brass)')}
+      <div class="footer-nav">
+        <button class="btn ghost" onclick="closeReview()">${t.backToResults}</button>
+        <button class="btn brass" onclick="beginTraining()">${t.runAgain}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- PWA registration (safe no-op over file://) ---------- */
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+render();
+</script>
+</body>
+</html>
