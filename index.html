@@ -307,6 +307,9 @@ const UI = {
     reinforceLine: (m)=> `Remember: ${m.labelConnect} → ${m.labelClose}`,
     letterInWord: (word,pos,letter)=> `In <b>${word}</b>, position <b>${pos}</b> is <span class="hl">${letter}</span>. What does it stand for?`,
     stepToLetter: (word,step)=> `In <b>${word}</b>, which item does this belong to?<br><i>"${step}"</i>`,
+    positionPrompt: (word,pos)=> `In <b>${word}</b>, what belongs at position <b>${pos}</b>?`,
+    stepToStage: (word,step)=> `Which part of the call does this line belong to?<br><i>"${step}"</i>`,
+    thisLineIs:"This line belongs to",
     orderPrompt: (word)=> `Put every item of <b>${word}</b> in the correct order.`,
     missingPrompt: (word)=> `One item is missing from <b>${word}</b>. Which one belongs in the blank?`,
     recallPrompt: (word)=> `Match every item of <b>${word}</b> — from memory.`,
@@ -323,7 +326,7 @@ const UI = {
     learnDone:"You've been through the full sequence.", learnDoneBtn:"Start Practice →",
     learnOf: (n,total)=> `${n} of ${total}`,
     learnPrev:"← Back", learnNext:"Next →",
-    hintBtn:"💡 Hint", hintShown: (letter)=> `Starts with the letter <b>${letter}</b>.`,
+    hintBtn:"💡 Hint", hintShownLetter: (letter)=> `Starts with the letter <b>${letter}</b>.`, hintShownWord: (word)=> `Starts with: <b>"${word}"</b>`,
     practiceComplete:"Practice Complete", practiceNote:"This session doesn't count toward certification — it's for building the sequence in memory.",
     practiceAgain:"Practice Again", readyForQuiz:"Ready for Quiz →",
     recommendTitle:"Before your next Quiz attempt...",
@@ -366,6 +369,9 @@ const UI = {
     reinforceLine: (m)=> `Recuerda: ${m.labelConnect} → ${m.labelClose}`,
     letterInWord: (word,pos,letter)=> `En <b>${word}</b>, la posición <b>${pos}</b> es <span class="hl">${letter}</span>. ¿Qué significa?`,
     stepToLetter: (word,step)=> `En <b>${word}</b>, ¿a qué elemento pertenece esto?<br><i>"${step}"</i>`,
+    positionPrompt: (word,pos)=> `En <b>${word}</b>, ¿qué corresponde a la posición <b>${pos}</b>?`,
+    stepToStage: (word,step)=> `¿A qué parte de la llamada pertenece esta línea?<br><i>"${step}"</i>`,
+    thisLineIs:"Esta línea pertenece a",
     orderPrompt: (word)=> `Pon todos los elementos de <b>${word}</b> en el orden correcto.`,
     missingPrompt: (word)=> `Falta un elemento en <b>${word}</b>. ¿Cuál va en el espacio en blanco?`,
     recallPrompt: (word)=> `Empareja cada elemento de <b>${word}</b> — de memoria.`,
@@ -382,7 +388,7 @@ const UI = {
     learnDone:"Has pasado por toda la secuencia.", learnDoneBtn:"Comenzar Práctica →",
     learnOf: (n,total)=> `${n} de ${total}`,
     learnPrev:"← Atrás", learnNext:"Siguiente →",
-    hintBtn:"💡 Pista", hintShown: (letter)=> `Comienza con la letra <b>${letter}</b>.`,
+    hintBtn:"💡 Pista", hintShownLetter: (letter)=> `Comienza con la letra <b>${letter}</b>.`, hintShownWord: (word)=> `Comienza con: <b>"${word}"</b>`,
     practiceComplete:"Práctica Completa", practiceNote:"Esta sesión no cuenta para la certificación — es para grabar la secuencia en tu memoria.",
     practiceAgain:"Practicar de Nuevo", readyForQuiz:"Listo para el Quiz →",
     recommendTitle:"Antes de tu próximo intento de Quiz...",
@@ -464,21 +470,20 @@ function getPS(lang, mod){ return passStreaks[psKey(lang,mod)] || 0; }
 function setPS(lang, mod, val){ passStreaks[psKey(lang,mod)] = val; savePassStreak(); }
 
 /* ---------- LEVEL / QUESTION GENERATION (shared by both modules) ---------- */
-function genLevel1(data, t, randomize){
+function genLevel1(data, t, randomize, isScript){
   const qs = [];
   [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
     list.forEach((item,idx)=>{
       const distractors = pickDistractors(list, item.step, 3).map(d=>d.step);
       const options = randomize ? shuffle([item.step, ...distractors]) : [item.step, ...distractors];
       qs.push({ type:t.levelNames[0], engine:"mc",
-        prompt: t.letterInWord(word, idx+1, item.letter),
+        prompt: isScript ? t.positionPrompt(word, idx+1) : t.letterInWord(word, idx+1, item.letter),
         options, correctIndex: options.indexOf(item.step),
-        explain: `${item.letter} = ${item.step}.` + (item.detail?` ${item.detail}`:''),
+        explain: (isScript ? `${item.step}.` : `${item.letter} = ${item.step}.`) + (item.detail?` ${item.detail}`:''),
         word, trackItem:{word, letter:item.letter, step:item.step}
       });
     });
   });
-  const words = [data.labelConnect, data.labelClose];
   const decoys = shuffle(["ALPHA","BRAVO","DELTA","OMEGA","PRIME","FLOW","FASE-X","PLAN-Z"]);
   [data.labelConnect, data.labelClose].forEach((w,i)=>{
     const opts = randomize ? shuffle([w, ...decoys.slice(i*3,i*3+3)]) : [w, ...decoys.slice(i*3,i*3+3)];
@@ -490,33 +495,46 @@ function genLevel1(data, t, randomize){
   });
   return qs;
 }
-function genLevel2(data, t, randomize){
+function genLevel2(data, t, randomize, isScript){
   const qs = [];
   [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
-    const uniqueLetters = [...new Set(list.map(i=>i.letter))];
-    list.forEach(item=>{
-      const options = randomize ? shuffle(uniqueLetters) : uniqueLetters.slice();
-      qs.push({ type:t.levelNames[1], engine:"mc",
-        prompt: t.stepToLetter(word, item.step),
-        options, correctIndex: options.indexOf(item.letter),
-        explain: `"${item.step}" = ${item.letter}.` + (item.detail?` ${item.detail}`:''),
-        word, trackItem:{word, letter:item.letter, step:item.step}
+    if(isScript){
+      const uniqueStages = [...new Set(list.map(i=>i.stage))];
+      list.forEach(item=>{
+        const options = randomize ? shuffle(uniqueStages) : uniqueStages.slice();
+        qs.push({ type:t.levelNamesScript[1], engine:"mc",
+          prompt: t.stepToStage(word, item.step),
+          options, correctIndex: options.indexOf(item.stage),
+          explain: `${t.thisLineIs} "${item.stage}".`,
+          word, trackItem:{word, letter:item.letter, step:item.step}
+        });
       });
-    });
+    } else {
+      const uniqueLetters = [...new Set(list.map(i=>i.letter))];
+      list.forEach(item=>{
+        const options = randomize ? shuffle(uniqueLetters) : uniqueLetters.slice();
+        qs.push({ type:t.levelNames[1], engine:"mc",
+          prompt: t.stepToLetter(word, item.step),
+          options, correctIndex: options.indexOf(item.letter),
+          explain: `"${item.step}" = ${item.letter}.` + (item.detail?` ${item.detail}`:''),
+          word, trackItem:{word, letter:item.letter, step:item.step}
+        });
+      });
+    }
   });
   return qs;
 }
-function genLevel3(data, t){
+function genLevel3(data, t, isScript){
   return [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].map(([list,word])=>({
     type:t.levelNames[2], engine:"order",
     prompt: t.orderPrompt(word),
-    items: list.map(i=>`${i.letter} — ${i.step}`),
+    items: list.map(i=> isScript ? i.step : `${i.letter} — ${i.step}`),
     correctOrder: list.map((_,i)=>i),
-    explain: `${word}: ` + list.map(i=>i.letter).join("") + " — " + list.map(i=>i.step).join(" → "),
+    explain: isScript ? (`${word}: ` + list.map(i=>i.step).join(" → ")) : (`${word}: ` + list.map(i=>i.letter).join("") + " — " + list.map(i=>i.step).join(" → ")),
     word
   }));
 }
-function genLevel4(data, t, randomize){
+function genLevel4(data, t, randomize, isScript){
   const qs = [];
   [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
     const hideIdxs = shuffle(list.map((_,i)=>i)).slice(0,2);
@@ -527,22 +545,25 @@ function genLevel4(data, t, randomize){
       qs.push({ type:t.levelNames[3], engine:"mc-seq",
         prompt: t.missingPrompt(word),
         chips, options, correctIndex: options.indexOf(list[hideIdx].step),
-        explain: `${word} position ${hideIdx+1} (${list[hideIdx].letter}) = ${list[hideIdx].step}.` + (list[hideIdx].detail?` ${list[hideIdx].detail}`:''),
+        explain: (isScript ? `${word} position ${hideIdx+1} = ${list[hideIdx].step}.` : `${word} position ${hideIdx+1} (${list[hideIdx].letter}) = ${list[hideIdx].step}.`) + (list[hideIdx].detail?` ${list[hideIdx].detail}`:''),
         word, trackItem:{word, letter:list[hideIdx].letter, step:list[hideIdx].step}
       });
     });
   });
   return qs;
 }
-function genLevel5(data, t){
+function genLevel5(data, t, isScript){
   const qs = [];
   [ [data.connect, data.labelConnect], [data.close, data.labelClose] ].forEach(([list,word])=>{
     qs.push({ type:t.levelNames[4]||t.levelNamesScript[5], engine:"match",
       prompt: t.recallPrompt(word),
-      letters: shuffle(list.map((i,idx)=>({id:idx, text:i.letter}))),
+      letters: shuffle(list.map((i,idx)=>({id:idx, text: isScript ? String(idx+1) : i.letter}))),
       steps: shuffle(list.map((i,idx)=>({id:idx, text:i.step}))),
       pairs: list.map((i,idx)=>idx),
-      explain: `${word}: ` + list.map(i=>`${i.letter}=${i.step}`).join(", ") + (list.some(i=>i.detail)?" "+list.filter(i=>i.detail).map(i=>i.detail).join(" "):""), word
+      explain: isScript
+        ? (`${word}: ` + list.map(i=>i.step).join(", "))
+        : (`${word}: ` + list.map(i=>`${i.letter}=${i.step}`).join(", ") + (list.some(i=>i.detail)?" "+list.filter(i=>i.detail).map(i=>i.detail).join(" "):"")),
+      word
     });
   });
   qs.push({ type:"Recall", engine:"fill",
@@ -569,16 +590,16 @@ function genObjections(lang, t, randomize){
 function buildLevels(data, t, isScript, lang, quizMode){
   const names = isScript ? t.levelNamesScript : t.levelNames;
   const levels = [
-    {id:1, name:names[0], questions: quizMode ? shuffle(genLevel1(data,t,true)) : genLevel1(data,t,false)},
-    {id:2, name:names[1], questions: quizMode ? shuffle(genLevel2(data,t,true)) : genLevel2(data,t,false)},
-    {id:3, name:names[2], questions: quizMode ? shuffle(genLevel3(data,t)) : genLevel3(data,t)},
-    {id:4, name:names[3], questions: quizMode ? shuffle(genLevel4(data,t,true)) : genLevel4(data,t,false)}
+    {id:1, name:names[0], questions: quizMode ? shuffle(genLevel1(data,t,true,isScript)) : genLevel1(data,t,false,isScript)},
+    {id:2, name:names[1], questions: quizMode ? shuffle(genLevel2(data,t,true,isScript)) : genLevel2(data,t,false,isScript)},
+    {id:3, name:names[2], questions: quizMode ? shuffle(genLevel3(data,t,isScript)) : genLevel3(data,t,isScript)},
+    {id:4, name:names[3], questions: quizMode ? shuffle(genLevel4(data,t,true,isScript)) : genLevel4(data,t,false,isScript)}
   ];
   if(isScript){
     levels.push({id:5, name:names[4], questions: quizMode ? shuffle(genObjections(lang,t,true)) : genObjections(lang,t,false)});
-    levels.push({id:6, name:names[5], questions: quizMode ? shuffle(genLevel5(data,t)) : genLevel5(data,t)});
+    levels.push({id:6, name:names[5], questions: quizMode ? shuffle(genLevel5(data,t,isScript)) : genLevel5(data,t,isScript)});
   } else {
-    levels.push({id:5, name:names[4], questions: quizMode ? shuffle(genLevel5(data,t)) : genLevel5(data,t)});
+    levels.push({id:5, name:names[4], questions: quizMode ? shuffle(genLevel5(data,t,isScript)) : genLevel5(data,t,isScript)});
   }
   if(quizMode){
     // Quiz mode: interleave every question type together into one continuous, fully
@@ -762,7 +783,7 @@ function renderLearn(){
       ${isFirstOfPhase ? `<div style="font-family:var(--serif);font-weight:700;font-size:22px;color:${color};margin-bottom:14px;">${c.phase}</div>` : ''}
       ${c.stage ? `<div class="qtype-pill">${c.stage}</div>` : ''}
       <div style="display:flex;align-items:center;gap:20px;margin:10px 0 18px;">
-        <div style="font-family:var(--serif);font-weight:700;font-size:56px;color:${color};line-height:1;">${c.letter}</div>
+        <div style="font-family:var(--serif);font-weight:700;font-size:56px;color:${color};line-height:1;">${state.module==='script' ? c.pos : c.letter}</div>
         <div style="font-size:20px;font-weight:600;color:var(--ink);line-height:1.35;">${fmtStep(c.step)}</div>
       </div>
       ${c.detail ? `<div style="font-size:14px;color:var(--slate);line-height:1.6;background:var(--paper);padding:12px 14px;border-radius:8px;">${c.detail}</div>` : ''}
@@ -854,7 +875,9 @@ function renderQuestionBody(q){
   if(q.engine==="mc-seq"){
     body += `<div class="seqrow">` + q.chips.map(c=> c.blank
       ? `<div class="seqchip blank">?</div>`
-      : `<div class="seqchip"><span class="L">${c.letter}</span> ${fmtStep(c.step)}</div>`
+      : (state.module==='script'
+          ? `<div class="seqchip">${fmtStep(c.step)}</div>`
+          : `<div class="seqchip"><span class="L">${c.letter}</span> ${fmtStep(c.step)}</div>`)
     ).join('') + `</div>`;
   }
   return body;
@@ -884,7 +907,10 @@ function renderLevel(){
       </div>
       <div id="matchStatus" style="margin-top:10px;font-size:12px;color:var(--slate);"></div>`;
   }
-  const hintTarget = q.trackItem ? q.trackItem.letter : (q.answer ? q.answer[0] : null);
+  const isScriptMod = state.module==='script';
+  const hintTarget = q.trackItem
+    ? (isScriptMod ? q.trackItem.step.split(' ')[0].replace(/^[^\wÀ-ÿ]+/,'') : q.trackItem.letter)
+    : (q.answer ? q.answer[0] : null);
   const hintHtml = (state.mode==='practice' && hintTarget) ? `
     <div style="margin-top:10px;">
       <button class="btn ghost" onclick="showHint('${hintTarget.replace(/'/g,"\\'")}')" ${state.hintShown?'disabled':''}>${t.hintBtn}</button>
@@ -959,10 +985,11 @@ function showCoach(correct, explain, correctText){
   pulseBar(correct);
 }
 function lockOptions(){ document.querySelectorAll('.opt').forEach(b=>{ b.disabled=true; }); }
-function showHint(letter){
+function showHint(hintVal){
   state.hintShown = true;
   const box = document.getElementById('hintBox');
-  if(box) box.innerHTML = state.t.hintShown(letter);
+  const isScriptMod = state.module==='script';
+  if(box) box.innerHTML = isScriptMod ? state.t.hintShownWord(hintVal) : state.t.hintShownLetter(hintVal);
   const btn = document.querySelector('.btn.ghost[onclick^="showHint"]');
   if(btn) btn.disabled = true;
 }
@@ -1134,8 +1161,8 @@ function renderResults(){
       </div>
 
       ${weakestSteps.length ? `<h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weakestSteps}</h3>
-        <ul class="weaklist">${weakestSteps.map(i=>`<li><span class="L">${i.letter}</span>${fmtStep(i.step)} — ${i.correct}/${i.total}</li>`).join('')}</ul>` : ''}
-      ${weakestLetters.length ? `<h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weakestLetters}</h3>
+        <ul class="weaklist">${weakestSteps.map(i=>`<li>${state.module==='script' ? '' : `<span class="L">${i.letter}</span>`}${fmtStep(i.step)} — ${i.correct}/${i.total}</li>`).join('')}</ul>` : ''}
+      ${(state.module!=='script' && weakestLetters.length) ? `<h3 style="font-size:14px;color:var(--slate);text-transform:uppercase;letter-spacing:1px;">${t.weakestLetters}</h3>
         <ul class="weaklist">${weakestLetters.map(i=>`<li><span class="L">${i.letter}</span>${i.correct}/${i.total}</li>`).join('')}</ul>` : ''}
 
       <div style="margin-top:14px;">
@@ -1162,11 +1189,12 @@ function closeReview(){ state.screen="results"; render(); }
 function renderReview(){
   const m = state.data, t = state.t;
   function block(list, word, color){
+    const isScriptMod = state.module==='script';
     return `<div style="margin-bottom:22px;">
       <div style="font-family:var(--serif);font-weight:700;font-size:26px;color:${color};margin-bottom:10px;">${word}</div>
-      ${list.map(i=>`
+      ${list.map((i,idx)=>`
         <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);">
-          <div style="font-family:var(--serif);font-weight:700;font-size:26px;color:${color};width:56px;text-align:center;flex-shrink:0;">${i.letter}</div>
+          <div style="font-family:var(--serif);font-weight:700;font-size:26px;color:${color};width:56px;text-align:center;flex-shrink:0;">${isScriptMod ? idx+1 : i.letter}</div>
           <div>
             <div style="font-size:15.5px;font-weight:600;color:var(--ink);">${fmtStep(i.step)}</div>
             ${i.detail ? `<div style="font-size:12.5px;color:var(--slate);margin-top:3px;line-height:1.5;">${i.detail}</div>` : ''}
