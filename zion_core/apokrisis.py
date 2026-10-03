@@ -61,7 +61,7 @@ def close_apokrisis(response: Apokrisis, cronicas_sink=None):
     """Close an ANGEL response into CRONICAS and HOLY GHOST review evidence."""
     from .cronicas import cronicas_emit_apokrisis
     from .holy_ghost import holy_ghost_receive
-    event = cronicas_emit_apokrisis(response, cronicas_sink)
+    event = cronicas_emit_apokrisis(response, cronicas_sink) if record_response_event else None
     learning = holy_ghost_receive(response)
     return event, learning
 
@@ -82,6 +82,7 @@ def omar_close_and_learn(
     conflict: bool = False,
     supersede: bool = False,
     auto_write: bool = True,
+    record_response_event: bool = True,
 ):
     """OMAR entrypoint: close ANGEL work, evaluate learning, and persist eligible knowledge."""
     from pathlib import Path
