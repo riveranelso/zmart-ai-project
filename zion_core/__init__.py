@@ -18,7 +18,7 @@ from .holy_ghost import (
 )
 from .grapho import GraphoResult, grapho_render, grapho_write
 from .omar import MissionContext, OmarMissionDispatch, AngelExecutionContext, prepare_mission, dispatch_mission, execution_contexts, LearningIntent, receive_apokrisis, receive_owner_correction
-from .biblia import BibliaContext, retrieve_biblia
+from .biblia import BibliaDocument, BibliaContext, retrieve_biblia, SCOPE_PRECEDENCE
 from .durability import DurabilityAssessment, assess_durability
 from .correction_memory import CorrectionMemory, correction_fingerprint
 from .persistence import CronicasJsonlSink, PersistentCorrectionMemory
@@ -34,7 +34,7 @@ __all__ = [
     "prepare_learning_cycle", "persist_learning_cycle",
     "GraphoResult", "grapho_render", "grapho_write",
     "MissionContext", "OmarMissionDispatch", "AngelExecutionContext", "prepare_mission", "dispatch_mission", "execution_contexts", "LearningIntent", "receive_apokrisis", "receive_owner_correction",
-    "BibliaContext", "retrieve_biblia",
+    "BibliaDocument", "BibliaContext", "retrieve_biblia", "SCOPE_PRECEDENCE",
     "DurabilityAssessment", "assess_durability",
     "CorrectionMemory", "correction_fingerprint",
     "CronicasJsonlSink", "PersistentCorrectionMemory",
