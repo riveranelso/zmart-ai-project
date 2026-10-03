@@ -19,7 +19,9 @@ class SecurityContext:
 def seraphim(mission: dict[str, Any], context_refs: tuple[str, ...]) -> GateResult:
     if not context_refs:
         return GateResult("SERAPHIM", False, "CANONICAL_CONTEXT_MISSING")
-    if mission.get("integrity_conflict") is True:\n        return GateResult("SERAPHIM", False, "INTEGRITY_CONFLICT")\n    return GateResult("SERAPHIM", True, "INTEGRITY_OK")
+    if mission.get("integrity_conflict") is True:
+        return GateResult("SERAPHIM", False, "INTEGRITY_CONFLICT")
+    return GateResult("SERAPHIM", True, "INTEGRITY_OK")
 
 def cherubim(mission: dict[str, Any], isolation_key: str, security: SecurityContext | None) -> GateResult:
     if security is None or security.authenticated is not True or not security.principal_id:
@@ -29,12 +31,18 @@ def cherubim(mission: dict[str, Any], isolation_key: str, security: SecurityCont
     return GateResult("CHERUBIM", True, "BOUNDARY_OK")
 
 def thrones(mission: dict[str, Any], security: SecurityContext | None) -> GateResult:
-    if mission.get("policy_conflict") is True:\n        return GateResult("THRONES", False, "POLICY_CONFLICT")\n    if mission.get("human_approval_required") is True and security is not None and not security.human_approval_granted:
+    if mission.get("policy_conflict") is True:
+        return GateResult("THRONES", False, "POLICY_CONFLICT")
+    if mission.get("human_approval_required") is True and security is not None and not security.human_approval_granted:
         return GateResult("THRONES", False, "HUMAN_APPROVAL_REQUIRED")
     return GateResult("THRONES", True, "POLICY_OK")
 
 def powers(mission: dict[str, Any]) -> GateResult:
-    if mission.get("runtime_enabled") is False:\n        return GateResult("POWERS", False, "RUNTIME_DISABLED")\n    if mission.get("kill_switch") is True:\n        return GateResult("POWERS", False, "KILL_SWITCH_ACTIVE")\n    if mission.get("risk_level", "low") in {"high", "critical"}:
+    if mission.get("runtime_enabled") is False:
+        return GateResult("POWERS", False, "RUNTIME_DISABLED")
+    if mission.get("kill_switch") is True:
+        return GateResult("POWERS", False, "KILL_SWITCH_ACTIVE")
+    if mission.get("risk_level", "low") in {"high", "critical"}:
         return GateResult("POWERS", False, "RISK_GATE")
     return GateResult("POWERS", True, "RUNTIME_OK")
 
