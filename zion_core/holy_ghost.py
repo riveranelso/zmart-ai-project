@@ -155,6 +155,7 @@ def propose_biblia_promotion(
     *,
     existing_rule_candidates: tuple[str, ...] = (),
     conflict: bool = False,
+    supersede: bool = False,
 ) -> PromotionDecision:
     """Produce a deterministic BIBLIA promotion decision without writing files."""
     if not destination.ready_for_review or not destination.destination_ref:
@@ -237,6 +238,7 @@ def prepare_learning_cycle(
         proposal,destination,existing_text,
         existing_rule_candidates=existing_rule_candidates,
         conflict=conflict,
+        supersede=supersede,
     )
     return LearningCycle(signal,proposal,destination,promotion,None)
 
