@@ -91,6 +91,36 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(target.read_text(encoding="utf-8"),original)
             self.assertFalse(cronicas.exists())
 
+    def test_direct_reconciliation_rejects_non_mutating_action(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Path(tmp)/"WORKFLOWS.md"
+            rule="Persist this exact durable rule."
+            original="# Workflows\n\n## zmart-consumer-rights\n- "+rule+"\n"
+            target.write_text(original,encoding="utf-8")
+            cronicas=Path(tmp)/"cronicas.jsonl"
+            decision=self.decision(rule)
+            decision.action="NO_CHANGE"
+            result=grapho_reconcile_committed_mutation(
+                target,decision,CronicasJsonlSink(cronicas),
+            )
+            self.assertEqual(result.reason,"RECONCILIATION_ACTION_NOT_WRITABLE")
+            self.assertFalse(cronicas.exists())
+
+    def test_direct_reconciliation_rejects_multiline_rule_injection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Path(tmp)/"WORKFLOWS.md"
+            target.write_text(
+                "# Workflows\n\n## zmart-consumer-rights\n- Safe rule.\n- Injected rule.\n",
+                encoding="utf-8",
+            )
+            cronicas=Path(tmp)/"cronicas.jsonl"
+            decision=self.decision("Safe rule.\n- Injected rule.")
+            result=grapho_reconcile_committed_mutation(
+                target,decision,CronicasJsonlSink(cronicas),
+            )
+            self.assertEqual(result.reason,"RECONCILIATION_INVALID_RULES")
+            self.assertFalse(cronicas.exists())
+
     def test_reconciliation_waits_for_active_biblia_writer_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
