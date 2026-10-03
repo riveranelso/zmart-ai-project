@@ -50,6 +50,17 @@ def _scope_for_ref(ref: str)->str:
     return _REF_SCOPE.get(Path(ref).name,"GLOBAL")
 
 
+def _business_section(text: str, business_id: str) -> str:
+    """Return only the named business section when a shared BIBLIA document is segmented."""
+    header=f"## {business_id}"
+    if header not in text:
+        return text
+    start=text.index(header)
+    next_section=text.find("\n## ",start+len(header))
+    end=len(text) if next_section==-1 else next_section
+    return text[start:end].rstrip()+"\n"
+
+
 def retrieve_biblia(
     business_id: str,
     *,
@@ -67,7 +78,7 @@ def retrieve_biblia(
             scope=_scope_for_ref(ref)
             documents.append(BibliaDocument(
                 ref=ref,
-                text=path.read_text(encoding="utf-8"),
+                text=_business_section(path.read_text(encoding="utf-8"),business_id),
                 scope=scope,
                 precedence=SCOPE_PRECEDENCE[scope],
             ))
