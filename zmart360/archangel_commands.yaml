@@ -6,7 +6,7 @@ hierarchy:
 
 commands:
   sanmiguel:
-    display_name: "SANMIGUEL COMMAND"
+    display_name: "SAN MIGUEL COMMAND"
     mission: "Defense & Response"
     source_note: "Revelation 12:7 explicitly describes San Miguel and his angels; software mapping is metaphorical."
     hosts:
