@@ -25,6 +25,7 @@ class CronicaEvent:
     uncertainty_count:int=0
     correction_count:int=0
     dispatch_fingerprint:str|None=None
+    response_fingerprint:str|None=None
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 CronicasSink = Callable[[CronicaEvent], None]
@@ -104,6 +105,20 @@ class CronicasMemorySink:
     def events(self)->tuple[CronicaEvent,...]:
         return tuple(self._events)
 
+def build_apokrisis_fingerprint(response:Any)->str:
+    """Hash complete response identity without persisting response content."""
+    identity={
+        "angel_id":response.angel_id,"mission_id":response.mission_id,
+        "status":response.status,"business_id":response.business_id,
+        "correlation_id":response.correlation_id,
+        "evidence_refs":list(response.evidence_refs),
+        "uncertainty":list(response.uncertainty),
+        "correction_signals":list(response.correction_signals),
+        "output_ref":response.output_ref,"error_code":response.error_code,
+    }
+    encoded=json.dumps(identity,sort_keys=True,separators=(",",":"),ensure_ascii=False).encode("utf-8")
+    return sha256(encoded).hexdigest()
+
 def build_apokrisis_event(response:Any)->CronicaEvent:
     """Convert an APOKRISIS into privacy-bounded historical metadata."""
     return CronicaEvent(
@@ -120,6 +135,7 @@ def build_apokrisis_event(response:Any)->CronicaEvent:
         evidence_refs=tuple(response.evidence_refs),
         uncertainty_count=len(response.uncertainty),
         correction_count=len(response.correction_signals),
+        response_fingerprint=build_apokrisis_fingerprint(response),
     )
 
 def cronicas_emit_apokrisis(response:Any,sink:CronicasSink|None=None)->CronicaEvent:
