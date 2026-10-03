@@ -90,7 +90,7 @@ def cronicas_emit_apokrisis(response:Any,sink:CronicasSink|None=None)->CronicaEv
     return event
 
 
-def build_grapho_event(decision:Any,result:Any)->CronicaEvent:
+def build_grapho_event(decision:Any,result:Any,origin_angel_id:str|None=None)->CronicaEvent:
     """Record BIBLIA mutation metadata without storing rule contents."""
     return CronicaEvent(
         event_id=str(uuid4()),
@@ -100,13 +100,14 @@ def build_grapho_event(decision:Any,result:Any)->CronicaEvent:
         action=str(result.action),
         reason=str(result.reason),
         business_id=str(decision.business_id),
+        angel_ids=(str(origin_angel_id),) if origin_angel_id else (),
         status="RECONCILED" if result.reason=="RECONCILED_ALREADY_COMMITTED" else ("CHANGED" if result.changed else "UNCHANGED"),
         evidence_refs=(str(result.destination_ref),) if result.destination_ref else (),
         correction_count=len(getattr(decision,"proposed_rules",()) or ()),
     )
 
-def cronicas_emit_grapho(decision:Any,result:Any,sink:CronicasSink|None=None)->CronicaEvent:
-    event=build_grapho_event(decision,result)
+def cronicas_emit_grapho(decision:Any,result:Any,sink:CronicasSink|None=None,*,origin_angel_id:str|None=None)->CronicaEvent:
+    event=build_grapho_event(decision,result,origin_angel_id)
     if sink is not None:
         sink(event)
     return event
