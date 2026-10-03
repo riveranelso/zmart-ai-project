@@ -203,9 +203,11 @@ class OmarRuntime:
         if not all(isinstance(value,str) and value.strip()
                    for value in (business_id,mission_id,destination_ref)):
             raise ValueError("RECONCILIATION_IDENTITY_REQUIRED")
-        bid=business_id.strip()
-        mid=mission_id.strip()
-        ref=destination_ref.strip()
+        if business_id != business_id.strip() or mission_id != mission_id.strip() or destination_ref != destination_ref.strip():
+            raise ValueError("RECONCILIATION_IDENTITY_NONCANONICAL")
+        bid=business_id
+        mid=mission_id
+        ref=destination_ref
         action=getattr(decision,"action",None)
         if action not in {"ADD","UPDATE","SUPERSEDE"}:
             raise ValueError("RECONCILIATION_ACTION_NOT_MUTATING")
@@ -250,7 +252,11 @@ class OmarRuntime:
     ):
         if not isinstance(correction_id,str) or not correction_id.strip():
             raise ValueError("CORRECTION_ID_REQUIRED")
-        cid=correction_id.strip()
+        if correction_id != correction_id.strip():
+            raise ValueError("CORRECTION_ID_NONCANONICAL")
+        if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
+            raise ValueError("BUSINESS_ID_REQUIRED")
+        cid=correction_id
         with self.operation_lock.hold(business_id,"OWNER_CORRECTION",cid):
             prior=self.history(
                 business_id=business_id,
