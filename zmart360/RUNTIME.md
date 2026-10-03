@@ -44,6 +44,7 @@ HOLY GHOST classifies durable lessons to the narrowest valid scope. BIBLIA retri
 
 ### Normal BIBLIA write boundary
 - HOLY GHOST resolves a learning destination through SANPEDRO; OMAR resolves that destination against the configured `biblia_root` before GRAPHO is allowed to write.
+- Canonical destination matching uses the exact filename basename for the requested scope. A suffix lookalike is rejected, and more than one registered ref with the same canonical basename is `DESTINATION_AMBIGUOUS` rather than first-match-wins.
 - The resolved destination must remain inside `biblia_root`. Registry traversal and authorized-name symlinks that resolve outside the root fail closed with no BIBLIA mutation.
 - The ANGEL_RESPONSE remains valid historical evidence when a later BIBLIA destination check fails; no `BIBLIA_MUTATION` event is emitted for the rejected write.
 - GRAPHO is the deterministic file materializer, not the business registry or root authority; direct low-level use must be supplied an already-authorized target by its caller.
