@@ -212,9 +212,46 @@ class OmarRuntime:
                 mission_id=cid,
             )
             if any("OMAR.OWNER-INPUT" in event.angel_ids for event in prior):
+                mutation_history=self.history(
+                    business_id=business_id,event_type="BIBLIA_MUTATION",mission_id=cid,
+                )
+                auto_write=True if learning is None else learning.auto_write
+                if not auto_write or mutation_history:
+                    return OmarCloseResult(
+                        processed=False,
+                        reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+                    )
+                recovery_learning=learning
+                if recovery_learning is None:
+                    from .durability import assess_durability
+                    assessment=assess_durability(
+                        correction,
+                        repeated_correction=self.correction_memory.count(
+                            business_id,correction
+                        ) >= 2,
+                    )
+                    recovery_learning=LearningIntent(
+                        explicit_durable_instruction=(
+                            assessment.reason=="EXPLICIT_DURABLE_LANGUAGE"
+                        ),
+                        repeated_correction=assessment.repeated_correction,
+                    )
+                event,cycle=receive_owner_correction(
+                    correction,
+                    business_id=business_id,
+                    biblia_root=self.biblia_root,
+                    registry_path=self.registry_path,
+                    cronicas_sink=self.cronicas_sink,
+                    learning=recovery_learning,
+                    correction_id=cid,
+                    correction_memory=self.correction_memory,
+                    record_response_event=False,
+                )
                 return OmarCloseResult(
-                    processed=False,
-                    reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+                    processed=True,
+                    reason="OWNER_CORRECTION_LEARNING_RECOVERED",
+                    event=event,
+                    cycle=cycle,
                 )
             event,cycle=receive_owner_correction(
                 correction,
