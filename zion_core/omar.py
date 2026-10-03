@@ -185,6 +185,8 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
             raise ValueError("ANGEL_CONTEXT_ISOLATION_MISMATCH")
         if commission.mission_id != getattr(decision,"mission_id",None):
             raise ValueError("ANGEL_CONTEXT_MISSION_MISMATCH")
+        if commission.scope != getattr(decision,"scope",None):
+            raise ValueError("ANGEL_CONTEXT_SCOPE_MISMATCH")
         if commission.command != getattr(decision,"command",None) or commission.host != getattr(decision,"host",None):
             raise ValueError("ANGEL_CONTEXT_ROUTE_MISMATCH")
         if tuple(commission.context_refs) != tuple(dispatch.context.biblia.refs):
