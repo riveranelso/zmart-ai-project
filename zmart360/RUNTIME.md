@@ -95,7 +95,7 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 
 ### Response-only learning recovery
 - `ANGEL_RESPONSE` is durable evidence that an APOKRISIS arrived; it is not by itself proof that a durable learning cycle completed.
-- For durable learning intent, a retry that finds the same business + mission + ANGEL response but no `BIBLIA_MUTATION` may re-evaluate HOLY GHOST from the caller-supplied APOKRISIS while suppressing a duplicate `ANGEL_RESPONSE`.
+- For durable learning intent, a retry that finds the same business + mission + ANGEL response may re-evaluate HOLY GHOST from the caller-supplied APOKRISIS while suppressing a duplicate `ANGEL_RESPONSE`; mutation evidence from a sibling ANGEL in the same mission must not suppress this ANGEL's recovery.
 - If a mutation already exists, or the response has no correction signals, auto-write is disabled, or the learning intent is not durable, the retry remains the normal idempotent no-op.
 - Owner-correction recovery follows the same rule but MUST NOT call correction-memory `observe()` again for the same `correction_id`; it reads the existing fingerprint count so a technical retry cannot become a second human correction.
 - Recovery uses the existing APOKRISIS supplied on retry and stores no raw correction text in CRONICAS.
