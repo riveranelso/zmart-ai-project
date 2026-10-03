@@ -72,8 +72,9 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     original_section=section
     suffix=text[section_end:]
     candidate_lines=tuple(_rule_line(old) for old in candidates)
-    section_lines=section.splitlines()
-    if not all(line in section_lines for line in candidate_lines):
+    section_lines=section.splitlines(keepends=True)
+    line_bodies=tuple(line.rstrip("\r\n") for line in section_lines)
+    if not all(line in line_bodies for line in candidate_lines):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_CANDIDATE_NOT_FOUND" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND")
     rendered_lines=list(section_lines)
@@ -81,7 +82,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     for old_line,new_rule in zip(candidate_lines,rules):
         match_index=next(
             (idx for idx,line in enumerate(rendered_lines)
-             if idx not in used_indexes and line==old_line),
+             if idx not in used_indexes and line.rstrip("\r\n")==old_line),
             None,
         )
         if match_index is None:
@@ -90,11 +91,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
                 "SUPERSESSION_CANDIDATE_NOT_FOUND"
                 if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND",
             )
-        rendered_lines[match_index]=_rule_line(new_rule)
+        current=rendered_lines[match_index]
+        ending="\r\n" if current.endswith("\r\n") else ("\n" if current.endswith("\n") else "")
+        rendered_lines[match_index]=_rule_line(new_rule)+ending
         used_indexes.add(match_index)
-    section="\n".join(rendered_lines)
-    if original_section.endswith("\n"):
-        section+="\n"
+    section="".join(rendered_lines)
     if section==original_section:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "RULES_ALREADY_PRESENT")
