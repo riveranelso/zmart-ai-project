@@ -23,6 +23,20 @@ def _section_header(business_id: str) -> str:
 def _rule_line(rule: str) -> str:
     return f"- {rule.strip()}"
 
+def _section_bounds(text: str, business_id: str) -> tuple[int, int] | None:
+    header=_section_header(business_id)
+    offset=0
+    start=None
+    for line in text.splitlines(keepends=True):
+        body=line.rstrip("\r\n")
+        if start is None:
+            if body==header:
+                start=offset+len(line)
+        elif body.startswith("## "):
+            return start,offset
+        offset+=len(line)
+    return (start,len(text)) if start is not None else None
+
 def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     """Render a deterministic BIBLIA mutation. Does not perform external I/O."""
     if decision.action not in {"ADD", "UPDATE", "SUPERSEDE"}:
@@ -51,12 +65,14 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     text=existing_text.rstrip() if decision.action=="ADD" else existing_text
     header=_section_header(decision.business_id)
     if decision.action=="ADD":
-        if header in text:
-            start=text.index(header)+len(header)
-            next_section=text.find("\n## ",start)
-            insert_at=len(text) if next_section==-1 else next_section
+        bounds=_section_bounds(text,decision.business_id)
+        if bounds is not None:
+            start,insert_at=bounds
             section=text[start:insert_at]
-            missing=tuple(rule for rule in rules if _rule_line(rule) not in section)
+            section_lines=tuple(
+                line.rstrip("\r\n") for line in section.splitlines(keepends=True)
+            )
+            missing=tuple(rule for rule in rules if _rule_line(rule) not in section_lines)
             if not missing:
                 return GraphoResult("ADD",decision.destination_ref,False,existing_text,
                                     "RULES_ALREADY_PRESENT")
@@ -77,12 +93,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if len(candidates) != len(rules):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_RULE_COUNT_MISMATCH" if decision.action=="SUPERSEDE" else "UPDATE_RULE_COUNT_MISMATCH")
-    if header not in text:
+    bounds=_section_bounds(text,decision.business_id)
+    if bounds is None:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "BUSINESS_SECTION_NOT_FOUND")
-    section_start=text.index(header)+len(header)
-    next_section=text.find("\n## ",section_start)
-    section_end=len(text) if next_section==-1 else next_section
+    section_start,section_end=bounds
     prefix=text[:section_start]
     section=text[section_start:section_end]
     original_section=section
