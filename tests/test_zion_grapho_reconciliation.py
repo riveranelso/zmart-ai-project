@@ -175,6 +175,45 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(result.reason,"RECONCILIATION_INVALID_RULES")
             self.assertFalse(cronicas.exists())
 
+
+    def test_update_reconciliation_requires_old_rule_to_be_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            target.write_text(
+                "# Workflows\n\n## zmart-consumer-rights\n- Old rule.\n- New rule.\n",
+                encoding="utf-8",
+            )
+            cronicas=root/"cronicas.jsonl"
+            decision=self.decision("New rule.")
+            decision.action="UPDATE"
+            decision.matched_rules=("Old rule.",)
+            result=grapho_reconcile_committed_mutation(
+                target,decision,CronicasJsonlSink(cronicas),
+            )
+            self.assertEqual(result.reason,"RECONCILIATION_FINAL_STATE_NOT_PROVEN")
+            self.assertFalse(cronicas.exists())
+
+    def test_update_reconciliation_accepts_proven_final_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            target.write_text(
+                "# Workflows\n\n## zmart-consumer-rights\n- New rule.\n",
+                encoding="utf-8",
+            )
+            cronicas=root/"cronicas.jsonl"
+            decision=self.decision("New rule.")
+            decision.action="UPDATE"
+            decision.matched_rules=("Old rule.",)
+            result=grapho_reconcile_committed_mutation(
+                target,decision,CronicasJsonlSink(cronicas),
+            )
+            self.assertEqual(result.reason,"RECONCILED_ALREADY_COMMITTED")
+            events=read_cronicas(cronicas,event_type="BIBLIA_MUTATION")
+            self.assertEqual(len(events),1)
+            self.assertEqual(events[0].status,"RECONCILED")
+
     def test_reconciliation_waits_for_active_biblia_writer_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
