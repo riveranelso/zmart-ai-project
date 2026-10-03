@@ -28,7 +28,17 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if decision.action not in {"ADD", "UPDATE", "SUPERSEDE"}:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "PROMOTION_ACTION_NOT_WRITABLE")
-    rules=tuple(x.strip() for x in decision.proposed_rules if isinstance(x,str) and x.strip())
+    raw_rules=tuple(
+        x for x in decision.proposed_rules if isinstance(x,str) and x.strip()
+    )
+    raw_candidates=tuple(
+        x for x in getattr(decision,"matched_rules",())
+        if isinstance(x,str) and x.strip()
+    )
+    if any("\n" in value or "\r" in value for value in raw_rules+raw_candidates):
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "MULTILINE_RULE_REJECTED")
+    rules=tuple(x.strip() for x in raw_rules)
     if not rules:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "NO_RULES_TO_WRITE")
@@ -54,7 +64,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
             block="\n".join(_rule_line(x) for x in rules)
             content=text+"\n\n"+header+"\n"+block+"\n"
         return GraphoResult("ADD",decision.destination_ref,content!=existing_text,content,"RULES_APPENDED")
-    candidates=tuple(x.strip() for x in decision.matched_rules if isinstance(x,str) and x.strip())
+    candidates=tuple(x.strip() for x in raw_candidates)
     if not candidates:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_CANDIDATE_REQUIRED" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_REQUIRED")
