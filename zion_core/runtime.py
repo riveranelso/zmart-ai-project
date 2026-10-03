@@ -59,8 +59,24 @@ class OmarRuntime:
                 prior=self.history(business_id=bid,event_type="MISSION_DECISION",mission_id=mid)
                 if prior:
                     from .omar import prepare_mission, OmarMissionDispatch
-                    context=prepare_mission(bid,biblia_root=self.biblia_root,registry_path=self.registry_path)
                     event=prior[-1]
+                    # Reusing a mission id with different routing identity is
+                    # not an idempotent retry; fail closed instead of silently
+                    # returning the earlier decision.
+                    requested_intent=mission.get("intent")
+                    routes={}
+                    if isinstance(requested_intent,str):
+                        from .router import load_derekh
+                        routes=load_derekh(self.routes_path)
+                    expected_route=routes.get(requested_intent)
+                    if expected_route is not None:
+                        expected_command,expected_host=expected_route
+                        if (
+                            (event.command is not None and event.command != expected_command)
+                            or (event.host is not None and event.host != expected_host)
+                        ):
+                            raise ValueError("MISSION_ID_REUSE_CONFLICT")
+                    context=prepare_mission(bid,biblia_root=self.biblia_root,registry_path=self.registry_path)
                     decision=DispatchDecision(
                         mission_id=event.mission_id,action="IDEMPOTENT_NOOP",
                         reason="MISSION_ALREADY_DECIDED",business_id=event.business_id,
