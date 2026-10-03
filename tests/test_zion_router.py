@@ -11,7 +11,7 @@ class ZionRouterTests(unittest.TestCase):
         r=route_mission(self.mission())
         self.assertEqual(r.action,"DISPATCH")
         self.assertEqual(r.reason,"ALL_GATES_PASSED")
-        self.assertEqual(r.host,"MICHAEL.HOST-01")
+        self.assertEqual(r.host,"SANMIGUEL.HOST-01")
 
     def test_unknown_business_stops_before_dispatch(self):
         self.assertEqual(route_mission(self.mission(business_id="unknown")).reason,"BUSINESS_NOT_REGISTERED")
