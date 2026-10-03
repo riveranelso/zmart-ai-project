@@ -61,5 +61,7 @@ Before adding a new ZION runtime component for development orchestration, evalua
 
 Repository development specialists live in `.github/agents/`. Reuse `.agents/skills/zion-development/SKILL.md` for the shared ZION development contract. Prefer isolated/parallel specialist review where supported, but keep production deploy, main-branch merge, destructive changes, secrets, permissions, and customer-data operations behind explicit owner approval.
 
+For substantial ZION engineering work, load `.agents/skills/zion-orchestration/SKILL.md`. Its default path is native-agent-first: Architect + Adversarial discovery in parallel where supported, Builder implementation, CI + independent Reviewer verification, then automatic repair. Do not serialize all specialist roles through one context when the active platform can delegate them independently.
+
 Do not move BIBLIA, CRONICAS, HOLY GHOST, SAN PEDRO business isolation, or Nelson-specific durable operating knowledge into generic platform agents merely to reduce code; those are ZION-owned semantics.
 
