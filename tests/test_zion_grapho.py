@@ -272,5 +272,18 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"INVALID_PROPOSED_RULES")
         self.assertEqual(result.content,existing)
 
+    def test_update_rejects_malformed_matched_rules_collection(self):
+        original="# BIBLIA\n\n## los-duros\n- Old rule.\n"
+        for malformed in ("Old rule.", ("Old rule.", 123)):
+            with self.subTest(matched_rules=malformed):
+                decision=SimpleNamespace(
+                    action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+                    proposed_rules=("New rule.",),matched_rules=malformed,
+                )
+                result=grapho_render(original,decision)
+                self.assertFalse(result.changed)
+                self.assertEqual(result.reason,"INVALID_MATCHED_RULES")
+                self.assertEqual(result.content,original)
+
 if __name__=="__main__":
     unittest.main()
