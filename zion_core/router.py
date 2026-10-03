@@ -27,12 +27,12 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
     path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False
     for raw in path.read_text(encoding="utf-8").splitlines():
         line=raw.strip()
-        if line=="routes:":
+        if raw=="routes:":
             in_routes=True
             continue
         if not in_routes:
             continue
-        if line=="fallback:":
+        if raw=="fallback:":
             break
         if line.startswith("- intent:"):
             if intent and command and host:
