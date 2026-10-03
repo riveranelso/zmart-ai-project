@@ -44,4 +44,16 @@ class AngelAllocatorTests(unittest.TestCase):
                      context_refs=("BIBLIA.md",))
         self.assertEqual(commissions[0].payload_ref,"payload-1")
 
+    def test_direct_allocator_rejects_noncanonical_boundary_identities(self):
+        mission=self.mission()
+        base=dict(mission=mission,command="SANGABRIEL",host="SANGABRIEL.HOST-01",
+                  business_id="zmart-consumer-rights",isolation_key="zmart-consumer-rights",
+                  context_refs=("BIBLIA.md",))
+        for field in ("command","host","business_id","isolation_key"):
+            malformed=dict(base)
+            malformed[field]=" "+str(base[field])+" "
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    diatasso(**malformed)
+
 if __name__=="__main__": unittest.main()
