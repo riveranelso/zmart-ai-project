@@ -32,6 +32,17 @@ class ZionCronicasTests(unittest.TestCase):
         self.assertNotIn("payload_ref", serialized)
         self.assertNotIn("context_refs", serialized)
 
+    def test_routing_event_canonicalizes_correlation_id(self):
+        sink = CronicasMemorySink()
+        exapostello(self.mission(correlation_id="  corr-1  "), cronicas_sink=sink)
+        self.assertEqual(sink.events[0].correlation_id, "corr-1")
+
+    def test_routing_event_rejects_non_string_correlation_id(self):
+        sink = CronicasMemorySink()
+        with self.assertRaisesRegex(ValueError, "INVALID_CORRELATION_ID"):
+            exapostello(self.mission(correlation_id=123), cronicas_sink=sink)
+        self.assertEqual(sink.events, ())
+
     def test_gate_denial_is_recorded(self):
         sink = CronicasMemorySink()
         decision = exapostello(self.mission(kill_switch=True), cronicas_sink=sink)
