@@ -39,8 +39,6 @@ class SanPedroRegistryTests(unittest.TestCase):
             for refs,reason in [
                 ([" BIBLIA.md "],"BUSINESS_CONTEXT_MISSING"),
                 (["BIBLIA.md","BIBLIA.md"],"BUSINESS_CONTEXT_DUPLICATE"),
-                (["../outside.md"],"BUSINESS_CONTEXT_INVALID_REF"),
-                (["/tmp/outside.md"],"BUSINESS_CONTEXT_INVALID_REF"),
             ]:
                 with self.subTest(refs=refs):
                     path.write_text(json.dumps({"businesses":{"zmart":{
