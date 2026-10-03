@@ -22,7 +22,7 @@ class BusinessContext:
 
 
 def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessContext:
-    if not business_id or not isinstance(business_id, str):
+    if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
         raise SanPedroError("BUSINESS_ID_REQUIRED")
     registry = json.loads((path or DEFAULT_REGISTRY).read_text(encoding="utf-8"))
     businesses = registry.get("businesses")
@@ -34,10 +34,15 @@ def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessCont
     if entry.get("enabled") is not True:
         raise SanPedroError("BUSINESS_DISABLED")
     refs = entry.get("context_refs")
-    if not isinstance(refs, list) or not refs or not all(isinstance(x, str) and x for x in refs):
+    if not isinstance(refs, list) or not refs or not all(
+        isinstance(x,str) and x.strip() and x == x.strip() for x in refs
+    ):
         raise SanPedroError("BUSINESS_CONTEXT_MISSING")
+    if len(set(refs)) != len(refs):
+        raise SanPedroError("BUSINESS_CONTEXT_DUPLICATE")
     isolation_key = entry.get("isolation_key")
-    if not isinstance(isolation_key, str) or not isolation_key:
+    if (not isinstance(isolation_key,str) or not isolation_key.strip()
+            or isolation_key != isolation_key.strip()):
         raise SanPedroError("ISOLATION_KEY_MISSING")
     return BusinessContext(
         business_id=business_id,
