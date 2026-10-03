@@ -114,11 +114,16 @@ class LocalOperationLock:
         except FileNotFoundError:
             pass
         else:
-            dir_fd=os.open(path.parent,os.O_RDONLY)
             try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+                dir_fd=os.open(path.parent,os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+            except OSError:
+                # The dead-owner lock is already removed. Recovery is
+                # logically complete even if directory metadata sync fails.
+                pass
         return True
 
     @contextmanager
