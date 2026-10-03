@@ -68,10 +68,11 @@ class BusinessIsolationRetryTests(unittest.TestCase):
             root=Path(tmp)
             (root/"ZMARK.md").write_text("# Zmart\\n",encoding="utf-8")
             (root/"SCAN.md").write_text("# Scan\\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n\\n## scan-water-intelligence\\n",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{
-                "zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["ZMARK.md"]},
-                "scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["SCAN.md"]}
+                "zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["ZMARK.md","WORKFLOWS.md"]},
+                "scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["SCAN.md","WORKFLOWS.md"]}
             }}),encoding="utf-8")
             routes=root/"derekh.yaml"
             routes.write_text("routes:\\n  - intent: internal_dispatch\\n    command: SANGABRIEL\\n    host: SANGABRIEL.HOST-01\\n",encoding="utf-8")
