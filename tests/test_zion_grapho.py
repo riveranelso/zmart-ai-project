@@ -39,7 +39,8 @@ class GraphoTests(unittest.TestCase):
         self.assertFalse(result.changed)
         self.assertEqual(result.reason,"UPDATE_RULE_COUNT_MISMATCH")
     def test_add_retry_does_not_duplicate_rule_in_same_business_section(self):
-        decision=self.decision("ADD",rules=("Keep this rule.",))
+        decision=SimpleNamespace(action="ADD",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Keep this rule.",),matched_rules=())
         first=grapho_render("# BIBLIA\n",decision)
         second=grapho_render(first.content,decision)
         self.assertTrue(first.changed)
@@ -49,7 +50,8 @@ class GraphoTests(unittest.TestCase):
 
     def test_same_rule_in_other_business_does_not_suppress_target_add(self):
         existing="# BIBLIA\n\n## scan-water-intelligence\n- Shared wording.\n"
-        decision=self.decision("ADD",rules=("Shared wording.",))
+        decision=SimpleNamespace(action="ADD",destination_ref="BIBLIA.md",business_id="zmart-consumer-rights",
+            proposed_rules=("Shared wording.",),matched_rules=())
         result=grapho_render(existing,decision)
         self.assertTrue(result.changed)
         self.assertIn("## zmart-consumer-rights\n- Shared wording.",result.content)
@@ -57,7 +59,8 @@ class GraphoTests(unittest.TestCase):
 
     def test_add_only_appends_missing_rules_on_partial_retry(self):
         existing="# BIBLIA\n\n## zmart-consumer-rights\n- Existing rule.\n"
-        decision=self.decision("ADD",rules=("Existing rule.","New rule."))
+        decision=SimpleNamespace(action="ADD",destination_ref="BIBLIA.md",business_id="zmart-consumer-rights",
+            proposed_rules=("Existing rule.","New rule."),matched_rules=())
         result=grapho_render(existing,decision)
         self.assertTrue(result.changed)
         self.assertEqual(result.content.count("- Existing rule."),1)
