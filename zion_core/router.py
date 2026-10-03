@@ -11,6 +11,7 @@ from .registry import SanPedroError, sanpedro_resolve
 
 ROOT=Path(__file__).resolve().parents[1]; CONFIG_DIR=ROOT/"zmart360"
 ALLOWED_RISK={"low","medium","high","critical"}
+MEGILLAH_FIELDS={"mission_id","intent","requested_by","scope","business_id","project_id","risk_level","human_approval_required","target_command","target_host","angel_count_max","payload_ref","correlation_id"}
 class MissionValidationError(ValueError): pass
 
 @dataclass(frozen=True)
@@ -47,6 +48,8 @@ def load_routes(path:Path|None=None)->dict[str,tuple[str,str]]:
 
 def validate_mission(mission:dict[str,Any])->None:
     if not isinstance(mission,dict): raise MissionValidationError("MISSION_OBJECT_REQUIRED")
+    unknown=set(mission)-MEGILLAH_FIELDS
+    if unknown: raise MissionValidationError("UNKNOWN_MEGILLAH_FIELDS:"+",".join(sorted(unknown)))
     required=("mission_id","intent","requested_by","scope","business_id")
     missing=[k for k in required if not mission.get(k)]
     if missing: raise MissionValidationError("MISSING_REQUIRED_FIELDS:"+",".join(missing))
