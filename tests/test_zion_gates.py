@@ -34,6 +34,21 @@ class ZionGateTests(unittest.TestCase):
         self.assertEqual(denied[0].reason,"AUTHENTICATION_REQUIRED")
 
 
+
+    def test_cherubim_rejects_non_string_principal(self):
+        mission=self.base(business_id="zmart-consumer-rights")
+        security=SecurityContext(
+            authenticated=True,principal_id=123,
+            allowed_business_ids=("zmart-consumer-rights",),
+        )
+        denied=[
+            x for x in evaluate_gates(mission,"zmart",("BIBLIA",),security)
+            if not x.allowed
+        ]
+        self.assertEqual(denied[0].gate,"CHERUBIM")
+        self.assertEqual(denied[0].reason,"AUTHENTICATION_REQUIRED")
+
+
     def test_thrones_blocks_policy_conflict(self):
         self.assertEqual(self.denied(policy_conflict=True)[0].gate,"THRONES")
 
