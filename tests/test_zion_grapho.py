@@ -123,6 +123,28 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.content,original)
         self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
 
+    def test_update_rejects_candidate_that_is_only_line_prefix(self):
+        original="# BIBLIA\n\n## los-duros\n- Rule extended.\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Replacement.",),matched_rules=("Rule",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"UPDATE_CANDIDATE_NOT_FOUND")
+        self.assertEqual(result.content,original)
+
+    def test_supersede_rejects_candidate_that_is_only_line_prefix(self):
+        original="# BIBLIA\n\n## los-duros\n- Rule extended.\n"
+        decision=SimpleNamespace(
+            action="SUPERSEDE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Replacement.",),matched_rules=("Rule",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"SUPERSESSION_CANDIDATE_NOT_FOUND")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
