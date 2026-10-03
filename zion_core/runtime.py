@@ -147,6 +147,9 @@ class OmarRuntime:
         bid=business_id.strip()
         mid=mission_id.strip()
         ref=destination_ref.strip()
+        action=getattr(decision,"action",None)
+        if action not in {"ADD","UPDATE","SUPERSEDE"}:
+            raise ValueError("RECONCILIATION_ACTION_NOT_MUTATING")
         scope=getattr(decision,"scope",None)
         expected_name=SCOPE_DESTINATION_NAMES.get(scope) if isinstance(scope,str) else None
         if expected_name is None or Path(ref).name != expected_name:
