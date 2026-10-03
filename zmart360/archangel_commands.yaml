@@ -5,48 +5,48 @@ hierarchy:
   legion_reserved_for_external_threats: true
 
 commands:
-  michael:
-    display_name: "MICHAEL COMMAND"
+  sanmiguel:
+    display_name: "SANMIGUEL COMMAND"
     mission: "Defense & Response"
-    source_note: "Revelation 12:7 explicitly describes Michael and his angels; software mapping is metaphorical."
+    source_note: "Revelation 12:7 explicitly describes San Miguel and his angels; software mapping is metaphorical."
     hosts:
-      - id: MICHAEL.HOST-01
+      - id: SANMIGUEL.HOST-01
         name: "Watch"
         purpose: "Detection, anomaly triage, threat evidence"
-      - id: MICHAEL.HOST-02
+      - id: SANMIGUEL.HOST-02
         name: "Defense"
         purpose: "Containment, isolation, coordinated defensive response"
-      - id: MICHAEL.HOST-03
+      - id: SANMIGUEL.HOST-03
         name: "Incident Response"
         purpose: "Incident coordination, evidence preservation, protected recovery handoff"
 
-  gabriel:
-    display_name: "GABRIEL COMMAND"
+  sangabriel:
+    display_name: "SAN GABRIEL COMMAND"
     mission: "Communications & Dispatch"
     source_note: "Functional metaphor based on Gabriel's biblical messenger role; Scripture does not explicitly describe a Gabriel-led army."
     hosts:
-      - id: GABRIEL.HOST-01
+      - id: SANGABRIEL.HOST-01
         name: "Internal Dispatch"
         purpose: "Internal task and event delivery"
-      - id: GABRIEL.HOST-02
+      - id: SANGABRIEL.HOST-02
         name: "External Communications"
         purpose: "Authorized outbound communications"
-      - id: GABRIEL.HOST-03
+      - id: SANGABRIEL.HOST-03
         name: "Delivery & Notification"
         purpose: "Notifications, delivery confirmation, routing observability"
 
-  raphael:
-    display_name: "RAPHAEL COMMAND"
+  sanrafael:
+    display_name: "SAN RAFAEL COMMAND"
     mission: "Recovery & Restoration"
     source_note: "Healing/restoration metaphor draws from Tobit; deuterocanonical in Catholic and Orthodox traditions."
     hosts:
-      - id: RAPHAEL.HOST-01
+      - id: SANRAFAEL.HOST-01
         name: "Health"
         purpose: "Service and workflow health, dependency checks"
-      - id: RAPHAEL.HOST-02
+      - id: SANRAFAEL.HOST-02
         name: "Repair"
         purpose: "Authorized rollback, repair and state recovery"
-      - id: RAPHAEL.HOST-03
+      - id: SANRAFAEL.HOST-03
         name: "Verification"
         purpose: "Post-recovery integrity and safe-return verification"
 
