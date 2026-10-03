@@ -29,7 +29,8 @@ def cherubim(mission: dict[str, Any], isolation_key: str, security: SecurityCont
         return GateResult("CHERUBIM", False, "ISOLATION_BOUNDARY_VIOLATION")
     if security is None:
         return GateResult("CHERUBIM", True, "BOUNDARY_OK")
-    if security.authenticated is not True or not security.principal_id:
+    if (security.authenticated is not True or not isinstance(security.principal_id,str)
+            or not security.principal_id.strip()):
         return GateResult("CHERUBIM", False, "AUTHENTICATION_REQUIRED")
     if mission["business_id"] not in security.allowed_business_ids:
         return GateResult("CHERUBIM", False, "BUSINESS_ACCESS_DENIED")
