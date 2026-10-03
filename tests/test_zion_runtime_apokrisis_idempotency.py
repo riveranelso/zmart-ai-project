@@ -68,6 +68,24 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(forged,learning=LearningIntent())
 
 
+    def test_conflicting_durable_mission_decisions_fail_closed_at_close(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            runtime.dispatch({"mission_id":"m-conflicting-history","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"})
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflict",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="m-conflicting-history",business_id="zmart-consumer-rights",action="REQUIRE_HUMAN_REVIEW",reason="POLICY_CONFLICT",angel_ids=()))
+            response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-conflicting-history",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_MISSION_HISTORY"):
+                runtime.close(response,learning=LearningIntent())
+
+
     def test_dispatched_mission_with_empty_commission_evidence_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
