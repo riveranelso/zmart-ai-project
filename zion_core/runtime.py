@@ -125,7 +125,24 @@ class OmarRuntime:
                 prior=self.history(
                     business_id=bid,event_type="ANGEL_RESPONSE",mission_id=mid,
                 )
-                if any(aid in event.angel_ids for event in prior):
+                matching=[event for event in prior if aid in event.angel_ids]
+                if matching:
+                    recorded=matching[-1]
+                    current_evidence=tuple(getattr(response,"evidence_refs",()) or ())
+                    current_uncertainty=len(getattr(response,"uncertainty",()) or ())
+                    current_corrections=len(getattr(response,"correction_signals",()) or ())
+                    current_correlation=getattr(response,"correlation_id",None)
+                    current_status=getattr(response,"status",None)
+                    current_reason=getattr(response,"error_code",None) or current_status
+                    if (
+                        recorded.status != current_status
+                        or recorded.reason != current_reason
+                        or recorded.correlation_id != current_correlation
+                        or recorded.evidence_refs != current_evidence
+                        or recorded.uncertainty_count != current_uncertainty
+                        or recorded.correction_count != current_corrections
+                    ):
+                        raise ValueError("APOKRISIS_REUSE_CONFLICT")
                     correction_signals=tuple(
                         value for value in (getattr(response,"correction_signals",()) or ())
                         if isinstance(value,str) and value.strip()
