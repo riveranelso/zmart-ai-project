@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -131,6 +132,30 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                 with lock.hold(business,operation,identity):
                     pass
             self.assertTrue(path.exists())
+
+    def test_release_directory_sync_failure_does_not_fail_completed_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            lock=LocalOperationLock(root,timeout_seconds=0.2)
+            real_fsync=os.fsync
+            failed_directory_sync=False
+
+            def fail_directory_fsync(fd):
+                nonlocal failed_directory_sync
+                if stat.S_ISDIR(os.fstat(fd).st_mode) and not failed_directory_sync:
+                    failed_directory_sync=True
+                    raise OSError("SIMULATED_RELEASE_DIRECTORY_FSYNC_FAILURE")
+                return real_fsync(fd)
+
+            completed=[]
+            with patch("zion_core.persistence.os.fsync",side_effect=fail_directory_fsync):
+                with lock.hold("zmart-consumer-rights","MISSION_DISPATCH","release-fsync"):
+                    completed.append(True)
+
+            self.assertEqual(completed,[True])
+            self.assertTrue(failed_directory_sync)
+            with lock.hold("zmart-consumer-rights","MISSION_DISPATCH","release-fsync"):
+                pass
 
 
 if __name__=="__main__":
