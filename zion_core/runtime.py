@@ -57,6 +57,9 @@ class OmarRuntime:
             mid=mission_id.strip()
             bid=business_id.strip()
             with self.operation_lock.hold(bid,"MISSION_DISPATCH",mid):
+                same_id_events=self.history(event_type="MISSION_DECISION",mission_id=mid)
+                if any(event.business_id != bid for event in same_id_events):
+                    raise ValueError("MISSION_ID_CROSS_BUSINESS_CONFLICT")
                 prior=self.history(business_id=bid,event_type="MISSION_DECISION",mission_id=mid)
                 if prior:
                     from .omar import prepare_mission, OmarMissionDispatch
