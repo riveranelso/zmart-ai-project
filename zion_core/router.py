@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
 from typing import Any
+from .cronicas import CronicasSink, cronicas_emit
 from .allocator import DiatassoCommission, diatasso
 from .gates import evaluate_gates
 from .registry import SanPedroError, sanpedro_resolve
@@ -53,14 +54,17 @@ def validate_mission(mission:dict[str,Any])->None:
     count=mission.get("angel_count_max",1)
     if not isinstance(count,int) or isinstance(count,bool) or count<1: raise MissionValidationError("INVALID_ANGEL_COUNT")
 
-def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
+def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
     try: ctx=sanpedro_resolve(bid,registry_path)
     except SanPedroError as exc:
-        return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
+        decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
+        cronicas_emit(mission,decision,cronicas_sink); return decision
     base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     route=load_derekh(routes_path).get(str(mission["intent"]))
-    if route is None: return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
+    if route is None:
+        decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
+        cronicas_emit(mission,decision,cronicas_sink); return decision
     command,host=route
     if mission.get("target_command") not in (None,command): return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_COMMAND_CONFLICT",human_review_required=True,**base)
     if mission.get("target_host") not in (None,host): return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_HOST_CONFLICT",human_review_required=True,**base)
@@ -69,8 +73,9 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
             return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
     angels=diatasso(mission=mission,command=command,host=host,business_id=ctx.business_id,
                            isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
-    return DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
+    decision=DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
                             angel_prefix=host+".ANGEL-",angels=angels,**base)
+    cronicas_emit(mission,decision,cronicas_sink); return decision
 
 def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
     """Compatibility alias for EXAPOSTELLO. New ZION code should call exapostello()."""
