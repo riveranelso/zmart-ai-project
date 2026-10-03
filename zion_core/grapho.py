@@ -76,15 +76,22 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if not all(line in section_lines for line in candidate_lines):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_CANDIDATE_NOT_FOUND" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND")
-    replacements=dict(zip(candidate_lines,(_rule_line(new) for new in rules)))
-    consumed=set()
-    rendered_lines=[]
-    for line in section_lines:
-        if line in replacements and line not in consumed:
-            rendered_lines.append(replacements[line])
-            consumed.add(line)
-        else:
-            rendered_lines.append(line)
+    rendered_lines=list(section_lines)
+    used_indexes=set()
+    for old_line,new_rule in zip(candidate_lines,rules):
+        match_index=next(
+            (idx for idx,line in enumerate(rendered_lines)
+             if idx not in used_indexes and line==old_line),
+            None,
+        )
+        if match_index is None:
+            return GraphoResult(
+                decision.action,decision.destination_ref,False,existing_text,
+                "SUPERSESSION_CANDIDATE_NOT_FOUND"
+                if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND",
+            )
+        rendered_lines[match_index]=_rule_line(new_rule)
+        used_indexes.add(match_index)
     section="\n".join(rendered_lines)
     if original_section.endswith("\n"):
         section+="\n"
