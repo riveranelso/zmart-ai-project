@@ -1,12 +1,21 @@
-# SAN PEDRO — Zmart 360 Registry
+# SAN PEDRO — ZION CORE Registry & Keys
 
-SAN PEDRO is the authoritative registry of Zmart 360.
+SAN PEDRO is the authoritative registry for locating trusted ZION CORE context.
 
-Its job is to know what businesses, brands, projects, workflows, protocols and active-context locations exist and where their canonical knowledge lives.
+It knows which businesses and work areas exist and where their canonical knowledge lives. The machine-readable registry is `san_pedro_registry.json`.
 
-SAN PEDRO does not execute agent work and does not perform HOLY GHOST learning.
+## Runtime contract
+Before SAN GABRIEL may return DISPATCH, SAN PEDRO must resolve the mission's `business_id`.
 
-## Known business/work areas
+Resolution returns:
+- canonical business ID;
+- display name;
+- isolation key;
+- canonical context references.
+
+Unknown, disabled or contextless businesses fail closed to human review.
+
+## Registered work areas
 - Zmart Consumer Rights
 - SCAN Water Intelligence / ScanTapWater
 - Los Duros
@@ -16,18 +25,16 @@ SAN PEDRO does not execute agent work and does not perform HOLY GHOST learning.
 - Full Nelson AI
 - Zmart AI / Jessica
 
-## Registry contract
-For each registered domain, maintain pointers to the narrowest authoritative context. Do not duplicate the knowledge itself when a canonical source already exists.
-
 ## Isolation
-Do not assume shared rules merely because businesses are owned or operated by the same person. Brand identity, claims, assets, markets and compliance remain isolated.
+A successful lookup does not authorize cross-business access. The returned isolation key follows the mission through routing so downstream layers can enforce separation.
 
-## Active context
-Operational service territory is not the same as active advertising market. Register active campaign/project context separately from broad business scope.
+## Boundaries
+SAN PEDRO locates and identifies. It does not execute ANGEL work, grant permissions, dispatch missions, or perform HOLY GHOST learning.
 
 ## Relationship
 - HOLY GHOST guides and learns.
-- OMAR interprets, coordinates and retrieves.
-- SAN PEDRO tells OMAR where canonical context lives.
+- OMAR interprets and coordinates.
+- SAN PEDRO resolves trusted context.
 - BIBLIA contains canonical durable knowledge.
-- SERAFINES execute assigned work.
+- SAN GABRIEL dispatches authorized missions.
+- ANGELS execute bounded work.
