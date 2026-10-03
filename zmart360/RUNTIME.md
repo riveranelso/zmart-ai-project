@@ -27,9 +27,9 @@ A DispatchDecision containing action, reason, command, host and ANGEL identity p
 Input intent: `threat_detection`
 
 Decision:
-- command: MICHAEL
-- host: MICHAEL.HOST-01
-- angel prefix: MICHAEL.HOST-01.ANGEL-
+- command: SANMIGUEL
+- host: SANMIGUEL.HOST-01
+- angel prefix: SANMIGUEL.HOST-01.ANGEL-
 
 ## Next runtime increments
 Future increments can add:
