@@ -24,11 +24,23 @@ This is a technological metaphor inspired by biblical and Christian terminology.
 
 ## Third order — Operations
 - PRINCIPALITIES — operational domains.
-- ARCHANGELS — mission coordinators.
-- ANGELS — bounded execution agents.
+- ARCHANGELS — mission commanders.
+- HOSTS — specialized units belonging to an Archangel Command.
+- ANGELS — bounded individual execution agents.
+
+Canonical operational structure: ARCHANGEL -> HOST -> ANGEL.
+
+Initial commands:
+- MICHAEL COMMAND — Defense & Response.
+- GABRIEL COMMAND — Communications & Dispatch.
+- RAPHAEL COMMAND — Recovery & Restoration.
+
+See `ARCHANGEL_COMMANDS.md` and `archangel_commands.yaml`.
 
 ## Important architectural rule
 The orders define responsibility and authority boundaries. They are not required to form a literal synchronous request chain. A task should invoke only the controls and services it needs.
+
+LEGION is reserved exclusively for the external coordinated-threat classification. It is never the name of a trusted ZION unit.
 
 ## Human authority
 Nelson remains the human authority/operator of the software. OMAR is Nelson's operational representation inside ZION CORE.
