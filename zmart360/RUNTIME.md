@@ -28,6 +28,7 @@ Production storage is intentionally not selected by this composition.
 - A repeated `business_id + mission_id` dispatch becomes `IDEMPOTENT_NOOP` and does not append a second MISSION_DECISION.
 - A repeated APOKRISIS from the same `business_id + mission_id + angel_id` is not processed twice.
 - If CRONICAS already contains a mission decision that never reached `DISPATCH`, APOKRISIS for that mission is rejected; a human-review or denied mission cannot acquire ANGEL authority through `close()`.
+- When durable `DISPATCH` evidence exists, `close()` also requires non-empty commission evidence and the responding ANGEL must be one of those recorded commissions; missing or mismatched commission authority fails closed.
 - A repeated owner correction with the same `correction_id` is a technical retry, not a second human correction.
 - The same correction text under a new correction ID may count as a genuine repeated correction.
 - These checks survive runtime restart because they use persisted CRONICAS/correction state.
