@@ -125,6 +125,9 @@ def resolve_learning_destination(
     if not matches:
         return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                    None, False, "DESTINATION_NOT_REGISTERED")
+    if len(matches) != 1:
+        return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                                   None, False, "DESTINATION_AMBIGUOUS")
     return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                matches[0], True, "DESTINATION_RESOLVED")
 
