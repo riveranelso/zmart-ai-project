@@ -49,7 +49,7 @@ def validate_mission(mission:dict[str,Any])->None:
     count=mission.get("angel_count_max",1)
     if not isinstance(count,int) or isinstance(count,bool) or count<1: raise MissionValidationError("INVALID_ANGEL_COUNT")
 
-def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
+def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
     try: ctx=resolve_business(bid,registry_path)
     except RegistryError as exc:
@@ -68,7 +68,11 @@ def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path
     return DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
                             angel_prefix=host+".ANGEL-",angels=angels,**base)
 
+def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
+    """Compatibility alias for EXAPOSTELLO. New ZION code should call exapostello()."""
+    return exapostello(mission,routes_path,registry_path)
+
 def main()->None:
     import sys
-    print(json.dumps(route_mission(json.load(sys.stdin)).to_dict(),indent=2))
+    print(json.dumps(exapostello(json.load(sys.stdin)).to_dict(),indent=2))
 if __name__=="__main__": main()
