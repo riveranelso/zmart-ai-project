@@ -5,12 +5,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from zion_core.persistence import AtomicClaimStore, LocalOperationLock
+from zion_core.persistence import LocalOperationLock, _operation_digest
 
 
 class LocalOperationLockRecoveryTests(unittest.TestCase):
     def lock_path(self,root,business,operation,identity):
-        digest=AtomicClaimStore._digest(business,operation,identity)
+        digest=_operation_digest(business,operation,identity)
         return root/(digest+".lock")
 
     def test_proven_dead_owner_lock_is_recovered(self):
