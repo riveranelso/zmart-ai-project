@@ -1,9 +1,13 @@
-"""CRONICAS structured event records. No persistence or external I/O."""
+"""CRONICAS structured event records and safe event emission."""
 from dataclasses import asdict, dataclass
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Callable
+from uuid import uuid4
 
 @dataclass(frozen=True)
 class CronicaEvent:
+    event_id:str
+    occurred_at:str
     event_type:str
     mission_id:str
     action:str
@@ -16,9 +20,13 @@ class CronicaEvent:
     correlation_id:str|None=None
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
+CronicasSink = Callable[[CronicaEvent], None]
+
 def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
     angels=getattr(decision,"angels",()) or ()
     return CronicaEvent(
+        event_id=str(uuid4()),
+        occurred_at=datetime.now(timezone.utc).isoformat(),
         event_type="MISSION_DECISION",
         mission_id=str(decision.mission_id),
         action=str(decision.action),
@@ -30,3 +38,10 @@ def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
         angel_ids=tuple(a.angel_id for a in angels),
         correlation_id=mission.get("correlation_id"),
     )
+
+def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None)->CronicaEvent:
+    """Build a privacy-bounded CRONICAS event and optionally deliver it to an injected sink."""
+    event=build_routing_event(mission,decision)
+    if sink is not None:
+        sink(event)
+    return event
