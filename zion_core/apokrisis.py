@@ -80,6 +80,7 @@ def omar_close_and_learn(
     active_campaign: bool = False,
     existing_rule_candidates: tuple[str, ...] = (),
     conflict: bool = False,
+    supersede: bool = False,
     auto_write: bool = True,
 ):
     """OMAR entrypoint: close ANGEL work, evaluate learning, and persist eligible knowledge."""
@@ -103,6 +104,7 @@ def omar_close_and_learn(
         active_campaign=active_campaign,
         existing_rule_candidates=existing_rule_candidates,
         conflict=conflict,
+        supersede=supersede,
     )
     if not cycle.destination.ready_for_review or not cycle.destination.destination_ref:
         return event, cycle
@@ -124,6 +126,7 @@ def omar_close_and_learn(
         active_campaign=active_campaign,
         existing_rule_candidates=existing_rule_candidates,
         conflict=conflict,
+        supersede=supersede,
     )
     if auto_write:
         cycle = persist_learning_cycle(cycle, target, cronicas_sink=cronicas_sink)
