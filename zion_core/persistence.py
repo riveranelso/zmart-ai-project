@@ -189,7 +189,13 @@ class PersistentCorrectionMemory:
         raw=json.loads(self.path.read_text(encoding="utf-8"))
         if not isinstance(raw,dict):
             raise ValueError("INVALID_CORRECTION_MEMORY")
-        return {str(k):int(v) for k,v in raw.items()}
+        data={}
+        for key,value in raw.items():
+            if (not isinstance(key,str) or not key or not isinstance(value,int)
+                    or isinstance(value,bool) or value < 0):
+                raise ValueError("INVALID_CORRECTION_MEMORY")
+            data[key]=value
+        return data
 
     def _save(self,data: dict[str,int])->None:
         self.path.parent.mkdir(parents=True,exist_ok=True)
@@ -213,7 +219,8 @@ class PersistentCorrectionMemory:
 
     @staticmethod
     def _key(business_id: str,correction: str)->str:
-        if not business_id:
+        if (not isinstance(business_id,str) or not business_id.strip()
+                or business_id != business_id.strip()):
             raise ValueError("BUSINESS_ID_REQUIRED")
         if not isinstance(correction,str) or not correction.strip():
             raise ValueError("CORRECTION_REQUIRED")
