@@ -112,6 +112,17 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.content,original)
         self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
 
+    def test_identical_update_does_not_add_trailing_newline(self):
+        original="# BIBLIA\n\n## los-duros\n- Keep same rule."
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Keep same rule.",),matched_rules=("Keep same rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.content,original)
+        self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
+
 
 if __name__=="__main__":
     unittest.main()
