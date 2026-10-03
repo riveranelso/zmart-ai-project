@@ -270,15 +270,16 @@ def read_cronicas(
             for key in ("event_id","occurred_at","event_type","mission_id","action","reason"):
                 if not isinstance(raw.get(key),str) or not raw[key].strip():
                     raise TypeError
-            for key in ("business_id","command","host","denied_by","correlation_id","status","dispatch_fingerprint"):
+            for key in ("business_id","command","host","denied_by","correlation_id","status","dispatch_fingerprint","response_fingerprint"):
                 value=raw.get(key)
                 if value is not None and (not isinstance(value,str) or not value.strip()):
                     raise TypeError
-            fingerprint=raw.get("dispatch_fingerprint")
-            if fingerprint is not None and (
-                len(fingerprint)!=64 or any(ch not in "0123456789abcdef" for ch in fingerprint)
-            ):
-                raise TypeError
+            for fingerprint_key in ("dispatch_fingerprint","response_fingerprint"):
+                fingerprint=raw.get(fingerprint_key)
+                if fingerprint is not None and (
+                    len(fingerprint)!=64 or any(ch not in "0123456789abcdef" for ch in fingerprint)
+                ):
+                    raise TypeError
             for key in ("angel_ids","evidence_refs"):
                 value=raw.get(key,[])
                 if not isinstance(value,list) or not all(
