@@ -233,6 +233,17 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
         if not rules or not all(_rule_line(rule) in section_lines for rule in rules):
             return GraphoResult(decision.action,decision.destination_ref,False,existing,
                                 "RECONCILIATION_RULES_NOT_PROVEN")
+        if decision.action in {"UPDATE","SUPERSEDE"}:
+            matched=getattr(decision,"matched_rules",())
+            if (not isinstance(matched,tuple) or len(matched)!=len(rules)
+                    or any(not isinstance(rule,str) or not rule.strip()
+                           or "\\n" in rule or "\\r" in rule for rule in matched)):
+                return GraphoResult(decision.action,decision.destination_ref,False,existing,
+                                    "RECONCILIATION_FINAL_STATE_NOT_PROVEN")
+            old_lines=tuple(_rule_line(rule.strip()) for rule in matched)
+            if any(old_line in section_lines for old_line in old_lines):
+                return GraphoResult(decision.action,decision.destination_ref,False,existing,
+                                    "RECONCILIATION_FINAL_STATE_NOT_PROVEN")
         result=GraphoResult(decision.action,decision.destination_ref,False,existing,
                             "RECONCILED_ALREADY_COMMITTED")
         from .cronicas import cronicas_emit_grapho
