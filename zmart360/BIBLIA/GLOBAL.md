@@ -10,7 +10,23 @@ HOLY GHOST is the guidance and adaptive-learning metaphor inside ZION CORE. No c
 
 OMAR represents Nelson's operational AI twin inside the system; OMAR does not represent a divine or angelic being.
 
-Biblical/Christian names are functional metaphors. Do not assign a sacred name merely because it sounds powerful. Define the technical function first, then use a name only when the correspondence is coherent.
+Religious, spiritual, mystical and cosmological names are functional metaphors. ZION CORE is not limited to the standard biblical canon or to Christianity. A name may draw from documented canonical, deuterocanonical, apocryphal, Jewish, Christian, Islamic, Sufi, Zoroastrian, Hindu, Buddhist, Taoist, African, Afro-Caribbean, ancient religious, Gnostic, Hermetic or other documented religious/cosmological traditions when the correspondence is respectful and coherent.
+
+### Mandatory naming law
+Every ZION-owned component, process, protocol, registry, route, envelope, event class or other architectural concept MUST receive a name grounded in a documented religious, spiritual, mystical or cosmological tradition.
+
+Generic engineering names such as `route_mission`, `mission_envelope`, `dispatch_routes` or `registry` may exist temporarily as implementation compatibility names, but MUST NOT be treated as final canonical ZION names.
+
+Before creating a new canonical name:
+1. Define the component's technical function precisely.
+2. Search across relevant religious/cosmological traditions rather than defaulting automatically to the standard Bible.
+3. Verify that the source concept actually corresponds to the function.
+4. Record the tradition/source and the reason for the mapping.
+5. Prefer respectful functional correspondence over a name that merely sounds powerful.
+6. Do not imply that ZION CORE declares one religion or culture to possess absolute truth.
+7. Preserve external protocol/library names when interoperability requires them; this law governs concepts designed by ZION itself.
+
+Existing generic ZION-owned names are nomenclature debt and should be migrated deliberately without breaking runtime compatibility.
 
 ## Canonical functional names
 - ZION CORE — internal technological environment / core
