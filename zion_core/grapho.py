@@ -22,7 +22,7 @@ def _rule_line(rule: str) -> str:
 
 def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     """Render a deterministic BIBLIA mutation. Does not perform external I/O."""
-    if decision.action not in {"ADD", "UPDATE"}:
+    if decision.action not in {"ADD", "UPDATE", "SUPERSEDE"}:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "PROMOTION_ACTION_NOT_WRITABLE")
     rules=tuple(x.strip() for x in decision.proposed_rules if isinstance(x,str) and x.strip())
