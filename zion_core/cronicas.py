@@ -28,6 +28,11 @@ CronicasSink = Callable[[CronicaEvent], None]
 
 def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
     angels=getattr(decision,"angels",()) or ()
+    correlation_id=mission.get("correlation_id")
+    if correlation_id is not None and (
+        not isinstance(correlation_id,str) or not correlation_id.strip()
+    ):
+        raise ValueError("INVALID_CORRELATION_ID")
     return CronicaEvent(
         event_id=str(uuid4()),
         occurred_at=datetime.now(timezone.utc).isoformat(),
@@ -40,7 +45,7 @@ def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
         host=getattr(decision,"host",None),
         denied_by=getattr(decision,"denied_by",None),
         angel_ids=tuple(a.angel_id for a in angels),
-        correlation_id=mission.get("correlation_id"),
+        correlation_id=correlation_id.strip() if correlation_id is not None else None,
     )
 
 def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None)->CronicaEvent:
