@@ -105,6 +105,8 @@ class LearningBusinessIsolationTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent(
                     scope_hint="WORKFLOW",repeated_correction=True))
             self.assertEqual(outside.read_text(encoding="utf-8"),original)
+            self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
+            self.assertEqual(runtime.history(event_type="BIBLIA_MUTATION"),())
 
     def test_learning_rejects_authorized_symlink_outside_biblia_root(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
@@ -136,6 +138,8 @@ class LearningBusinessIsolationTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent(
                     scope_hint="WORKFLOW",repeated_correction=True))
             self.assertEqual(outside.read_text(encoding="utf-8"),original)
+            self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
+            self.assertEqual(runtime.history(event_type="BIBLIA_MUTATION"),())
 
 
 if __name__=="__main__":
