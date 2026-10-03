@@ -178,6 +178,25 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                     self.assertEqual(owner["identity"],identity)
             self.assertFalse(path.exists())
 
+    def test_zero_owner_metadata_write_fails_closed_and_cleans_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            lock=LocalOperationLock(root,timeout_seconds=0.1)
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="zero-metadata-write"
+            path=self.lock_path(root,business,operation,identity)
+
+            with patch("zion_core.persistence.os.write",return_value=0):
+                with self.assertRaisesRegex(OSError,"LOCK_OWNER_METADATA_SHORT_WRITE"):
+                    with lock.hold(business,operation,identity):
+                        self.fail("protected section must not be entered")
+
+            self.assertFalse(path.exists())
+            with lock.hold(business,operation,identity):
+                pass
+            self.assertFalse(path.exists())
+
     def test_owner_metadata_fsync_failure_does_not_leave_unrecoverable_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"locks"
