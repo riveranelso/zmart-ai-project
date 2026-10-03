@@ -159,4 +159,32 @@ class ZionRouterTests(unittest.TestCase):
                 load_derekh(path)
 
 
+
+    def test_derekh_rejects_empty_route_identity_values(self):
+        cases=(
+            ("intent","  - intent: \n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n"),
+            ("command","  - intent: legitimate\n    command: \n    host: SANGABRIEL.HOST-01\n"),
+            ("host","  - intent: legitimate\n    command: SANGABRIEL\n    host: \n"),
+        )
+        for field,body in cases:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                path=Path(tmp)/"derekh.yaml"
+                path.write_text("routes:\n"+body,encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError,"INCOMPLETE_ROUTE"):
+                    load_derekh(path)
+
+    def test_derekh_rejects_host_suffix_that_is_not_canonical_number(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: legitimate\n"
+                "    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-evil\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"INVALID_COMMAND_HOST_PAIR"):
+                load_derekh(path)
+
+
 if __name__=="__main__": unittest.main()
