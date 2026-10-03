@@ -36,6 +36,26 @@ class CorrectionMemoryCrashRecoveryTests(unittest.TestCase):
             self.assertEqual(memory.count(business,correction),2)
             self.assertFalse(temp.exists())
 
+    def test_post_replace_directory_fsync_failure_does_not_report_false_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"corrections.json"
+            memory=PersistentCorrectionMemory(path)
+            real_fsync=os.fsync
+            calls=0
+
+            def fail_second_fsync(fd):
+                nonlocal calls
+                calls+=1
+                if calls==2:
+                    raise OSError("SIMULATED_DIRECTORY_FSYNC_FAILURE")
+                return real_fsync(fd)
+
+            with patch("zion_core.persistence.os.fsync",side_effect=fail_second_fsync):
+                count=memory.observe("zmart-consumer-rights","Same durable rule.")
+
+            self.assertEqual(count,1)
+            self.assertEqual(memory.count("zmart-consumer-rights","Same durable rule."),1)
+
 
 if __name__=="__main__":
     unittest.main()
