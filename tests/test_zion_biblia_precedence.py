@@ -97,6 +97,22 @@ class BibliaPrecedenceTests(unittest.TestCase):
             self.assertNotIn("WRONG",context.text)
             self.assertNotIn("SCAN",context.text)
 
+    def test_thematic_h2_in_unsegmented_document_remains_global_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text(
+                "# Global\n\n## Repetition prevention\n- GLOBAL RULE\n",
+                encoding="utf-8",
+            )
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"los-duros":{
+                "enabled":True,"isolation_key":"los-duros",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            context=retrieve_biblia("los-duros",root=root,registry_path=registry)
+            self.assertIn("## Repetition prevention",context.text)
+            self.assertIn("GLOBAL RULE",context.text)
+
 
 if __name__=="__main__":
     unittest.main()
