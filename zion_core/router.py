@@ -25,6 +25,15 @@ class DispatchDecision:
 
 def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
     path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False
+    def commit_route()->None:
+        nonlocal intent,command,host
+        if intent is None:
+            return
+        if not intent or not command or not host:
+            raise RuntimeError("INCOMPLETE_ROUTE")
+        if intent in routes:
+            raise RuntimeError("DUPLICATE_ROUTE")
+        routes[intent]=(command,host)
     for raw in path.read_text(encoding="utf-8").splitlines():
         line=raw.strip()
         if raw=="routes:":
@@ -33,17 +42,27 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
         if not in_routes:
             continue
         if raw=="fallback:":
+            commit_route()
+            intent=command=host=None
             break
+        if not line:
+            continue
         if line.startswith("- intent:"):
-            if intent and command and host:
-                if intent in routes: raise RuntimeError("DUPLICATE_ROUTE")
-                routes[intent]=(command,host)
+            commit_route()
             intent=line.split(":",1)[1].strip(); command=host=None
-        elif intent and line.startswith("command:"): command=line.split(":",1)[1].strip()
-        elif intent and line.startswith("host:"): host=line.split(":",1)[1].strip()
-    if intent and command and host:
-        if intent in routes: raise RuntimeError("DUPLICATE_ROUTE")
-        routes[intent]=(command,host)
+            continue
+        if intent is None:
+            raise RuntimeError("UNKNOWN_ROUTE_KEY")
+        if line.startswith("command:"):
+            if command is not None: raise RuntimeError("DUPLICATE_ROUTE_KEY")
+            command=line.split(":",1)[1].strip()
+        elif line.startswith("host:"):
+            if host is not None: raise RuntimeError("DUPLICATE_ROUTE_KEY")
+            host=line.split(":",1)[1].strip()
+        else:
+            raise RuntimeError("UNKNOWN_ROUTE_KEY")
+    else:
+        commit_route()
     for cmd,hst in routes.values():
         if not hst.startswith(cmd+".HOST-"): raise RuntimeError("INVALID_COMMAND_HOST_PAIR")
     return routes
