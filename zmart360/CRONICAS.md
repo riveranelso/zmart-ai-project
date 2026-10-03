@@ -30,6 +30,7 @@ History reads are observational only. They do not replay a mission, re-run an AN
 
 CRONICAS also provides durable evidence for runtime idempotency:
 - an existing MISSION_DECISION prevents duplicate dispatch of the same business/mission identity;
+- new MISSION_DECISION records include a privacy-bounded SHA-256 dispatch fingerprint over dispatch-affecting MEGILLAH/gate inputs and security context; retries with the same mission ID but a changed fingerprint fail closed, while `correlation_id` whitespace is canonicalized before fingerprinting;
 - an existing ANGEL_RESPONSE prevents duplicate processing of the same business/mission/ANGEL response;
 - an existing OMAR.OWNER-INPUT response for a correction ID prevents a technical retry from being counted as a second human correction.
 
