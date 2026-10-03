@@ -123,6 +123,23 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
                     runtime.reconcile_biblia_mutation(decision)
                 self.assertEqual(runtime.history(),())
 
+    def test_authorized_symlink_cannot_escape_biblia_root(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root=Path(tmp)
+            outside=Path(outside_tmp)/"outside.md"
+            original="# Outside\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n"
+            outside.write_text(original,encoding="utf-8")
+            link=root/"WORKFLOWS.md"
+            try:
+                link.symlink_to(outside)
+            except (OSError,NotImplementedError):
+                self.skipTest("symlink not supported by test platform")
+            runtime=self.runtime(root)
+            with self.assertRaisesRegex(ValueError,"RECONCILIATION_DESTINATION_OUTSIDE_BIBLIA_ROOT"):
+                runtime.reconcile_biblia_mutation(self.decision("WORKFLOWS.md"))
+            self.assertEqual(runtime.history(),())
+            self.assertEqual(outside.read_text(encoding="utf-8"),original)
+
 
 if __name__=="__main__":
     unittest.main()
