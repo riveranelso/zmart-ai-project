@@ -1,4 +1,7 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from zion_core.holy_ghost import LearningProposal, resolve_learning_destination
 
 class LearningDestinationTests(unittest.TestCase):
@@ -23,6 +26,35 @@ class LearningDestinationTests(unittest.TestCase):
         d=resolve_learning_destination(self.proposal("TEMPORARY",reusable=False))
         self.assertFalse(d.ready_for_review)
         self.assertEqual(d.reason,"TEMPORARY_NOT_CANONICAL")
+
+    def test_suffix_spoof_does_not_authorize_wrong_biblia_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["NOTWORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            d=resolve_learning_destination(
+                self.proposal("WORKFLOW"),registry_path=registry
+            )
+            self.assertFalse(d.ready_for_review)
+            self.assertIsNone(d.destination_ref)
+            self.assertEqual(d.reason,"DESTINATION_NOT_REGISTERED")
+
+    def test_exact_basename_allows_prefixed_registered_ref(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["zmart360/BIBLIA/WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            d=resolve_learning_destination(
+                self.proposal("WORKFLOW"),registry_path=registry
+            )
+            self.assertTrue(d.ready_for_review)
+            self.assertEqual(d.destination_ref,"zmart360/BIBLIA/WORKFLOWS.md")
 
 if __name__=="__main__":
     unittest.main()
