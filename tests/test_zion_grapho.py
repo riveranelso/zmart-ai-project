@@ -206,6 +206,18 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"MULTILINE_RULE_REJECTED")
         self.assertEqual(result.content,original)
 
+    def test_rejects_multiline_business_section_injection(self):
+        original="# BIBLIA\n"
+        decision=SimpleNamespace(
+            action="ADD",destination_ref="BIBLIA.md",
+            business_id="los-duros\n## scan-water-intelligence",
+            proposed_rules=("Safe rule.",),matched_rules=(),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"INVALID_BUSINESS_ID")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
