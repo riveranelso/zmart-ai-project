@@ -50,6 +50,43 @@ class BibliaPrecedenceTests(unittest.TestCase):
             context=retrieve_biblia("x",root=root,registry_path=registry)
             self.assertEqual(context.precedence,("GLOBAL",))
 
+    def test_segmented_document_never_falls_back_to_other_business(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text(
+                "# Workflows\n\n## los-duros-extra\n- OTHER SECRET\n"
+                "## scan-water-intelligence\n- SCAN ONLY\n",
+                encoding="utf-8",
+            )
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"los-duros":{
+                "enabled":True,"isolation_key":"los-duros",
+                "context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            context=retrieve_biblia("los-duros",root=root,registry_path=registry)
+            self.assertEqual(context.documents[0].text,"")
+            self.assertNotIn("OTHER SECRET",context.text)
+            self.assertNotIn("SCAN ONLY",context.text)
+
+    def test_exact_business_heading_does_not_match_prefixed_heading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text(
+                "# Workflows\n\n## los-duros-extra\n- WRONG\n"
+                "## los-duros\n- RIGHT\n"
+                "## scan-water-intelligence\n- SCAN\n",
+                encoding="utf-8",
+            )
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"los-duros":{
+                "enabled":True,"isolation_key":"los-duros",
+                "context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            context=retrieve_biblia("los-duros",root=root,registry_path=registry)
+            self.assertIn("## los-duros\n- RIGHT",context.text)
+            self.assertNotIn("WRONG",context.text)
+            self.assertNotIn("SCAN",context.text)
+
 
 if __name__=="__main__":
     unittest.main()
