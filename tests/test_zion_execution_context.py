@@ -248,6 +248,26 @@ class AngelExecutionContextTests(unittest.TestCase):
                 execution_contexts(replace(dispatch,context=changed))
 
 
+    def test_tampered_decision_route_is_rejected_even_when_commissions_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Approved.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["BIBLIA.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            mission={"mission_id":"m-route","intent":"internal_dispatch","requested_by":"OMAR",
+                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            dispatch=dispatch_mission(mission,biblia_root=root,routes_path=routes,registry_path=registry)
+            bad_decision=replace(dispatch.decision,command="SANRAFAEL",host="SANRAFAEL.HOST-01")
+            bad_angels=tuple(replace(item,command="SANRAFAEL",host="SANRAFAEL.HOST-01",angel_id="SANRAFAEL.HOST-01.ANGEL-001") for item in bad_decision.angels)
+            tampered=replace(bad_decision,angels=bad_angels,angel_prefix="SANRAFAEL.HOST-01.ANGEL-")
+            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_DECISION_ROUTE_MISMATCH"):
+                execution_contexts(replace(dispatch,decision=tampered))
+
+
     def test_tampered_prepared_isolation_authority_is_rejected_by_biblia_registry_binding(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
