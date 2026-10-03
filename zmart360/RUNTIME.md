@@ -37,7 +37,7 @@ Future increments can add:
 2. SAN PEDRO context lookup;
 3. gate interfaces for SERAPHIM / CHERUBIM / THRONES / POWERS;
 4. ANGEL allocation;
-5. BOOK OF REMEMBRANCE event emission;
+5. CRÓNICAS event emission;
 6. execution adapters.
 
 These should be added incrementally and must not silently bypass human approval or production safeguards.
