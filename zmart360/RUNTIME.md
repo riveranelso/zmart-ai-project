@@ -55,6 +55,11 @@ CRONICAS history is append-only operational evidence. `history()` and `mission_h
 ## Safe behavior
 Unknown routes, invalid missions, boundary conflicts and applicable gate denials fail closed or require human review. Normal internal automation is not burdened with unnecessary approval friction, while high/critical risk, kill switches and policy/integrity conflicts remain gated.
 
+### ANGEL execution-context integrity
+- OMAR binds executable dispatch to the prepared mission, business, SAN PEDRO isolation key, BIBLIA refs, scope, payload, DEREKH route and authorized ANGEL count.
+- Decision and commission fields must remain consistent with that prepared authority before execution contexts are created.
+- Human-review or gate-denial state blocks execution-context creation.
+
 ## Current implementation
 - SANPEDRO context resolution
 - BIBLIA isolated retrieval and explicit scope precedence
