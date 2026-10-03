@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .router import DispatchDecision
+from .registry import sanpedro_resolve
 from .omar import (
     LearningIntent,
     dispatch_mission,
@@ -144,6 +145,16 @@ class OmarRuntime:
             raise ValueError("RECONCILIATION_IDENTITY_REQUIRED")
         bid=business_id.strip()
         mid=mission_id.strip()
+        ref=destination_ref.strip()
+        context=sanpedro_resolve(bid,self.registry_path)
+        ref_path=Path(ref)
+        authorized_names={Path(item).name for item in context.context_refs}
+        if ref_path.name not in authorized_names or len(ref_path.parts)!=1:
+            raise ValueError("RECONCILIATION_DESTINATION_NOT_AUTHORIZED")
+        root=self.biblia_root.resolve()
+        target=(self.biblia_root/ref_path.name).resolve()
+        if root not in target.parents and target != root:
+            raise ValueError("RECONCILIATION_DESTINATION_OUTSIDE_BIBLIA_ROOT")
         with self.operation_lock.hold(bid,"BIBLIA_RECONCILIATION",mid):
             prior=self.history(
                 business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
@@ -152,7 +163,7 @@ class OmarRuntime:
                 return None
             from .grapho import grapho_reconcile_committed_mutation
             return grapho_reconcile_committed_mutation(
-                self.biblia_root/destination_ref,
+                target,
                 decision,
                 self.cronicas_sink,
             )
