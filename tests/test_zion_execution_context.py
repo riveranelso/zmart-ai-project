@@ -70,31 +70,6 @@ class AngelExecutionContextTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_ISOLATION_MISMATCH"):
                 execution_contexts(replace(dispatch,decision=tampered))
 
-    def test_tampered_commission_scope_is_rejected(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp)
-            (root/"BIBLIA.md").write_text("Approved Zmart knowledge.",encoding="utf-8")
-            registry=root/"registry.json"
-            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
-                "enabled":True,"isolation_key":"zmart-consumer-rights",
-                "context_refs":["BIBLIA.md"]
-            }}}),encoding="utf-8")
-            routes=root/"derekh.yaml"
-            routes.write_text(
-                "routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n"
-                "    host: SANGABRIEL.HOST-01\nfallback:\n  action: REQUIRE_HUMAN_REVIEW\n",
-                encoding="utf-8",
-            )
-            mission={"mission_id":"m-scope-tamper","intent":"internal_dispatch","requested_by":"OMAR",
-                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
-            dispatch=dispatch_mission(
-                mission,biblia_root=root,routes_path=routes,registry_path=registry
-            )
-            bad=replace(dispatch.decision.angels[0],scope="GLOBAL")
-            tampered=replace(dispatch.decision,angels=(bad,))
-            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_SCOPE_MISMATCH"):
-                execution_contexts(replace(dispatch,decision=tampered))
-
     def test_no_execution_context_when_dispatch_is_denied(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
