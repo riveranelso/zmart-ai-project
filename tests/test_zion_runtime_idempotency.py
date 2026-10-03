@@ -132,6 +132,42 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                         runtime.dispatch(changed)
 
 
+
+    def test_omitted_gate_defaults_match_explicit_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8"
+            )
+            defaults={
+                "risk_level":"low","human_approval_required":False,
+                "integrity_conflict":False,"policy_conflict":False,
+                "kill_switch":False,"runtime_enabled":True,
+            }
+            for index,(key,value) in enumerate(defaults.items()):
+                with self.subTest(key=key):
+                    runtime=OmarRuntime(
+                        biblia_root=root,registry_path=registry,routes_path=routes,
+                        cronicas_path=root/f"cronicas-{index}.jsonl",
+                        correction_memory_path=root/f"corrections-{index}.json",
+                    )
+                    base={"mission_id":f"default-{key}","intent":"internal_dispatch",
+                          "requested_by":"OMAR","scope":"WORKFLOW",
+                          "business_id":"zmart-consumer-rights"}
+                    self.assertEqual(runtime.dispatch(dict(base)).decision.action,"DISPATCH")
+                    self.assertEqual(
+                        runtime.dispatch(dict(base,**{key:value})).decision.action,
+                        "IDEMPOTENT_NOOP",
+                    )
+
+
     def test_omitted_default_angel_count_matches_explicit_one(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
