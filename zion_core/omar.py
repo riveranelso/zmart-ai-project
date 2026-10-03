@@ -70,3 +70,34 @@ def receive_apokrisis(
         conflict=intent.conflict,
         auto_write=intent.auto_write,
     )
+
+
+def receive_owner_correction(
+    correction: str,
+    *,
+    business_id: str,
+    biblia_root: Path,
+    registry_path: Path | None = None,
+    cronicas_sink: Any = None,
+    learning: LearningIntent | None = None,
+    correction_id: str = "owner-correction",
+):
+    """Receive a direct owner correction and pass it through the canonical learning loop."""
+    if not isinstance(correction,str) or not correction.strip():
+        raise ValueError("OWNER_CORRECTION_REQUIRED")
+    from .apokrisis import apokrisis
+    response=apokrisis(
+        angel_id="OMAR.OWNER-INPUT",
+        mission_id=correction_id,
+        status="SUCCESS",
+        summary="Direct owner correction received",
+        business_id=business_id,
+        correction_signals=(correction.strip(),),
+    )
+    return receive_apokrisis(
+        response,
+        biblia_root=biblia_root,
+        registry_path=registry_path,
+        cronicas_sink=cronicas_sink,
+        learning=learning,
+    )
