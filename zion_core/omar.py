@@ -113,3 +113,43 @@ def receive_owner_correction(
         cronicas_sink=cronicas_sink,
         learning=intent,
     )
+
+
+@dataclass(frozen=True)
+class OmarMissionDispatch:
+    """OMAR's prepared mission result: isolated knowledge plus dispatch decision."""
+    context: MissionContext
+    decision: Any
+
+
+def dispatch_mission(
+    mission: dict[str, Any],
+    *,
+    biblia_root: Path,
+    routes_path: Path | None = None,
+    registry_path: Path | None = None,
+    cronicas_sink: Any = None,
+    security_context: Any = None,
+) -> OmarMissionDispatch:
+    """Load canonical BIBLIA before EXAPOSTELLO dispatches the mission."""
+    if not isinstance(mission,dict):
+        raise ValueError("MISSION_OBJECT_REQUIRED")
+    business_id=mission.get("business_id")
+    if not isinstance(business_id,str) or not business_id.strip():
+        raise ValueError("MISSION_BUSINESS_ID_REQUIRED")
+
+    context=prepare_mission(
+        business_id,
+        biblia_root=biblia_root,
+        registry_path=registry_path,
+    )
+
+    from .router import exapostello
+    decision=exapostello(
+        mission,
+        routes_path=routes_path,
+        registry_path=registry_path,
+        cronicas_sink=cronicas_sink,
+        security_context=security_context,
+    )
+    return OmarMissionDispatch(context=context,decision=decision)
