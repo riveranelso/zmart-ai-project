@@ -100,4 +100,4 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - Owner-correction recovery follows the same rule but MUST NOT call correction-memory `observe()` again for the same `correction_id`; it reads the existing fingerprint count so a technical retry cannot become a second human correction.
 - Recovery uses the existing APOKRISIS supplied on retry and stores no raw correction text in CRONICAS.
 - A durable recovery that deterministically resolves to `NO_CHANGE`, `CONFLICT`, or `NOT_READY` has no mutation event by design and may be re-evaluated on another technical retry; this is side-effect-safe but is not modeled as a separate durable terminal learning state.
-
+- New normal GRAPHO mutation events carry the originating ANGEL in `angel_ids`. Recovery may treat a mutation as terminal evidence only when that exact ANGEL is attributed; a sibling ANGEL's mutation and historical/reconciled mutation evidence without origin attribution do not suppress recovery.
