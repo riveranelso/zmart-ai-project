@@ -54,6 +54,38 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
             )
             self.assertEqual(len(events),1)
 
+    def test_scope_destination_mismatch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            target.write_text("# Workflows\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n",encoding="utf-8")
+            runtime=self.runtime(root)
+            decision=PromotionDecision(
+                mission_id="reconcile-scope-mismatch",
+                business_id="zmart-consumer-rights",
+                scope="BRAND", destination_ref="WORKFLOWS.md", action="ADD",
+                proposed_rules=("AUTHORIZED_RULE",), matched_rules=(),
+                reason="NEW_RULE", requires_review=True,
+            )
+            with self.assertRaisesRegex(ValueError,"RECONCILIATION_SCOPE_DESTINATION_MISMATCH"):
+                runtime.reconcile_biblia_mutation(decision)
+            self.assertEqual(runtime.history(),())
+
+    def test_temporary_scope_cannot_be_reconciled_into_biblia(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            runtime=self.runtime(root)
+            decision=PromotionDecision(
+                mission_id="reconcile-temporary",
+                business_id="zmart-consumer-rights",
+                scope="TEMPORARY", destination_ref="WORKFLOWS.md", action="ADD",
+                proposed_rules=("AUTHORIZED_RULE",), matched_rules=(),
+                reason="NEW_RULE", requires_review=True,
+            )
+            with self.assertRaisesRegex(ValueError,"RECONCILIATION_SCOPE_DESTINATION_MISMATCH"):
+                runtime.reconcile_biblia_mutation(decision)
+            self.assertEqual(runtime.history(),())
+
 
 if __name__=="__main__":
     unittest.main()
