@@ -14,7 +14,7 @@ Its role is to deliver an authorized mission or event to the correct destination
 7. Deliver the assignments.
 8. Track delivery/result state.
 9. Return results to the requesting component.
-10. Emit relevant execution events to BOOK OF REMEMBRANCE.
+10. Emit relevant execution events to CRÓNICAS.
 
 ## Authority boundaries
 SAN GABRIEL may route; it may not:
