@@ -143,4 +143,31 @@ class ZionRouterTests(unittest.TestCase):
                 load_derekh(path)
 
 
+
+    def test_derekh_rejects_duplicate_top_level_routes_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: first\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n"
+                "routes:\n"
+                "  - intent: second\n    command: SANMIGUEL\n    host: SANMIGUEL.HOST-01\n"
+                "fallback:\n  action: REQUIRE_HUMAN_REVIEW\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"DUPLICATE_ROUTES_SECTION"):
+                load_derekh(path)
+
+    def test_derekh_requires_fallback_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: legitimate\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"FALLBACK_REQUIRED"):
+                load_derekh(path)
+
+
 if __name__=="__main__": unittest.main()
