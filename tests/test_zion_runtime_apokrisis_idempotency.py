@@ -112,6 +112,32 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
 
 
 
+
+    def test_changed_summary_is_not_silent_retry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            first=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-summary-replay",
+                status="SUCCESS",summary="first result",business_id="zmart-consumer-rights",
+            )
+            runtime.close(first,learning=LearningIntent(auto_write=False))
+            changed=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-summary-replay",
+                status="SUCCESS",summary="different result",business_id="zmart-consumer-rights",
+            )
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_REUSE_CONFLICT"):
+                runtime.close(changed,learning=LearningIntent(auto_write=False))
+
+
     def test_same_count_changed_correction_signal_is_not_silent_retry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
