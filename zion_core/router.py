@@ -21,8 +21,8 @@ class DispatchDecision:
     denied_by:str|None=None; human_review_required:bool=False
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
-def load_routes(path:Path|None=None)->dict[str,tuple[str,str]]:
-    path=path or CONFIG_DIR/"dispatch_routes.yaml"; routes={}; intent=command=host=None
+def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
+    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None
     for raw in path.read_text(encoding="utf-8").splitlines():
         line=raw.strip()
         if line.startswith("- intent:"):
@@ -40,6 +40,10 @@ def load_routes(path:Path|None=None)->dict[str,tuple[str,str]]:
         if not hst.startswith(cmd+".HOST-"): raise RuntimeError("INVALID_COMMAND_HOST_PAIR")
     return routes
 
+def load_routes(path:Path|None=None)->dict[str,tuple[str,str]]:
+    """Compatibility alias for DEREKH path loading."""
+    return load_derekh(path)
+
 def validate_mission(mission:dict[str,Any])->None:
     if not isinstance(mission,dict): raise MissionValidationError("MISSION_OBJECT_REQUIRED")
     required=("mission_id","intent","requested_by","scope","business_id")
@@ -55,7 +59,7 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     except RegistryError as exc:
         return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
     base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
-    route=load_routes(routes_path).get(str(mission["intent"]))
+    route=load_derekh(routes_path).get(str(mission["intent"]))
     if route is None: return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
     command,host=route
     if mission.get("target_command") not in (None,command): return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_COMMAND_CONFLICT",human_review_required=True,**base)
