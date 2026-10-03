@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zion_core.registry import RegistryError, resolve_business
+from zion_core.registry import RegistryError, SanPedroError, resolve_business, sanpedro_resolve
 
 
 class SanPedroRegistryTests(unittest.TestCase):
