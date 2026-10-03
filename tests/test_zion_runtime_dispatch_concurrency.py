@@ -55,5 +55,31 @@ class RuntimeDispatchConcurrencyTests(unittest.TestCase):
             self.assertEqual(len(events),1)
 
 
+    def test_same_mission_id_with_different_route_identity_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n"
+                "  - intent: first\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n"
+                "  - intent: second\n    command: SANMIGUEL\n    host: SANMIGUEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            base={"mission_id":"reuse-1","requested_by":"OMAR","scope":"WORKFLOW",
+                  "business_id":"zmart-consumer-rights"}
+            first=runtime.dispatch(dict(base,intent="first"))
+            self.assertEqual(first.decision.action,"DISPATCH")
+            with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
+                runtime.dispatch(dict(base,intent="second"))
+
 if __name__=="__main__":
     unittest.main()
