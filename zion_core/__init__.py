@@ -41,3 +41,5 @@ __all__ = [
 ]
 
 from .runtime import OmarRuntime
+
+from .persistence import CronicasReadError, read_cronicas
