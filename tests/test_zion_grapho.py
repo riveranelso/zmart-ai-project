@@ -157,6 +157,19 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"UPDATE_CANDIDATE_NOT_FOUND")
         self.assertEqual(result.content,original)
 
+    def test_update_preserves_crlf_outside_replaced_rule(self):
+        original="# BIBLIA\r\n\r\n## los-duros\r\n- Old rule.\r\n- Keep untouched.\r\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New rule.",),matched_rules=("Old rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertTrue(result.changed)
+        self.assertEqual(
+            result.content,
+            "# BIBLIA\r\n\r\n## los-duros\r\n- New rule.\r\n- Keep untouched.\r\n",
+        )
+
 
 if __name__=="__main__":
     unittest.main()
