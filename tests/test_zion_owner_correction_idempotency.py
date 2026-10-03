@@ -44,7 +44,19 @@ class OwnerCorrectionIdempotencyTests(unittest.TestCase):
             self.assertEqual((root/"cronicas.jsonl").read_bytes(),before)
             self.assertNotIn(rule,(root/"WORKFLOWS.md").read_text(encoding="utf-8"))
 
-            second_human_event=runtime.owner_correction(
+            restarted=OmarRuntime(
+                biblia_root=root,registry_path=root/"registry.json",
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            retry_after_restart=restarted.owner_correction(
+                rule,business_id="zmart-consumer-rights",correction_id="human-1"
+            )
+            self.assertFalse(retry_after_restart.processed)
+            self.assertEqual(retry_after_restart.reason,"OWNER_CORRECTION_ALREADY_PROCESSED")
+            self.assertEqual(restarted.correction_memory.count("zmart-consumer-rights",rule),1)
+
+            second_human_event=restarted.owner_correction(
                 rule,business_id="zmart-consumer-rights",correction_id="human-2"
             )
             self.assertTrue(second_human_event.processed)
