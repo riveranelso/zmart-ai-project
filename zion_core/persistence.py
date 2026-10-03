@@ -236,7 +236,10 @@ class PersistentCorrectionMemory:
             return data[key]
 
     def count(self,business_id: str,correction: str)->int:
-        return self._load().get(self._key(business_id,correction),0)
+        key=self._key(business_id,correction)
+        lock=LocalOperationLock(self.path.parent/(self.path.name+".locks"))
+        with lock.hold(business_id,"CORRECTION_MEMORY",correction_fingerprint(correction)):
+            return self._load().get(key,0)
 
 
 class CronicasReadError(ValueError):
