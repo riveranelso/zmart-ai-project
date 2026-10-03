@@ -64,3 +64,67 @@ def close_apokrisis(response: Apokrisis, cronicas_sink=None):
     event = cronicas_emit_apokrisis(response, cronicas_sink)
     learning = holy_ghost_receive(response)
     return event, learning
+
+
+def omar_close_and_learn(
+    response: Apokrisis,
+    *,
+    biblia_root: Any,
+    registry_path: Any = None,
+    cronicas_sink: Any = None,
+    scope_hint: str | None = None,
+    explicit_durable_instruction: bool = False,
+    repeated_correction: bool = False,
+    stable_workflow: bool = False,
+    locked_asset: bool = False,
+    active_campaign: bool = False,
+    existing_rule_candidates: tuple[str, ...] = (),
+    conflict: bool = False,
+    auto_write: bool = True,
+):
+    """OMAR entrypoint: close ANGEL work, evaluate learning, and persist eligible knowledge."""
+    from pathlib import Path
+    from .cronicas import cronicas_emit_apokrisis
+    from .holy_ghost import prepare_learning_cycle, persist_learning_cycle
+
+    root = Path(biblia_root)
+    event = cronicas_emit_apokrisis(response, cronicas_sink)
+
+    # First pass resolves the canonical SANPEDRO destination without assuming a file.
+    cycle = prepare_learning_cycle(
+        response,
+        "",
+        registry_path=registry_path,
+        scope_hint=scope_hint,
+        explicit_durable_instruction=explicit_durable_instruction,
+        repeated_correction=repeated_correction,
+        stable_workflow=stable_workflow,
+        locked_asset=locked_asset,
+        active_campaign=active_campaign,
+        existing_rule_candidates=existing_rule_candidates,
+        conflict=conflict,
+    )
+    if not cycle.destination.ready_for_review or not cycle.destination.destination_ref:
+        return event, cycle
+
+    target = root / cycle.destination.destination_ref
+    if not target.is_file():
+        return event, cycle
+
+    # Re-evaluate against the actual canonical BIBLIA text before any write.
+    cycle = prepare_learning_cycle(
+        response,
+        target.read_text(encoding="utf-8"),
+        registry_path=registry_path,
+        scope_hint=scope_hint,
+        explicit_durable_instruction=explicit_durable_instruction,
+        repeated_correction=repeated_correction,
+        stable_workflow=stable_workflow,
+        locked_asset=locked_asset,
+        active_campaign=active_campaign,
+        existing_rule_candidates=existing_rule_candidates,
+        conflict=conflict,
+    )
+    if auto_write:
+        cycle = persist_learning_cycle(cycle, target, cronicas_sink=cronicas_sink)
+    return event, cycle
