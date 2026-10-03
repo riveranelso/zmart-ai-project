@@ -119,6 +119,11 @@ class OmarRuntime:
                         registry_path=self.registry_path,cronicas_sink=self.cronicas_sink,
                         learning=learning,record_response_event=False,
                     )
+                    if getattr(cycle,"write_result",None) is None:
+                        return OmarCloseResult(
+                            processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
+                            cycle=cycle,
+                        )
                     return OmarCloseResult(
                         processed=True,reason="APOKRISIS_LEARNING_RECOVERED",
                         event=event,cycle=cycle,
@@ -272,6 +277,12 @@ class OmarRuntime:
                     correction_memory=self.correction_memory,
                     record_response_event=False,
                 )
+                if getattr(cycle,"write_result",None) is None:
+                    return OmarCloseResult(
+                        processed=False,
+                        reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+                        cycle=cycle,
+                    )
                 return OmarCloseResult(
                     processed=True,
                     reason="OWNER_CORRECTION_LEARNING_RECOVERED",
