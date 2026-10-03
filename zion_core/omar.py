@@ -17,6 +17,7 @@ class MissionContext:
     isolation_key: str | None = None
     command: str | None = None
     host: str | None = None
+    angel_count: int | None = None
 
     @property
     def knowledge(self) -> str:
@@ -173,7 +174,7 @@ def dispatch_mission(
         security_context=security_context,
     )
     if getattr(decision,"action",None) == "DISPATCH":
-        context=MissionContext(**{**context.__dict__,"command":decision.command,"host":decision.host})
+        context=MissionContext(**{**context.__dict__,"command":decision.command,"host":decision.host,"angel_count":decision.angel_count})
     return OmarMissionDispatch(context=context,decision=decision)
 
 
@@ -218,6 +219,8 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
     if len(set(angel_ids)) != len(angel_ids):
         raise ValueError("ANGEL_CONTEXT_DUPLICATE_ANGEL")
     angel_count=getattr(decision,"angel_count",None)
+    if angel_count != dispatch.context.angel_count:
+        raise ValueError("ANGEL_CONTEXT_DECISION_COUNT_MISMATCH")
     if not isinstance(angel_count,int) or isinstance(angel_count,bool) or len(angels) != angel_count:
         raise ValueError("ANGEL_CONTEXT_COUNT_MISMATCH")
     host=getattr(decision,"host",None)
