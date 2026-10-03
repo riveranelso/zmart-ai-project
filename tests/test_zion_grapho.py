@@ -66,6 +66,30 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.content.count("- Existing rule."),1)
         self.assertEqual(result.content.count("- New rule."),1)
 
+    def test_multi_rule_update_is_all_or_nothing_when_candidate_missing(self):
+        existing="# BIBLIA\n\n## los-duros\n- Old one\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New one","New two"),matched_rules=("Old one","Old two"),
+        )
+        result=grapho_render(existing,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"UPDATE_CANDIDATE_NOT_FOUND")
+        self.assertEqual(result.content,existing)
+        self.assertIn("- Old one",result.content)
+        self.assertNotIn("- New one",result.content)
+
+    def test_multi_rule_supersede_is_all_or_nothing_when_candidate_missing(self):
+        existing="# BIBLIA\n\n## los-duros\n- Old one\n"
+        decision=SimpleNamespace(
+            action="SUPERSEDE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New one","New two"),matched_rules=("Old one","Old two"),
+        )
+        result=grapho_render(existing,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"SUPERSESSION_CANDIDATE_NOT_FOUND")
+        self.assertEqual(result.content,existing)
+
 
 if __name__=="__main__":
     unittest.main()
