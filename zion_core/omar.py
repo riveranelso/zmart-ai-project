@@ -12,6 +12,8 @@ class MissionContext:
     business_id: str
     biblia: BibliaContext
     mission_id: str | None = None
+    scope: str | None = None
+    payload_ref: str | None = None
 
     @property
     def knowledge(self) -> str:
@@ -24,6 +26,8 @@ def prepare_mission(
     biblia_root: Path,
     registry_path: Path | None = None,
     mission_id: str | None = None,
+    scope: str | None = None,
+    payload_ref: str | None = None,
 ) -> MissionContext:
     """Load isolated canonical knowledge before OMAR dispatches a mission."""
     biblia=retrieve_biblia(
@@ -31,7 +35,7 @@ def prepare_mission(
         root=biblia_root,
         registry_path=registry_path,
     )
-    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id)
+    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id,scope=scope,payload_ref=payload_ref)
 
 
 @dataclass(frozen=True)
@@ -151,6 +155,8 @@ def dispatch_mission(
         biblia_root=biblia_root,
         registry_path=registry_path,
         mission_id=mission.get("mission_id"),
+        scope=mission.get("scope"),
+        payload_ref=mission.get("payload_ref"),
     )
 
     from .router import exapostello
@@ -185,6 +191,10 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         raise ValueError("ANGEL_CONTEXT_DECISION_BUSINESS_MISMATCH")
     if getattr(decision,"mission_id",None) != dispatch.context.mission_id:
         raise ValueError("ANGEL_CONTEXT_DECISION_MISSION_MISMATCH")
+    if getattr(decision,"scope",None) != dispatch.context.scope:
+        raise ValueError("ANGEL_CONTEXT_DECISION_SCOPE_MISMATCH")
+    if getattr(decision,"payload_ref",None) != dispatch.context.payload_ref:
+        raise ValueError("ANGEL_CONTEXT_DECISION_PAYLOAD_MISMATCH")
     if dispatch.context.biblia.business_id != dispatch.context.business_id:
         raise ValueError("ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH")
     if tuple(getattr(decision,"context_refs",()) or ()) != tuple(dispatch.context.biblia.refs):
