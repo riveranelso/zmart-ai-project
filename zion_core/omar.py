@@ -15,6 +15,8 @@ class MissionContext:
     scope: str | None = None
     payload_ref: str | None = None
     isolation_key: str | None = None
+    command: str | None = None
+    host: str | None = None
 
     @property
     def knowledge(self) -> str:
@@ -170,6 +172,8 @@ def dispatch_mission(
         cronicas_sink=cronicas_sink,
         security_context=security_context,
     )
+    if getattr(decision,"action",None) == "DISPATCH":
+        context=MissionContext(**{**context.__dict__,"command":decision.command,"host":decision.host})
     return OmarMissionDispatch(context=context,decision=decision)
 
 
@@ -198,6 +202,8 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         raise ValueError("ANGEL_CONTEXT_DECISION_SCOPE_MISMATCH")
     if getattr(decision,"payload_ref",None) != dispatch.context.payload_ref:
         raise ValueError("ANGEL_CONTEXT_DECISION_PAYLOAD_MISMATCH")
+    if getattr(decision,"command",None) != dispatch.context.command or getattr(decision,"host",None) != dispatch.context.host:
+        raise ValueError("ANGEL_CONTEXT_DECISION_ROUTE_MISMATCH")
     if dispatch.context.biblia.business_id != dispatch.context.business_id:
         raise ValueError("ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH")
     if tuple(getattr(decision,"context_refs",()) or ()) != tuple(dispatch.context.biblia.refs):
