@@ -256,10 +256,11 @@ def persist_learning_cycle(
     path: Path,
     *,
     cronicas_sink: Any = None,
+    origin_angel_id: str | None = None,
 ) -> LearningCycle:
     """Persist an eligible prepared cycle through GRAPHO."""
     if cycle.promotion.action not in {"ADD","UPDATE","SUPERSEDE"}:
         return cycle
     from .grapho import grapho_write
-    result=grapho_write(path,cycle.promotion,cronicas_sink)
+    result=grapho_write(path,cycle.promotion,cronicas_sink,origin_angel_id=origin_angel_id)
     return LearningCycle(cycle.signal,cycle.proposal,cycle.destination,cycle.promotion,result)
