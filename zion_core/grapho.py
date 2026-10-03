@@ -52,14 +52,23 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if len(candidates) != len(rules):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_RULE_COUNT_MISMATCH" if decision.action=="SUPERSEDE" else "UPDATE_RULE_COUNT_MISMATCH")
-    content=text
+    if header not in text:
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "BUSINESS_SECTION_NOT_FOUND")
+    section_start=text.index(header)+len(header)
+    next_section=text.find("\n## ",section_start)
+    section_end=len(text) if next_section==-1 else next_section
+    prefix=text[:section_start]
+    section=text[section_start:section_end]
+    suffix=text[section_end:]
     replaced=0
     for old,new in zip(candidates,rules):
         old_line=_rule_line(old)
         new_line=_rule_line(new)
-        if old_line in content:
-            content=content.replace(old_line,new_line,1)
+        if old_line in section:
+            section=section.replace(old_line,new_line,1)
             replaced+=1
+    content=prefix+section+suffix
     if replaced==0:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "SUPERSESSION_CANDIDATE_NOT_FOUND" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND")
