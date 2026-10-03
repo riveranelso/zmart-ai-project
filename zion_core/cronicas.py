@@ -97,6 +97,9 @@ def cronicas_emit_apokrisis(response:Any,sink:CronicasSink|None=None)->CronicaEv
 
 def build_grapho_event(decision:Any,result:Any,origin_angel_id:str|None=None,correlation_id:str|None=None)->CronicaEvent:
     """Record BIBLIA mutation metadata without storing rule contents."""
+    for name,value in (("ORIGIN_ANGEL_ID",origin_angel_id),("CORRELATION_ID",correlation_id)):
+        if value is not None and (not isinstance(value,str) or not value.strip()):
+            raise ValueError("INVALID_GRAPHO_"+name)
     return CronicaEvent(
         event_id=str(uuid4()),
         occurred_at=datetime.now(timezone.utc).isoformat(),
@@ -105,8 +108,8 @@ def build_grapho_event(decision:Any,result:Any,origin_angel_id:str|None=None,cor
         action=str(result.action),
         reason=str(result.reason),
         business_id=str(decision.business_id),
-        angel_ids=(str(origin_angel_id),) if origin_angel_id else (),
-        correlation_id=str(correlation_id) if correlation_id else None,
+        angel_ids=(origin_angel_id.strip(),) if origin_angel_id is not None else (),
+        correlation_id=correlation_id.strip() if correlation_id is not None else None,
         status="RECONCILED" if result.reason=="RECONCILED_ALREADY_COMMITTED" else ("CHANGED" if result.changed else "UNCHANGED"),
         evidence_refs=(str(result.destination_ref),) if result.destination_ref else (),
         correction_count=len(getattr(decision,"proposed_rules",()) or ()),
