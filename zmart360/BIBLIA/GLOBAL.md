@@ -38,6 +38,13 @@ Canonical display names may preserve their correct human spelling, including acc
 - Canonical schema: `megillah.schema.json`.
 - Legacy compatibility: `mission_envelope.schema.json` remains temporarily available while callers migrate.
 
+### DIATASSO
+- Canonical technical name: `DIATASSO`.
+- Function: appoint and arrange bounded ANGELS under the resolved COMMAND/HOST, producing the commission each ANGEL receives.
+- Source: Greek `διατάσσω` (`diatasso`), to arrange, order, direct or appoint; the term is associated with ordered instructions and appointment.
+- Boundary: DIATASSO appoints/arranges; EXAPOSTELLO performs the sending/dispatch.
+- Compatibility: legacy `allocate_angels()` and `AngelAssignment` remain temporary aliases.
+
 ### EXAPOSTELLO
 - Canonical technical name: `EXAPOSTELLO`.
 - Function: the SAN GABRIEL process that sends/dispatches an authorized mission toward its resolved command and HOST.
