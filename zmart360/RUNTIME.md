@@ -92,3 +92,12 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - A local operation lock remains fail-closed while ownership is live, unknown, malformed, or not safely comparable.
 - Once a normal release or proven-dead-owner recovery successfully unlinks the lock, that logical unlock is complete; a later directory metadata-sync `OSError` is best-effort durability hardening and does not convert completed protected work into failure.
 - Lock unlink failures other than an already-absent file remain significant and are not silently treated as success.
+
+### Response-only learning recovery
+- `ANGEL_RESPONSE` is durable evidence that an APOKRISIS arrived; it is not by itself proof that a durable learning cycle completed.
+- For durable learning intent, a retry that finds the same business + mission + ANGEL response but no `BIBLIA_MUTATION` may re-evaluate HOLY GHOST from the caller-supplied APOKRISIS while suppressing a duplicate `ANGEL_RESPONSE`.
+- If a mutation already exists, or the response has no correction signals, auto-write is disabled, or the learning intent is not durable, the retry remains the normal idempotent no-op.
+- Owner-correction recovery follows the same rule but MUST NOT call correction-memory `observe()` again for the same `correction_id`; it reads the existing fingerprint count so a technical retry cannot become a second human correction.
+- Recovery uses the existing APOKRISIS supplied on retry and stores no raw correction text in CRONICAS.
+- A durable recovery that deterministically resolves to `NO_CHANGE`, `CONFLICT`, or `NOT_READY` has no mutation event by design and may be re-evaluated on another technical retry; this is side-effect-safe but is not modeled as a separate durable terminal learning state.
+
