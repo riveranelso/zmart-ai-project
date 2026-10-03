@@ -121,6 +121,9 @@ class OmarRuntime:
                     raise ValueError("APOKRISIS_CONFLICTING_MISSION_HISTORY")
                 if dispatch_events and not dispatched_events:
                     raise ValueError("APOKRISIS_MISSION_NOT_DISPATCHED")
+                commission_sets={tuple(event.angel_ids) for event in dispatched_events}
+                if len(commission_sets)>1:
+                    raise ValueError("APOKRISIS_CONFLICTING_COMMISSION_HISTORY")
                 commissioned={
                     item for event in dispatched_events
                     for item in event.angel_ids
