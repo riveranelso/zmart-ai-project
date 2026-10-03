@@ -1,8 +1,10 @@
 """APOKRISIS: structured response returned by an ANGEL after bounded work."""
 from dataclasses import asdict, dataclass
+import re
 from typing import Any, Literal
 
 ApokrisisStatus = Literal["SUCCESS", "PARTIAL", "FAILED", "NEEDS_REVIEW"]
+ANGEL_ID_PATTERN=re.compile(r"^[A-Z][A-Z0-9]*\.HOST-[0-9]{2}\.ANGEL-[0-9]{3}$")
 
 @dataclass(frozen=True)
 class Apokrisis:
@@ -42,6 +44,9 @@ def apokrisis(
         for value in (angel_id,mission_id,business_id)
     ):
         raise ValueError("APOKRISIS_IDENTITY_REQUIRED")
+    canonical_angel_id=angel_id.strip()
+    if canonical_angel_id != "OMAR.OWNER-INPUT" and not ANGEL_ID_PATTERN.fullmatch(canonical_angel_id):
+        raise ValueError("INVALID_APOKRISIS_ANGEL_ID")
     for name, values in (
         ("EVIDENCE_REFS",evidence_refs),
         ("UNCERTAINTY",uncertainty),
@@ -65,7 +70,7 @@ def apokrisis(
     if status == "FAILED" and not error_code:
         raise ValueError("APOKRISIS_ERROR_CODE_REQUIRED")
     return Apokrisis(
-        angel_id=angel_id.strip(),
+        angel_id=canonical_angel_id,
         mission_id=mission_id.strip(),
         status=status,
         summary=summary.strip(),
