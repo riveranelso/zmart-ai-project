@@ -48,13 +48,20 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
             or "\n" in business_id or "\r" in business_id):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "INVALID_BUSINESS_ID")
-    raw_rules=tuple(
-        x for x in decision.proposed_rules if isinstance(x,str) and x.strip()
-    )
-    raw_candidates=tuple(
-        x for x in getattr(decision,"matched_rules",())
-        if isinstance(x,str) and x.strip()
-    )
+    proposed=getattr(decision,"proposed_rules",())
+    matched=getattr(decision,"matched_rules",())
+    if not isinstance(proposed,tuple) or any(
+        not isinstance(x,str) or not x.strip() for x in proposed
+    ):
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "INVALID_PROPOSED_RULES")
+    if not isinstance(matched,tuple) or any(
+        not isinstance(x,str) or not x.strip() for x in matched
+    ):
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "INVALID_MATCHED_RULES")
+    raw_rules=proposed
+    raw_candidates=matched
     if any("\n" in value or "\r" in value for value in raw_rules+raw_candidates):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "MULTILINE_RULE_REJECTED")
