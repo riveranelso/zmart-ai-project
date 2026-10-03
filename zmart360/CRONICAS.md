@@ -62,4 +62,4 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 - The retry uses the caller-supplied APOKRISIS; CRONICAS continues to store privacy-bounded metadata rather than raw correction text.
 - Owner retries preserve the original correction fingerprint count; recovery of the same `correction_id` is not new human evidence.
 - Non-mutating terminal evaluations do not manufacture `BIBLIA_MUTATION` evidence.
-
+- New normal `BIBLIA_MUTATION` events attribute the originating APOKRISIS/owner input in `angel_ids` without storing rule text. Reconciliation does not invent an origin when it cannot prove one. Same-ANGEL attribution may support retry idempotency; sibling or unattributed mutation evidence must not be used as proof that another ANGEL's learning completed.
