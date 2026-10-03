@@ -3,6 +3,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .persistence import LocalOperationLock
+
 @dataclass(frozen=True)
 class GraphoResult:
     action: str
@@ -76,12 +78,18 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
                         "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
 def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> GraphoResult:
-    """Persist a rendered BIBLIA mutation to an explicitly supplied local path."""
-    existing=path.read_text(encoding="utf-8")
-    result=grapho_render(existing,decision)
-    if result.changed:
-        path.write_text(result.content,encoding="utf-8")
-    if cronicas_sink is not None:
-        from .cronicas import cronicas_emit_grapho
-        cronicas_emit_grapho(decision,result,cronicas_sink)
-    return result
+    """Persist one local BIBLIA file mutation without lost concurrent updates."""
+    target=Path(path)
+    lock=LocalOperationLock(target.parent/".zion-biblia-locks")
+    identity=str(target.resolve())
+    with lock.hold("BIBLIA","GRAPHO_WRITE",identity):
+        existing=target.read_text(encoding="utf-8")
+        result=grapho_render(existing,decision)
+        if result.changed:
+            temp=target.with_suffix(target.suffix+".grapho.tmp")
+            temp.write_text(result.content,encoding="utf-8")
+            temp.replace(target)
+        if cronicas_sink is not None:
+            from .cronicas import cronicas_emit_grapho
+            cronicas_emit_grapho(decision,result,cronicas_sink)
+        return result
