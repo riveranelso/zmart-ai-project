@@ -20,7 +20,7 @@ class DispatchDecision:
     command:str|None=None; host:str|None=None; angel_prefix:str|None=None
     angels:tuple[DiatassoCommission,...]=()
     business_id:str|None=None; isolation_key:str|None=None; context_refs:tuple[str,...]=()
-    scope:str|None=None; payload_ref:str|None=None
+    scope:str|None=None; payload_ref:str|None=None; angel_count:int|None=None
     denied_by:str|None=None; human_review_required:bool=False
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
@@ -131,7 +131,7 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     angels=diatasso(mission=mission,command=command,host=host,business_id=ctx.business_id,
                            isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     decision=DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
-                            angel_prefix=host+".ANGEL-",angels=angels,**base)
+                            angel_prefix=host+".ANGEL-",angels=angels,angel_count=len(angels),**base)
     cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
 
 def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
