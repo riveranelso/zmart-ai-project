@@ -184,6 +184,9 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         raise ValueError("ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH")
     if tuple(getattr(decision,"context_refs",()) or ()) != tuple(dispatch.context.biblia.refs):
         raise ValueError("ANGEL_CONTEXT_DECISION_REFS_MISMATCH")
+    expected_isolation_key=dispatch.context.business_id
+    if getattr(decision,"isolation_key",None) != expected_isolation_key:
+        raise ValueError("ANGEL_CONTEXT_DECISION_ISOLATION_MISMATCH")
     angels=getattr(decision,"angels",()) or ()
     angel_ids=[getattr(commission,"angel_id",None) for commission in angels]
     if any(not isinstance(angel_id,str) or not angel_id.strip() for angel_id in angel_ids):
