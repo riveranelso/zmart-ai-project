@@ -55,3 +55,11 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 ### GRAPHO retry evidence
 - An idempotent ADD retry that finds every proposed rule already present in the target business section does not mutate BIBLIA and is historical `status=UNCHANGED`, not `CHANGED`.
 - Partial ADD retry writes only missing rules in that business section; identical rule text in another business is not treated as evidence for the target business.
+
+### Response-only learning recovery
+- An existing `ANGEL_RESPONSE` proves receipt, not necessarily completion of later HOLY GHOST/GRAPHO work.
+- Durable retry recovery suppresses a duplicate response event and may produce the missing `BIBLIA_MUTATION` only if the re-evaluated learning cycle actually writes.
+- The retry uses the caller-supplied APOKRISIS; CRONICAS continues to store privacy-bounded metadata rather than raw correction text.
+- Owner retries preserve the original correction fingerprint count; recovery of the same `correction_id` is not new human evidence.
+- Non-mutating terminal evaluations do not manufacture `BIBLIA_MUTATION` evidence.
+
