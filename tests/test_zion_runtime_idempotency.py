@@ -163,6 +163,41 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                 "IDEMPOTENT_NOOP",
             )
 
+    def test_allowed_business_order_does_not_change_security_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            mission={"mission_id":"security-order","intent":"internal_dispatch",
+                     "requested_by":"OMAR","scope":"WORKFLOW",
+                     "business_id":"zmart-consumer-rights"}
+            first=SecurityContext(
+                authenticated=True,principal_id="owner",
+                allowed_business_ids=("zmart-consumer-rights","scan-water-intelligence"),
+            )
+            reordered=SecurityContext(
+                authenticated=True,principal_id="owner",
+                allowed_business_ids=("scan-water-intelligence","zmart-consumer-rights"),
+            )
+            self.assertEqual(runtime.dispatch(dict(mission),security_context=first).decision.action,"DISPATCH")
+            self.assertEqual(
+                runtime.dispatch(dict(mission),security_context=reordered).decision.action,
+                "IDEMPOTENT_NOOP",
+            )
+
     def test_same_mission_id_cannot_change_security_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
