@@ -11,6 +11,7 @@ from .biblia import BibliaContext, retrieve_biblia
 class MissionContext:
     business_id: str
     biblia: BibliaContext
+    mission_id: str | None = None
 
     @property
     def knowledge(self) -> str:
@@ -22,6 +23,7 @@ def prepare_mission(
     *,
     biblia_root: Path,
     registry_path: Path | None = None,
+    mission_id: str | None = None,
 ) -> MissionContext:
     """Load isolated canonical knowledge before OMAR dispatches a mission."""
     biblia=retrieve_biblia(
@@ -29,7 +31,7 @@ def prepare_mission(
         root=biblia_root,
         registry_path=registry_path,
     )
-    return MissionContext(business_id=business_id,biblia=biblia)
+    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id)
 
 
 @dataclass(frozen=True)
@@ -148,6 +150,7 @@ def dispatch_mission(
         business_id,
         biblia_root=biblia_root,
         registry_path=registry_path,
+        mission_id=mission.get("mission_id"),
     )
 
     from .router import exapostello
@@ -180,6 +183,8 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
     contexts=[]
     if getattr(decision,"business_id",None) != dispatch.context.business_id:
         raise ValueError("ANGEL_CONTEXT_DECISION_BUSINESS_MISMATCH")
+    if getattr(decision,"mission_id",None) != dispatch.context.mission_id:
+        raise ValueError("ANGEL_CONTEXT_DECISION_MISSION_MISMATCH")
     if dispatch.context.biblia.business_id != dispatch.context.business_id:
         raise ValueError("ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH")
     if tuple(getattr(decision,"context_refs",()) or ()) != tuple(dispatch.context.biblia.refs):
