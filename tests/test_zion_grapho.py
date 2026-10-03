@@ -218,6 +218,17 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"INVALID_BUSINESS_ID")
         self.assertEqual(result.content,original)
 
+    def test_rejects_noncanonical_business_id_whitespace(self):
+        original="# BIBLIA\n"
+        decision=SimpleNamespace(
+            action="ADD",destination_ref="BIBLIA.md",business_id=" los-duros ",
+            proposed_rules=("Safe rule.",),matched_rules=(),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"INVALID_BUSINESS_ID")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
