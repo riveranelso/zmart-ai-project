@@ -113,6 +113,15 @@ class OmarRuntime:
             aid=angel_id.strip()
             identity=mid+"\x1f"+aid
             with self.operation_lock.hold(bid,"APOKRISIS",identity):
+                dispatch_events=self.history(
+                    business_id=bid,event_type="MISSION_DECISION",mission_id=mid,
+                )
+                commissioned={
+                    item for event in dispatch_events if event.action=="DISPATCH"
+                    for item in event.angel_ids
+                }
+                if commissioned and aid not in commissioned:
+                    raise ValueError("APOKRISIS_ANGEL_NOT_COMMISSIONED")
                 prior=self.history(
                     business_id=bid,event_type="ANGEL_RESPONSE",mission_id=mid,
                 )
