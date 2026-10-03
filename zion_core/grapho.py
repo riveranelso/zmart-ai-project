@@ -55,10 +55,13 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
                             "UPDATE_CANDIDATE_NOT_FOUND")
     return GraphoResult("UPDATE",decision.destination_ref,True,content+"\n","RULES_UPDATED")
 
-def grapho_write(path: Path, decision: Any) -> GraphoResult:
+def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> GraphoResult:
     """Persist a rendered BIBLIA mutation to an explicitly supplied local path."""
     existing=path.read_text(encoding="utf-8")
     result=grapho_render(existing,decision)
     if result.changed:
         path.write_text(result.content,encoding="utf-8")
+    if cronicas_sink is not None:
+        from .cronicas import cronicas_emit_grapho
+        cronicas_emit_grapho(decision,result,cronicas_sink)
     return result
