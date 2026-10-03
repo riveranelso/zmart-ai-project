@@ -59,6 +59,7 @@ class CronicasReaderTests(unittest.TestCase):
                 dict(base,angel_ids="SANMIGUEL.HOST-01.ANGEL-001"),
                 dict(base,uncertainty_count=True),
                 dict(base,dispatch_fingerprint="not-a-sha256"),
+                dict(base,response_fingerprint="not-a-sha256"),
             )
             for row in malformed_rows:
                 with self.subTest(row=row):
