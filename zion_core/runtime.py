@@ -205,7 +205,12 @@ class OmarRuntime:
             prior=self.history(
                 business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
             )
-            if prior:
+            if any(
+                event.action==action
+                and event.evidence_refs==(ref,)
+                and event.status in {"CHANGED","RECONCILED"}
+                for event in prior
+            ):
                 return None
             from .grapho import grapho_reconcile_committed_mutation
             return grapho_reconcile_committed_mutation(
