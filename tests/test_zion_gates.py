@@ -1,5 +1,5 @@
 import unittest
-from zion_core.gates import evaluate_gates
+from zion_core.gates import SecurityContext, evaluate_gates
 
 class ZionGateTests(unittest.TestCase):
     def base(self, **changes):
@@ -21,6 +21,21 @@ class ZionGateTests(unittest.TestCase):
 
     def test_thrones_blocks_policy_conflict(self):
         self.assertEqual(self.denied(policy_conflict=True)[0].gate,"THRONES")
+
+    def test_thrones_fails_closed_when_approval_required_without_security_context(self):
+        denied=self.denied(human_approval_required=True)
+        self.assertEqual(denied[0].gate,"THRONES")
+        self.assertEqual(denied[0].reason,"HUMAN_APPROVAL_REQUIRED")
+
+    def test_thrones_accepts_explicit_human_approval(self):
+        mission=self.base(human_approval_required=True,business_id="zmart-consumer-rights")
+        security=SecurityContext(
+            authenticated=True,principal_id="owner",
+            allowed_business_ids=("zmart-consumer-rights",),
+            human_approval_granted=True,
+        )
+        denied=[x for x in evaluate_gates(mission,"zmart",("BIBLIA",),security) if not x.allowed]
+        self.assertEqual(denied,[])
 
     def test_powers_blocks_high_risk(self):
         self.assertEqual(self.denied(risk_level="high")[0].gate,"POWERS")
