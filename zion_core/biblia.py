@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from .registry import sanpedro_resolve
+from .registry import sanpedro_business_ids, sanpedro_resolve
 
 
 SCOPE_PRECEDENCE={
@@ -50,23 +50,26 @@ def _scope_for_ref(ref: str)->str:
     return _REF_SCOPE.get(Path(ref).name,"GLOBAL")
 
 
-def _business_section(text: str, business_id: str) -> str:
-    """Return one exact business section; fail closed when a segmented document lacks it."""
-    header=f"## {business_id}"
+def _business_section(
+    text: str,business_id: str,known_business_ids: tuple[str,...]
+) -> str:
+    """Return one exact registered-business section without treating thematic H2s as tenants."""
     lines=text.splitlines(keepends=True)
-    heading_indexes=tuple(
+    business_headers={f"## {item}" for item in known_business_ids}
+    business_indexes=tuple(
         idx for idx,line in enumerate(lines)
-        if line.rstrip("\r\n").startswith("## ")
+        if line.rstrip("\r\n") in business_headers
     )
-    if not heading_indexes:
+    if not business_indexes:
         return text
+    header=f"## {business_id}"
     target_index=next(
-        (idx for idx in heading_indexes if lines[idx].rstrip("\r\n")==header),
+        (idx for idx in business_indexes if lines[idx].rstrip("\r\n")==header),
         None,
     )
     if target_index is None:
         return ""
-    end_index=next((idx for idx in heading_indexes if idx>target_index),len(lines))
+    end_index=next((idx for idx in business_indexes if idx>target_index),len(lines))
     return "".join(lines[target_index:end_index]).rstrip()+"\n"
 
 
@@ -77,6 +80,7 @@ def retrieve_biblia(
     registry_path: Path | None = None,
 ) -> BibliaContext:
     context=sanpedro_resolve(business_id,registry_path)
+    known_business_ids=sanpedro_business_ids(registry_path)
     documents=[]
     for ref in context.context_refs:
         path=(root/ref).resolve()
@@ -87,7 +91,9 @@ def retrieve_biblia(
             scope=_scope_for_ref(ref)
             documents.append(BibliaDocument(
                 ref=ref,
-                text=_business_section(path.read_text(encoding="utf-8"),business_id),
+                text=_business_section(
+                    path.read_text(encoding="utf-8"),business_id,known_business_ids
+                ),
                 scope=scope,
                 precedence=SCOPE_PRECEDENCE[scope],
             ))
