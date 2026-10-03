@@ -38,7 +38,6 @@ class LearningMutationGapTests(unittest.TestCase):
                 omar_close_and_learn(
                     response,biblia_root=root,registry_path=registry,
                     cronicas_sink=_FailMutationSink(CronicasJsonlSink(cronicas)),
-                    learning if False else None,
                     scope_hint="WORKFLOW",
                 )
 
