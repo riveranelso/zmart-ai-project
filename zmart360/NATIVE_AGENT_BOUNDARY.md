@@ -44,6 +44,8 @@ Use repository agent profiles in `.github/agents/`, reusable skills in `.agents/
 
 All share the canonical ZION development contract through `.agents/skills/zion-development/SKILL.md`.
 
+Substantial engineering work is coordinated through `.agents/skills/zion-orchestration/SKILL.md`, which prefers parallel Architect + Adversarial discovery, Builder implementation, and CI + independent Reviewer verification when the active platform supports delegation.
+
 ## DECISION RULE
 
 Before creating a new development-oriented runtime component:
