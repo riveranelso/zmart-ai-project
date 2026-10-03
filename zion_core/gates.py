@@ -24,7 +24,12 @@ def seraphim(mission: dict[str, Any], context_refs: tuple[str, ...]) -> GateResu
     return GateResult("SERAPHIM", True, "INTEGRITY_OK")
 
 def cherubim(mission: dict[str, Any], isolation_key: str, security: SecurityContext | None) -> GateResult:
-    if security is None or security.authenticated is not True or not security.principal_id:
+    requested_isolation = mission.get("isolation_key")
+    if requested_isolation is not None and requested_isolation != isolation_key:
+        return GateResult("CHERUBIM", False, "ISOLATION_BOUNDARY_VIOLATION")
+    if security is None:
+        return GateResult("CHERUBIM", True, "BOUNDARY_OK")
+    if security.authenticated is not True or not security.principal_id:
         return GateResult("CHERUBIM", False, "AUTHENTICATION_REQUIRED")
     if mission["business_id"] not in security.allowed_business_ids:
         return GateResult("CHERUBIM", False, "BUSINESS_ACCESS_DENIED")
