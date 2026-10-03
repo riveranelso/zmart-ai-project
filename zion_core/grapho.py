@@ -34,7 +34,14 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if decision.action=="ADD":
         block="\n".join(_rule_line(x) for x in rules)
         if header in text:
-            content=text+"\n"+block+"\n"
+            start=text.index(header)+len(header)
+            next_section=text.find("\n## ",start)
+            insert_at=len(text) if next_section==-1 else next_section
+            prefix=text[:insert_at].rstrip()
+            suffix=text[insert_at:]
+            content=prefix+"\n"+block+"\n"+suffix.lstrip("\n")
+            if suffix and not content.endswith("\n"):
+                content+="\n"
         else:
             content=text+"\n\n"+header+"\n"+block+"\n"
         return GraphoResult("ADD",decision.destination_ref,content!=existing_text,content,"RULES_APPENDED")
@@ -42,6 +49,9 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if not candidates:
         return GraphoResult("UPDATE",decision.destination_ref,False,existing_text,
                             "UPDATE_CANDIDATE_REQUIRED")
+    if len(candidates) != len(rules):
+        return GraphoResult("UPDATE",decision.destination_ref,False,existing_text,
+                            "UPDATE_RULE_COUNT_MISMATCH")
     content=text
     replaced=0
     for old,new in zip(candidates,rules):
