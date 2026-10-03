@@ -43,7 +43,10 @@ class BusinessIsolationRetryTests(unittest.TestCase):
             self.assertEqual(scan.decision.action,"DISPATCH")
             self.assertEqual(zmart.context.business_id,"zmart-consumer-rights")
             self.assertEqual(scan.context.business_id,"scan-water-intelligence")
-            self.assertNotEqual(zmart.context.context_refs,scan.context.context_refs)
+            self.assertIn("# Zmart",zmart.context.knowledge)
+            self.assertNotIn("# Scan",zmart.context.knowledge)
+            self.assertIn("# Scan",scan.context.knowledge)
+            self.assertNotIn("# Zmart",scan.context.knowledge)
 
             zhist=runtime.mission_history("shared-id",business_id="zmart-consumer-rights")
             shist=runtime.mission_history("shared-id",business_id="scan-water-intelligence")
