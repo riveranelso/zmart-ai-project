@@ -62,6 +62,9 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if not rules:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "NO_RULES_TO_WRITE")
+    if len({_rule_line(rule) for rule in rules}) != len(rules):
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "DUPLICATE_PROPOSED_RULE")
     text=existing_text.rstrip() if decision.action=="ADD" else existing_text
     header=_section_header(decision.business_id)
     if decision.action=="ADD":
@@ -189,7 +192,7 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
     if not isinstance(proposed,tuple) or any(
         not isinstance(rule,str) or not rule.strip() or "\n" in rule or "\r" in rule
         for rule in proposed
-    ):
+    ) or len({_rule_line(rule) for rule in proposed}) != len(proposed):
         return GraphoResult(
             decision.action,getattr(decision,"destination_ref",None),False,
             Path(path).read_text(encoding="utf-8"),"RECONCILIATION_INVALID_RULES",
