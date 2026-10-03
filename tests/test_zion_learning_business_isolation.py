@@ -80,6 +80,63 @@ class LearningBusinessIsolationTests(unittest.TestCase):
             self.assertTrue(all(e.business_id=="zmart-consumer-rights" for e in zevents))
             self.assertTrue(all(e.business_id=="scan-water-intelligence" for e in sevents))
 
+    def test_learning_rejects_registry_traversal_outside_biblia_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp); root=base/"biblia"; root.mkdir()
+            outside=base/"WORKFLOWS.md"
+            original="# Outside\n\n## zmart-consumer-rights\n- BASE\n"
+            outside.write_text(original,encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["../WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            response=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="traversal-learn",
+                status="SUCCESS",summary="done",business_id="zmart-consumer-rights",
+                correction_signals=("MUST_NOT_ESCAPE",),
+            )
+            with self.assertRaisesRegex(ValueError,"BIBLIA_DESTINATION_OUTSIDE_ROOT"):
+                runtime.close(response,learning=LearningIntent(
+                    scope_hint="WORKFLOW",repeated_correction=True))
+            self.assertEqual(outside.read_text(encoding="utf-8"),original)
+
+    def test_learning_rejects_authorized_symlink_outside_biblia_root(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root=Path(tmp)
+            outside=Path(outside_tmp)/"WORKFLOWS.md"
+            original="# Outside\n\n## zmart-consumer-rights\n- BASE\n"
+            outside.write_text(original,encoding="utf-8")
+            link=root/"WORKFLOWS.md"
+            try:
+                link.symlink_to(outside)
+            except (OSError,NotImplementedError):
+                self.skipTest("symlink not supported by test platform")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            response=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="symlink-learn",
+                status="SUCCESS",summary="done",business_id="zmart-consumer-rights",
+                correction_signals=("MUST_NOT_ESCAPE",),
+            )
+            with self.assertRaisesRegex(ValueError,"BIBLIA_DESTINATION_OUTSIDE_ROOT"):
+                runtime.close(response,learning=LearningIntent(
+                    scope_hint="WORKFLOW",repeated_correction=True))
+            self.assertEqual(outside.read_text(encoding="utf-8"),original)
+
 
 if __name__=="__main__":
     unittest.main()
