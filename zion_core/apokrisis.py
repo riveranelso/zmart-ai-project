@@ -87,6 +87,7 @@ def omar_close_and_learn(
     from pathlib import Path
     from .cronicas import cronicas_emit_apokrisis
     from .holy_ghost import prepare_learning_cycle, persist_learning_cycle
+    from .biblia import retrieve_biblia
 
     root = Path(biblia_root)
     event = cronicas_emit_apokrisis(response, cronicas_sink)
@@ -113,10 +114,15 @@ def omar_close_and_learn(
     if not target.is_file():
         return event, cycle
 
-    # Re-evaluate against the actual canonical BIBLIA text before any write.
+    # Re-evaluate only against SANPEDRO-authorized BIBLIA for this business.
+    authorized = retrieve_biblia(
+        response.business_id,
+        root=root,
+        registry_path=registry_path,
+    )
     cycle = prepare_learning_cycle(
         response,
-        target.read_text(encoding="utf-8"),
+        authorized.text,
         registry_path=registry_path,
         scope_hint=scope_hint,
         explicit_durable_instruction=explicit_durable_instruction,
