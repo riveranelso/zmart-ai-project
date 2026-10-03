@@ -42,6 +42,7 @@ class LearningIntent:
     active_campaign: bool = False
     existing_rule_candidates: tuple[str, ...] = ()
     conflict: bool = False
+    supersede: bool = False
     auto_write: bool = True
 
 
@@ -68,6 +69,7 @@ def receive_apokrisis(
         active_campaign=intent.active_campaign,
         existing_rule_candidates=intent.existing_rule_candidates,
         conflict=intent.conflict,
+        supersede=intent.supersede,
         auto_write=intent.auto_write,
     )
 
