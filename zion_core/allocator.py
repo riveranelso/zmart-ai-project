@@ -26,11 +26,12 @@ def diatasso(*, mission:dict[str,Any], command:str, host:str, business_id:str,
         raise ValueError("MISSION_ID_REQUIRED")
     if not isinstance(scope,str) or not scope.strip():
         raise ValueError("MISSION_SCOPE_REQUIRED")
-    if not isinstance(command,str) or not command.strip() or not isinstance(host,str) or not host.strip():
+    if (not isinstance(command,str) or not command.strip() or command != command.strip()
+            or not isinstance(host,str) or not host.strip() or host != host.strip()):
         raise ValueError("COMMAND_HOST_REQUIRED")
-    if not isinstance(business_id,str) or not business_id.strip():
+    if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
         raise ValueError("BUSINESS_ID_REQUIRED")
-    if not isinstance(isolation_key,str) or not isolation_key.strip():
+    if not isinstance(isolation_key,str) or not isolation_key.strip() or isolation_key != isolation_key.strip():
         raise ValueError("ISOLATION_KEY_REQUIRED")
     if not isinstance(context_refs,tuple) or not context_refs or not all(
         isinstance(ref,str) and ref.strip() and ref==ref.strip()
