@@ -1,9 +1,9 @@
-"""Deterministic bounded ANGEL allocation."""
+"""DIATASSO: deterministic bounded appointment of ANGELS to a mission."""
 from dataclasses import dataclass, asdict
 from typing import Any
 
 @dataclass(frozen=True)
-class AngelAssignment:
+class DiatassoCommission:
     angel_id: str
     mission_id: str
     command: str
@@ -15,13 +15,13 @@ class AngelAssignment:
     payload_ref: str | None = None
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
-def allocate_angels(*, mission:dict[str,Any], command:str, host:str, business_id:str,
-                    isolation_key:str, context_refs:tuple[str,...])->tuple[AngelAssignment,...]:
+def diatasso(*, mission:dict[str,Any], command:str, host:str, business_id:str,
+                    isolation_key:str, context_refs:tuple[str,...])->tuple[DiatassoCommission,...]:
     count=mission.get("angel_count_max",1)
     if not isinstance(count,int) or isinstance(count,bool) or count<1:
         raise ValueError("INVALID_ANGEL_COUNT")
     return tuple(
-        AngelAssignment(
+        DiatassoCommission(
             angel_id=f"{host}.ANGEL-{i:03d}",
             mission_id=str(mission["mission_id"]),
             command=command,
@@ -34,3 +34,12 @@ def allocate_angels(*, mission:dict[str,Any], command:str, host:str, business_id
         )
         for i in range(1,count+1)
     )
+
+
+AngelAssignment = DiatassoCommission  # compatibility alias
+
+def allocate_angels(*, mission:dict[str,Any], command:str, host:str, business_id:str,
+                    isolation_key:str, context_refs:tuple[str,...])->tuple[DiatassoCommission,...]:
+    """Compatibility alias. New ZION code should use DIATASSO."""
+    return diatasso(mission=mission,command=command,host=host,business_id=business_id,
+                    isolation_key=isolation_key,context_refs=context_refs)
