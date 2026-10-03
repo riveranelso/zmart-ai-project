@@ -1,10 +1,13 @@
 import tempfile
 import unittest
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
 from zion_core import CronicasJsonlSink, read_cronicas
 from zion_core.grapho import grapho_reconcile_committed_mutation
+from zion_core.persistence import LocalOperationLock
 
 
 class GraphoReconciliationTests(unittest.TestCase):
@@ -52,6 +55,32 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(result.reason,"RECONCILIATION_RULES_NOT_PROVEN")
             self.assertEqual(target.read_text(encoding="utf-8"),original)
             self.assertFalse(cronicas.exists())
+
+    def test_reconciliation_waits_for_active_biblia_writer_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            rule="Persist this exact durable rule."
+            target.write_text("# Workflows\n\n## zmart-consumer-rights\n- "+rule+"\n",encoding="utf-8")
+            cronicas=root/"cronicas.jsonl"
+            lock=LocalOperationLock(target.parent/".zion-biblia-locks")
+            identity=str(target.resolve())
+            results=[]
+
+            with lock.hold("BIBLIA","GRAPHO_WRITE",identity):
+                thread=threading.Thread(target=lambda: results.append(
+                    grapho_reconcile_committed_mutation(
+                        target,self.decision(rule),CronicasJsonlSink(cronicas)
+                    )
+                ))
+                thread.start()
+                time.sleep(0.1)
+                self.assertTrue(thread.is_alive())
+                self.assertEqual(results,[])
+            thread.join(5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(results),1)
+            self.assertEqual(results[0].reason,"RECONCILED_ALREADY_COMMITTED")
 
 
 if __name__=="__main__":
