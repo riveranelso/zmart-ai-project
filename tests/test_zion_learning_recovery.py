@@ -33,6 +33,7 @@ class LearningRecoveryTests(unittest.TestCase):
                 status="SUCCESS",
                 summary="done",
                 business_id="zmart-consumer-rights",
+                correlation_id="corr-recover-1",
                 correction_signals=(rule,),
             )
             intent=LearningIntent(scope_hint="WORKFLOW",repeated_correction=True)
@@ -68,6 +69,7 @@ class LearningRecoveryTests(unittest.TestCase):
             self.assertEqual(
                 mutations[0].angel_ids,("SANGABRIEL.HOST-01.ANGEL-001",)
             )
+            self.assertEqual(mutations[0].correlation_id,"corr-recover-1")
 
             retry=runtime.close(response,learning=intent)
             self.assertFalse(retry.processed)
