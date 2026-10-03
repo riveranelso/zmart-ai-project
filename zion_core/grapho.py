@@ -177,17 +177,17 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
     identity=str(target.resolve())
     with lock.hold("BIBLIA","GRAPHO_WRITE",identity):
         existing=target.read_text(encoding="utf-8")
-        header=_section_header(decision.business_id)
-        if header not in existing:
+        bounds=_section_bounds(existing,decision.business_id)
+        if bounds is None:
             return GraphoResult(decision.action,decision.destination_ref,False,existing,
                                 "RECONCILIATION_BUSINESS_SECTION_NOT_FOUND")
-        start=existing.index(header)+len(header)
-        end=existing.find("\n## ",start)
-        if end==-1:
-            end=len(existing)
+        start,end=bounds
         section=existing[start:end]
         rules=tuple(x.strip() for x in decision.proposed_rules if isinstance(x,str) and x.strip())
-        if not rules or not all(_rule_line(rule) in section for rule in rules):
+        section_lines=tuple(
+            line.rstrip("\r\n") for line in section.splitlines(keepends=True)
+        )
+        if not rules or not all(_rule_line(rule) in section_lines for rule in rules):
             return GraphoResult(decision.action,decision.destination_ref,False,existing,
                                 "RECONCILIATION_RULES_NOT_PROVEN")
         result=GraphoResult(decision.action,decision.destination_ref,False,existing,
