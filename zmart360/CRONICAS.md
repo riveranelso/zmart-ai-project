@@ -63,3 +63,4 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 - Owner retries preserve the original correction fingerprint count; recovery of the same `correction_id` is not new human evidence.
 - Non-mutating terminal evaluations do not manufacture `BIBLIA_MUTATION` evidence.
 - New normal `BIBLIA_MUTATION` events attribute the originating APOKRISIS/owner input in `angel_ids` without storing rule text. Reconciliation does not invent an origin when it cannot prove one. Same-ANGEL attribution may support retry idempotency; sibling or unattributed mutation evidence must not be used as proof that another ANGEL's learning completed.
+- New normal `BIBLIA_MUTATION` events also preserve the source APOKRISIS `correlation_id` when present, allowing privacy-bounded trace linkage without storing correction text; reconciliation leaves correlation absent unless it is explicitly proven by its input contract.
