@@ -38,7 +38,7 @@ def _operation_digest(business_id: str,operation: str,identity: str)->str:
     """Stable local lock identity; not a durable pre-action claim."""
     parts=(business_id,operation,identity)
     if not all(isinstance(x,str) and x.strip() for x in parts):
-        raise ValueError("OPERATION_LOCK_IDENTITY_REQUIRED")
+        raise ValueError("ATOMIC_CLAIM_IDENTITY_REQUIRED")
     raw="\x1f".join(x.strip() for x in parts).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
