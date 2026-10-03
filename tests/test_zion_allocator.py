@@ -45,7 +45,7 @@ class AngelAllocatorTests(unittest.TestCase):
         self.assertEqual(commissions[0].payload_ref,"payload-1")
 
     def test_direct_allocator_rejects_noncanonical_boundary_identities(self):
-        mission=self.mission()
+        mission={"mission_id":"m5","scope":"PROJECT","angel_count_max":1}
         base=dict(mission=mission,command="SANGABRIEL",host="SANGABRIEL.HOST-01",
                   business_id="zmart-consumer-rights",isolation_key="zmart-consumer-rights",
                   context_refs=("BIBLIA.md",))
