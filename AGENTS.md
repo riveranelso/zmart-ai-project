@@ -47,3 +47,19 @@ Never commit secrets, credentials, tokens, customer PII or private lead exports.
 ## ZION development skill
 For ZION CORE implementation, debugging, hardening, CI repair, architecture audit, and documentation synchronization, load `.agents/skills/zion-development/SKILL.md` and follow its autonomous development loop. This skill does not authorize production deploys, main-branch mutation, secrets/permission changes, or destructive external actions.
 
+## Native agent-first development
+
+ZION owns Nelson-specific canonical knowledge, durable learning/history, business isolation, routing policy, and domain behavior. It MUST NOT recreate general developer-agent infrastructure when the active coding platform already provides an equivalent capability.
+
+Before adding a new ZION runtime component for development orchestration, evaluate in this order:
+1. existing platform capability;
+2. agent skill;
+3. custom/subagent;
+4. deterministic hook or CI;
+5. MCP/tool integration;
+6. only then custom ZION runtime code.
+
+Repository development specialists live in `.github/agents/`. Reuse `.agents/skills/zion-development/SKILL.md` for the shared ZION development contract. Prefer isolated/parallel specialist review where supported, but keep production deploy, main-branch merge, destructive changes, secrets, permissions, and customer-data operations behind explicit owner approval.
+
+Do not move BIBLIA, CRONICAS, HOLY GHOST, SAN PEDRO business isolation, or Nelson-specific durable operating knowledge into generic platform agents merely to reduce code; those are ZION-owned semantics.
+
