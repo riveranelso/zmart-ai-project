@@ -77,7 +77,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     for old,new in zip(candidates,rules):
         section=section.replace(_rule_line(old),_rule_line(new),1)
     content=prefix+section+suffix
-    return GraphoResult(decision.action,decision.destination_ref,True,content+"\n",
+    rendered=content if content.endswith("\n") else content+"\n"
+    if rendered==existing_text:
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "RULES_ALREADY_PRESENT")
+    return GraphoResult(decision.action,decision.destination_ref,True,rendered,
                         "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
 def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None, *, origin_angel_id: str | None = None, correlation_id: str | None = None) -> GraphoResult:
