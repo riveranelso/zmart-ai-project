@@ -1,4 +1,5 @@
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -42,16 +43,16 @@ class CorrectionMemoryCrashRecoveryTests(unittest.TestCase):
             path=Path(tmp)/"corrections.json"
             memory=PersistentCorrectionMemory(path)
             real_fsync=os.fsync
-            calls=0
+            failed_directory_sync=False
 
-            def fail_second_fsync(fd):
-                nonlocal calls
-                calls+=1
-                if calls==2:
+            def fail_directory_fsync(fd):
+                nonlocal failed_directory_sync
+                if stat.S_ISDIR(os.fstat(fd).st_mode) and not failed_directory_sync:
+                    failed_directory_sync=True
                     raise OSError("SIMULATED_DIRECTORY_FSYNC_FAILURE")
                 return real_fsync(fd)
 
-            with patch("zion_core.persistence.os.fsync",side_effect=fail_second_fsync):
+            with patch("zion_core.persistence.os.fsync",side_effect=fail_directory_fsync):
                 count=memory.observe("zmart-consumer-rights","Same durable rule.")
 
             self.assertEqual(count,1)
