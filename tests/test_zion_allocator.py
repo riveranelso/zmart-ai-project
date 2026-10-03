@@ -30,4 +30,18 @@ class AngelAllocatorTests(unittest.TestCase):
                      business_id="zmart-consumer-rights",isolation_key="zmart",
                      context_refs=("zmart360/BIBLIA/GLOBAL.md",))
 
+    def test_allocator_rejects_noncanonical_context_ref(self):
+        mission={"mission_id":"m3","scope":"PROJECT"}
+        with self.assertRaisesRegex(ValueError,"CONTEXT_REFS_REQUIRED"):
+            diatasso(mission=mission,command="BUILD",host="BUILD.HOST-01",
+                     business_id="zmart-consumer-rights",isolation_key="zmart",
+                     context_refs=(" BIBLIA.md ",))
+
+    def test_allocator_canonicalizes_payload_ref(self):
+        mission={"mission_id":"m4","scope":"PROJECT","payload_ref":"  payload-1  "}
+        commissions=diatasso(mission=mission,command="BUILD",host="BUILD.HOST-01",
+                     business_id="zmart-consumer-rights",isolation_key="zmart",
+                     context_refs=("BIBLIA.md",))
+        self.assertEqual(commissions[0].payload_ref,"payload-1")
+
 if __name__=="__main__": unittest.main()
