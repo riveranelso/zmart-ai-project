@@ -42,4 +42,13 @@ class ZionRouterTests(unittest.TestCase):
         data=self.mission(); del data["business_id"]
         with self.assertRaises(MissionValidationError): route_mission(data)
 
+    def test_optional_string_fields_reject_whitespace_only_values(self):
+        mission=self.mission()
+        for field in ("project_id","target_command","target_host","payload_ref","correlation_id","isolation_key"):
+            malformed=dict(mission)
+            malformed[field]="   "
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(MissionValidationError,"INVALID_STRING:"+field):
+                    validate_mission(malformed)
+
 if __name__=="__main__": unittest.main()
