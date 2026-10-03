@@ -121,7 +121,7 @@ def resolve_learning_destination(
     if filename is None:
         return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                    None, False, "DESTINATION_SCOPE_UNSUPPORTED")
-    matches=tuple(ref for ref in context.context_refs if ref.endswith("/"+filename) or ref.endswith(filename))
+    matches=tuple(ref for ref in context.context_refs if Path(ref).name == filename)
     if not matches:
         return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                    None, False, "DESTINATION_NOT_REGISTERED")
