@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
-import re
 from typing import Any
 from .cronicas import CronicasSink, cronicas_emit
 from .allocator import DiatassoCommission, diatasso
@@ -66,7 +65,9 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
     else:
         commit_route()
     for cmd,hst in routes.values():
-        if re.fullmatch(re.escape(cmd)+r"\\.HOST-\\d{2}",hst) is None:
+        prefix=cmd+".HOST-"
+        suffix=hst[len(prefix):] if hst.startswith(prefix) else ""
+        if len(suffix)!=2 or not suffix.isascii() or not suffix.isdigit():
             raise RuntimeError("INVALID_COMMAND_HOST_PAIR")
     return routes
 
