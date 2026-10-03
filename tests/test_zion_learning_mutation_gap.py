@@ -55,6 +55,39 @@ class LearningMutationGapTests(unittest.TestCase):
                 event_type="BIBLIA_MUTATION",mission_id="gap-001",
             )),0)
 
+    def test_runtime_reconciles_gap_once_without_rewriting_biblia(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            workflows=root/"WORKFLOWS.md"
+            rule="Persist this exact durable rule."
+            workflows.write_text("# Workflows\n\n## zmart-consumer-rights\n- "+rule+"\n",encoding="utf-8")
+            before=workflows.read_bytes()
+            cronicas=root/"cronicas.jsonl"
+            runtime=OmarRuntime(
+                biblia_root=root,cronicas_path=cronicas,
+                correction_memory_path=root/"corrections.json",
+            )
+            from zion_core.holy_ghost import PromotionDecision
+            decision=PromotionDecision(
+                mission_id="gap-recovery-001",business_id="zmart-consumer-rights",
+                scope="WORKFLOW",destination_ref="WORKFLOWS.md",action="ADD",
+                proposed_rules=(rule,),matched_rules=(),reason="NEW_RULE",
+                requires_review=True,
+            )
+
+            first=runtime.reconcile_biblia_mutation(decision)
+            second=runtime.reconcile_biblia_mutation(decision)
+
+            self.assertEqual(first.reason,"RECONCILED_ALREADY_COMMITTED")
+            self.assertIsNone(second)
+            self.assertEqual(workflows.read_bytes(),before)
+            events=runtime.history(
+                business_id="zmart-consumer-rights",
+                event_type="BIBLIA_MUTATION",mission_id="gap-recovery-001",
+            )
+            self.assertEqual(len(events),1)
+            self.assertEqual(events[0].status,"RECONCILED")
+
 
 if __name__=="__main__":
     unittest.main()
