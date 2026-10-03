@@ -116,8 +116,11 @@ class OmarRuntime:
                 dispatch_events=self.history(
                     business_id=bid,event_type="MISSION_DECISION",mission_id=mid,
                 )
+                dispatched_events=[event for event in dispatch_events if event.action=="DISPATCH"]
+                if dispatch_events and not dispatched_events:
+                    raise ValueError("APOKRISIS_MISSION_NOT_DISPATCHED")
                 commissioned={
-                    item for event in dispatch_events if event.action=="DISPATCH"
+                    item for event in dispatched_events
                     for item in event.angel_ids
                 }
                 if commissioned and aid not in commissioned:
