@@ -53,6 +53,32 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             )
 
 
+    def test_dispatched_mission_with_empty_commission_evidence_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            from zion_core.cronicas import CronicasEvent, JsonlCronicasSink
+            JsonlCronicasSink(root/"cronicas.jsonl").append(CronicasEvent(
+                event_type="MISSION_DECISION",mission_id="m-empty-commission",
+                business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",
+                angel_ids=(),
+            ))
+            forged=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-empty-commission",
+                status="SUCCESS",summary="forged",business_id="zmart-consumer-rights",
+            )
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_COMMISSION_EVIDENCE_MISSING"):
+                runtime.close(forged,learning=LearningIntent())
+
+
     def test_denied_mission_cannot_accept_angel_response(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
