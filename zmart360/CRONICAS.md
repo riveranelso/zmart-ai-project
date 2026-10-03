@@ -49,3 +49,5 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 - Parsing and filtering happen after the lock is released.
 - A reader therefore does not interpret an actively written partial final record as persisted corruption under the cooperating local adapter.
 - Lock timeout remains fail-closed; this is a local-filesystem guarantee, not distributed snapshot isolation.
+
+- For local atomic replacements used by BIBLIA/correction state, pre-replace file fsync remains mandatory; post-replace directory fsync is durability hardening and does not redefine an already-visible logical commit as failed. CRONICAS recovery must continue to distinguish historical evidence from canonical state.
