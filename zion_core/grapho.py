@@ -35,17 +35,23 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     text=existing_text.rstrip()
     header=_section_header(decision.business_id)
     if decision.action=="ADD":
-        block="\n".join(_rule_line(x) for x in rules)
         if header in text:
             start=text.index(header)+len(header)
             next_section=text.find("\n## ",start)
             insert_at=len(text) if next_section==-1 else next_section
+            section=text[start:insert_at]
+            missing=tuple(rule for rule in rules if _rule_line(rule) not in section)
+            if not missing:
+                return GraphoResult("ADD",decision.destination_ref,False,existing_text,
+                                    "RULES_ALREADY_PRESENT")
+            block="\n".join(_rule_line(x) for x in missing)
             prefix=text[:insert_at].rstrip()
             suffix=text[insert_at:]
             content=prefix+"\n"+block+"\n"+suffix.lstrip("\n")
             if suffix and not content.endswith("\n"):
                 content+="\n"
         else:
+            block="\n".join(_rule_line(x) for x in rules)
             content=text+"\n\n"+header+"\n"+block+"\n"
         return GraphoResult("ADD",decision.destination_ref,content!=existing_text,content,"RULES_APPENDED")
     candidates=tuple(x.strip() for x in decision.matched_rules if isinstance(x,str) and x.strip())
