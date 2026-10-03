@@ -179,13 +179,13 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         return ()
     contexts=[]
     angels=getattr(decision,"angels",()) or ()
-    if len(angels) != getattr(decision,"angel_count",None):
-        raise ValueError("ANGEL_CONTEXT_COUNT_MISMATCH")
     angel_ids=[getattr(commission,"angel_id",None) for commission in angels]
     if any(not isinstance(angel_id,str) or not angel_id.strip() for angel_id in angel_ids):
         raise ValueError("ANGEL_CONTEXT_ID_INVALID")
     if len(set(angel_ids)) != len(angel_ids):
         raise ValueError("ANGEL_CONTEXT_DUPLICATE_ANGEL")
+    if len(angels) != getattr(decision,"angel_count",None):
+        raise ValueError("ANGEL_CONTEXT_COUNT_MISMATCH")
     host=getattr(decision,"host",None)
     expected_ids=[f"{host}.ANGEL-{index:03d}" for index in range(1,len(angels)+1)]
     if angel_ids != expected_ids:
