@@ -248,6 +248,24 @@ class AngelExecutionContextTests(unittest.TestCase):
                 execution_contexts(replace(dispatch,context=changed))
 
 
+    def test_tampered_prepared_route_authority_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Approved.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["BIBLIA.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            mission={"mission_id":"m-route-context","intent":"internal_dispatch","requested_by":"OMAR",
+                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            dispatch=dispatch_mission(mission,biblia_root=root,routes_path=routes,registry_path=registry)
+            tampered_context=replace(dispatch.context,command="SANRAFAEL",host="SANRAFAEL.HOST-01")
+            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_DECISION_ROUTE_MISMATCH"):
+                execution_contexts(replace(dispatch,context=tampered_context))
+
+
     def test_tampered_decision_route_is_rejected_even_when_commissions_match(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
