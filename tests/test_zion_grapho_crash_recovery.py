@@ -1,3 +1,5 @@
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -67,6 +69,27 @@ class GraphoCrashRecoveryTests(unittest.TestCase):
             self.assertIn("CURRENT_RULE",final)
             self.assertNotIn("STALE_UNTRUSTED_CONTENT",final)
             self.assertFalse(temp.exists())
+
+    def test_post_replace_directory_fsync_failure_keeps_successful_grapho_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"WORKFLOWS.md"
+            path.write_text("# Workflows\n",encoding="utf-8")
+            real_fsync=os.fsync
+            failed_directory_sync=False
+
+            def fail_directory_fsync(fd):
+                nonlocal failed_directory_sync
+                if stat.S_ISDIR(os.fstat(fd).st_mode) and not failed_directory_sync:
+                    failed_directory_sync=True
+                    raise OSError("SIMULATED_DIRECTORY_FSYNC_FAILURE")
+                return real_fsync(fd)
+
+            with patch("zion_core.grapho.os.fsync",side_effect=fail_directory_fsync):
+                result=grapho_write(path,self.decision("POST_COMMIT_RULE"))
+
+            self.assertTrue(result.changed)
+            self.assertIn("POST_COMMIT_RULE",path.read_text(encoding="utf-8"))
+            self.assertTrue(failed_directory_sync)
 
 
 if __name__=="__main__":
