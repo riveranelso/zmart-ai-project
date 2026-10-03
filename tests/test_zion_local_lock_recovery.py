@@ -152,6 +152,32 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                 self.assertTrue(path.exists())
             self.assertFalse(path.exists())
 
+    def test_partial_owner_metadata_write_is_completed_before_entering(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            lock=LocalOperationLock(root,timeout_seconds=0.1)
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="partial-metadata-write"
+            path=self.lock_path(root,business,operation,identity)
+            real_write=os.write
+            first=True
+
+            def partial_first_write(fd,data):
+                nonlocal first
+                if first and len(data)>1:
+                    first=False
+                    split=max(1,len(data)//2)
+                    return real_write(fd,data[:split])
+                return real_write(fd,data)
+
+            with patch("zion_core.persistence.os.write",side_effect=partial_first_write):
+                with lock.hold(business,operation,identity):
+                    owner=json.loads(path.read_text(encoding="utf-8"))
+                    self.assertEqual(owner["pid"],os.getpid())
+                    self.assertEqual(owner["identity"],identity)
+            self.assertFalse(path.exists())
+
     def test_owner_metadata_fsync_failure_does_not_leave_unrecoverable_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"locks"
