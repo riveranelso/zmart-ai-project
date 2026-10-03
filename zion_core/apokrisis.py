@@ -139,5 +139,8 @@ def omar_close_and_learn(
         supersede=supersede,
     )
     if auto_write:
-        cycle = persist_learning_cycle(cycle, target, cronicas_sink=cronicas_sink)
+        cycle = persist_learning_cycle(
+            cycle,target,cronicas_sink=cronicas_sink,
+            origin_angel_id=cycle.signal.angel_id,
+        )
     return event, cycle
