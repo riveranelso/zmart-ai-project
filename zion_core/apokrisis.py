@@ -110,7 +110,10 @@ def omar_close_and_learn(
     if not cycle.destination.ready_for_review or not cycle.destination.destination_ref:
         return event, cycle
 
-    target = root / cycle.destination.destination_ref
+    root_resolved = root.resolve()
+    target = (root / cycle.destination.destination_ref).resolve()
+    if root_resolved not in target.parents and target != root_resolved:
+        raise ValueError("BIBLIA_DESTINATION_OUTSIDE_ROOT")
     if not target.is_file():
         return event, cycle
 
