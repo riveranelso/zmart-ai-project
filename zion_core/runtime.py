@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .router import DispatchDecision
-from .cronicas import build_dispatch_fingerprint
+from .cronicas import build_apokrisis_fingerprint, build_dispatch_fingerprint
 from .registry import sanpedro_resolve
 from .holy_ghost import SCOPE_DESTINATION_NAMES
 from .omar import (
@@ -128,6 +128,9 @@ class OmarRuntime:
                 matching=[event for event in prior if aid in event.angel_ids]
                 if matching:
                     recorded=matching[-1]
+                    if (recorded.response_fingerprint is not None
+                            and recorded.response_fingerprint != build_apokrisis_fingerprint(response)):
+                        raise ValueError("APOKRISIS_REUSE_CONFLICT")
                     current_evidence=tuple(getattr(response,"evidence_refs",()) or ())
                     current_uncertainty=len(getattr(response,"uncertainty",()) or ())
                     current_corrections=len(getattr(response,"correction_signals",()) or ())
