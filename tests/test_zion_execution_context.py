@@ -248,6 +248,35 @@ class AngelExecutionContextTests(unittest.TestCase):
                 execution_contexts(replace(dispatch,context=changed))
 
 
+    def test_cross_business_dispatch_decision_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Shared knowledge.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{
+                "zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["BIBLIA.md"]},
+                "scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["BIBLIA.md"]}
+            }}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-01\n",encoding="utf-8"
+            )
+            zmart=dispatch_mission(
+                {"mission_id":"m-zmart","intent":"internal_dispatch","requested_by":"OMAR",
+                 "scope":"WORKFLOW","business_id":"zmart-consumer-rights"},
+                biblia_root=root,routes_path=routes,registry_path=registry,
+            )
+            scan=dispatch_mission(
+                {"mission_id":"m-scan","intent":"internal_dispatch","requested_by":"OMAR",
+                 "scope":"WORKFLOW","business_id":"scan-water-intelligence"},
+                biblia_root=root,routes_path=routes,registry_path=registry,
+            )
+            tampered=replace(zmart,decision=scan.decision)
+            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_DECISION_BUSINESS_MISMATCH"):
+                execution_contexts(tampered)
+
+
     def test_no_execution_context_when_dispatch_is_denied(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
