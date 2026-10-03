@@ -292,7 +292,7 @@ def read_cronicas(
                 raw[key]=tuple(value)
             if raw.get("event_type")=="MISSION_DECISION" and raw.get("action")=="DISPATCH":
                 import re
-                if not raw["angel_ids"] or not all(
+                if raw["angel_ids"] and not all(
                     re.fullmatch(r"[A-Z][A-Z0-9]*\\.HOST-[0-9]{2}\\.ANGEL-[0-9]{3}",item)
                     for item in raw["angel_ids"]
                 ):
