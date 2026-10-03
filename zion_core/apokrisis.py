@@ -56,3 +56,11 @@ def apokrisis(
         output_ref=output_ref,
         error_code=error_code,
     )
+
+def close_apokrisis(response: Apokrisis, cronicas_sink=None):
+    """Close an ANGEL response into CRONICAS and HOLY GHOST review evidence."""
+    from .cronicas import cronicas_emit_apokrisis
+    from .holy_ghost import holy_ghost_receive
+    event = cronicas_emit_apokrisis(response, cronicas_sink)
+    learning = holy_ghost_receive(response)
+    return event, learning
