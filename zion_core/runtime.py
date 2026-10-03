@@ -107,8 +107,8 @@ class OmarRuntime:
                         )
                     )
                     attributed_mutation=any(
-                        aid in event.angel_ids
-                        for event in self.history(
+                        str(response.angel_id) in mutation.angel_ids
+                        for mutation in self.history(
                             business_id=bid,event_type="BIBLIA_MUTATION",
                             mission_id=mid,
                         )
