@@ -30,6 +30,11 @@ Production storage is intentionally not selected by this composition.
 - A repeated owner correction with the same `correction_id` is a technical retry, not a second human correction.
 - The same correction text under a new correction ID may count as a genuine repeated correction.
 - These checks survive runtime restart because they use persisted CRONICAS/correction state.
+- The local adapter serializes each idempotency critical section with a short-lived operation lock. Dispatch is keyed by business + mission; APOKRISIS by business + mission + ANGEL; owner correction by business + correction ID.
+- Correction repetition memory separately serializes updates by business + correction fingerprint so distinct human correction events cannot lose increments.
+- Local crash recovery may reclaim a lock only when its recorded owner can be proven dead or its PID can be proven reused through process-start identity. Unknown ownership fails closed by timeout.
+- These are local-filesystem concurrency guarantees. They are NOT a claim of distributed exactly-once execution.
+- A production persistence implementation MUST provide an equivalent atomic uniqueness/transaction boundary across all participating workers before this idempotency contract may be relied on in distributed production.
 
 ## Learning and precedence
 HOLY GHOST classifies durable lessons to the narrowest valid scope. BIBLIA retrieval order is GLOBAL -> WORKFLOW -> BRAND -> PROJECT -> CAMPAIGN, so more specific active knowledge is presented later and prevails operationally. A narrow-scope override does not delete broader knowledge. Explicit same-scope replacement uses SUPERSEDE only with deterministic candidate mapping; unresolved ambiguity becomes CONFLICT and does not write.
