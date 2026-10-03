@@ -7,3 +7,4 @@ __all__ = ["DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels
 
 from .apokrisis import Apokrisis, apokrisis, close_apokrisis
 from .holy_ghost import LearningSignal, LearningProposal, LearningDestination, PromotionDecision, holy_ghost_receive, evaluate_learning, resolve_learning_destination, propose_biblia_promotion
+from .grapho import GraphoResult, grapho_render, grapho_write
