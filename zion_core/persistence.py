@@ -267,8 +267,29 @@ def read_cronicas(
             raw=json.loads(line)
             if not isinstance(raw,dict):
                 raise TypeError
-            raw["angel_ids"]=tuple(raw.get("angel_ids") or ())
-            raw["evidence_refs"]=tuple(raw.get("evidence_refs") or ())
+            for key in ("event_id","occurred_at","event_type","mission_id","action","reason"):
+                if not isinstance(raw.get(key),str) or not raw[key].strip():
+                    raise TypeError
+            for key in ("business_id","command","host","denied_by","correlation_id","status","dispatch_fingerprint"):
+                value=raw.get(key)
+                if value is not None and (not isinstance(value,str) or not value.strip()):
+                    raise TypeError
+            fingerprint=raw.get("dispatch_fingerprint")
+            if fingerprint is not None and (
+                len(fingerprint)!=64 or any(ch not in "0123456789abcdef" for ch in fingerprint)
+            ):
+                raise TypeError
+            for key in ("angel_ids","evidence_refs"):
+                value=raw.get(key,[])
+                if not isinstance(value,list) or not all(
+                    isinstance(item,str) and item.strip() for item in value
+                ):
+                    raise TypeError
+                raw[key]=tuple(value)
+            for key in ("uncertainty_count","correction_count"):
+                value=raw.get(key,0)
+                if not isinstance(value,int) or isinstance(value,bool) or value < 0:
+                    raise TypeError
             event=CronicaEvent(**raw)
         except (json.JSONDecodeError,TypeError,KeyError,ValueError) as exc:
             raise CronicasReadError(f"INVALID_CRONICAS_LINE:{line_number}") from exc
