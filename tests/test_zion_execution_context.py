@@ -6,6 +6,7 @@ from pathlib import Path
 from dataclasses import replace
 
 from zion_core import dispatch_mission, execution_contexts
+from zion_core.biblia import BibliaContext, BibliaDocument
 
 
 class AngelExecutionContextTests(unittest.TestCase):
@@ -228,6 +229,23 @@ class AngelExecutionContextTests(unittest.TestCase):
             tampered=replace(dispatch.decision,angels=(bad,))
             with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_PAYLOAD_MISMATCH"):
                 execution_contexts(replace(dispatch,decision=tampered))
+
+
+
+    def test_mismatched_biblia_business_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Approved.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["BIBLIA.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            mission={"mission_id":"m-biblia-business","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            dispatch=dispatch_mission(mission,biblia_root=root,routes_path=routes,registry_path=registry)
+            other=BibliaContext("other-business",dispatch.context.biblia.refs,(BibliaDocument("BIBLIA.md","Other knowledge","GLOBAL",10),))
+            changed=replace(dispatch.context,biblia=other)
+            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH"):
+                execution_contexts(replace(dispatch,context=changed))
 
 
     def test_no_execution_context_when_dispatch_is_denied(self):
