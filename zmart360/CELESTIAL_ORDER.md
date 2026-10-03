@@ -31,9 +31,9 @@ This is a technological metaphor inspired by biblical and Christian terminology.
 Canonical operational structure: ARCHANGEL -> HOST -> ANGEL.
 
 Initial commands:
-- MICHAEL COMMAND — Defense & Response.
-- GABRIEL COMMAND — Communications & Dispatch.
-- RAPHAEL COMMAND — Recovery & Restoration.
+- SAN MIGUEL COMMAND — Defense & Response.
+- SAN GABRIEL COMMAND — Communications & Dispatch.
+- SAN RAFAEL COMMAND — Recovery & Restoration.
 
 See `ARCHANGEL_COMMANDS.md` and `archangel_commands.yaml`.
 
