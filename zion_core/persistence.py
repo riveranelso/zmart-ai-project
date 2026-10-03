@@ -89,6 +89,25 @@ class LocalOperationLock:
         return True
 
     @staticmethod
+    def _process_start_identity(pid: int)->str | None:
+        if not isinstance(pid,int) or pid <= 0:
+            return None
+        stat=Path(f"/proc/{pid}/stat")
+        try:
+            raw=stat.read_text(encoding="utf-8")
+        except OSError:
+            return None
+        # /proc/<pid>/stat field 2 is parenthesized and may contain spaces.
+        close=raw.rfind(")")
+        if close < 0:
+            return None
+        fields=raw[close+2:].split()
+        # starttime is field 22 overall, index 19 after fields 1-2 are removed.
+        if len(fields) <= 19:
+            return None
+        return fields[19]
+
+    @staticmethod
     def _read_owner(path: Path)->dict[str,Any] | None:
         try:
             raw=json.loads(path.read_text(encoding="utf-8"))
@@ -100,8 +119,14 @@ class LocalOperationLock:
         owner=self._read_owner(path)
         if not owner:
             return False
-        alive=self._owner_alive(owner.get("pid"))
-        if alive is not False:
+        pid=owner.get("pid")
+        alive=self._owner_alive(pid)
+        if alive is True:
+            recorded_start=owner.get("process_start")
+            current_start=self._process_start_identity(pid)
+            if not (recorded_start and current_start and recorded_start != current_start):
+                return False
+        elif alive is not False:
             return False
         try:
             path.unlink()
@@ -126,8 +151,10 @@ class LocalOperationLock:
                     raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
                 time.sleep(self.poll_seconds)
         try:
-            payload={"pid":os.getpid(),"business_id":business_id.strip(),
-                     "operation":operation.strip(),"identity":identity.strip()}
+            pid=os.getpid()
+            payload={"pid":pid,"process_start":self._process_start_identity(pid),
+                     "business_id":business_id.strip(),"operation":operation.strip(),
+                     "identity":identity.strip()}
             os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
             os.fsync(fd)
             yield
