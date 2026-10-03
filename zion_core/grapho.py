@@ -209,7 +209,8 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
     if (
         not isinstance(destination_ref,str)
         or not destination_ref.strip()
-        or Path(destination_ref).name != target.name
+        or destination_ref != destination_ref.strip()
+        or destination_ref != target.name
     ):
         return GraphoResult(
             decision.action,destination_ref,False,target.read_text(encoding="utf-8"),
