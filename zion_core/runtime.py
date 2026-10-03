@@ -9,6 +9,7 @@ from typing import Any
 
 from .router import DispatchDecision
 from .registry import sanpedro_resolve
+from .holy_ghost import SCOPE_DESTINATION_NAMES
 from .omar import (
     LearningIntent,
     dispatch_mission,
@@ -146,6 +147,10 @@ class OmarRuntime:
         bid=business_id.strip()
         mid=mission_id.strip()
         ref=destination_ref.strip()
+        scope=getattr(decision,"scope",None)
+        expected_name=SCOPE_DESTINATION_NAMES.get(scope) if isinstance(scope,str) else None
+        if expected_name is None or Path(ref).name != expected_name:
+            raise ValueError("RECONCILIATION_SCOPE_DESTINATION_MISMATCH")
         context=sanpedro_resolve(bid,self.registry_path)
         ref_path=Path(ref)
         authorized_names={Path(item).name for item in context.context_refs}
