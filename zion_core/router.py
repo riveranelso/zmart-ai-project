@@ -6,7 +6,7 @@ import json
 from typing import Any
 from .allocator import AngelAssignment, allocate_angels
 from .gates import evaluate_gates
-from .registry import RegistryError, resolve_business
+from .registry import SanPedroError, sanpedro_resolve
 
 ROOT=Path(__file__).resolve().parents[1]; CONFIG_DIR=ROOT/"zmart360"
 ALLOWED_RISK={"low","medium","high","critical"}
@@ -55,8 +55,8 @@ def validate_mission(mission:dict[str,Any])->None:
 
 def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
-    try: ctx=resolve_business(bid,registry_path)
-    except RegistryError as exc:
+    try: ctx=sanpedro_resolve(bid,registry_path)
+    except SanPedroError as exc:
         return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
     base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     route=load_derekh(routes_path).get(str(mission["intent"]))
