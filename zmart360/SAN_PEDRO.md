@@ -15,6 +15,8 @@ Resolution returns:
 
 Unknown, disabled or contextless businesses fail closed to human review.
 
+For canonical learning destinations, the registered reference must match the scope's canonical BIBLIA filename by exact basename. Suffix lookalikes are not authorization. Zero matches remain unregistered; multiple matches for the same canonical basename are ambiguous and fail closed rather than selecting one by order.
+
 ## Registered work areas
 - Zmart Consumer Rights
 - SCAN Water Intelligence / ScanTapWater
