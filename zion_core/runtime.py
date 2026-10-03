@@ -18,6 +18,14 @@ from .persistence import CronicasJsonlSink, PersistentCorrectionMemory, read_cro
 
 
 @dataclass(frozen=True)
+class OmarCloseResult:
+    processed: bool
+    reason: str
+    event: Any = None
+    cycle: Any = None
+
+
+@dataclass(frozen=True)
 class OmarRuntime:
     biblia_root: Path
     cronicas_path: Path
@@ -69,12 +77,32 @@ class OmarRuntime:
         )
 
     def close(self, response: Any, *, learning: LearningIntent | None = None):
-        return receive_apokrisis(
+        business_id=getattr(response,"business_id",None)
+        mission_id=getattr(response,"mission_id",None)
+        angel_id=getattr(response,"angel_id",None)
+        if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
+            prior=self.history(
+                business_id=business_id.strip(),
+                event_type="ANGEL_RESPONSE",
+                mission_id=mission_id.strip(),
+            )
+            if any(angel_id.strip() in event.angel_ids for event in prior):
+                return OmarCloseResult(
+                    processed=False,
+                    reason="APOKRISIS_ALREADY_PROCESSED",
+                )
+        event,cycle=receive_apokrisis(
             response,
             biblia_root=self.biblia_root,
             registry_path=self.registry_path,
             cronicas_sink=self.cronicas_sink,
             learning=learning,
+        )
+        return OmarCloseResult(
+            processed=True,
+            reason="APOKRISIS_PROCESSED",
+            event=event,
+            cycle=cycle,
         )
 
 
