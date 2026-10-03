@@ -1,22 +1,22 @@
-# Zmart 360 — Agent Entry Point
+# Zmart 360 — Bootstrap
 
-Zmart 360 is the central operating system. OMAR is its operational intelligence and routing layer. HOLY GHOST is its observing/adaptive learning layer.
+This compatibility entry point exists so external coding/AI tools that automatically look for AGENTS.md enter the Zmart 360 architecture correctly.
 
-## Mandatory start
-Before substantial work:
-1. Read `zmart360/OMAR.md`.
-2. Read `zmart360/SAN_PEDRO.md`.
-3. Identify the exact brand/project/workflow.
-4. Load only the relevant scoped rules and active context.
-5. For repeated workflows, apply established protocols before asking Nelson to restate specifications.
+## Canonical architecture
+- `zmart360/HOLY_GHOST.md` — guidance and adaptive learning
+- `zmart360/OMAR.md` — Nelson's central AI twin / operational intelligence
+- `zmart360/SAN_PEDRO.md` — registry
+- `zmart360/BIBLIA/` — canonical knowledge
+- `zmart360/SERAFINES.md` — agent/execution contract
 
-## Adaptive learning
-Read `zmart360/HOLY_GHOST.md` when a task produces a correction, new durable preference, repeated workflow, reusable decision, or evidence that OMAR failed to retrieve an existing rule.
+## Mandatory execution path
+Before substantial or recurring work:
+1. Load OMAR.
+2. Consult SAN PEDRO for the correct context.
+3. Retrieve applicable BIBLIA knowledge.
+4. Execute through the SERAFINES contract when agent work is needed.
+5. Route meaningful corrections/repeated patterns through HOLY GHOST.
 
-Do not treat every statement as permanent. Classify scope and preserve brand/project isolation.
+If Nelson repeats an instruction already documented, treat it as a retrieval/execution failure and repair the path instead of merely duplicating the rule.
 
-## Hard rule
-If Nelson repeats an instruction that was already documented, repair the retrieval/loading path rather than simply recording another duplicate rule.
-
-## Security
-Never commit secrets, credentials, API keys, tokens, customer PII or private lead exports.
+Never commit secrets, credentials, tokens, customer PII or private lead exports.
