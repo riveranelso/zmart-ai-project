@@ -31,6 +31,13 @@ Existing generic ZION-owned names are nomenclature debt and should be migrated d
 ### Technical identifier law
 Canonical display names may preserve their correct human spelling, including accents when appropriate. Technical ZION identifiers MUST use ASCII only: no accents, spaces or decorative/special characters. Example: `CRÓNICAS` -> `CRONICAS`, `SAN MIGUEL` -> `SANMIGUEL`.
 
+### MEGILLAH
+- Canonical technical name: `MEGILLAH`.
+- Function: structured mission-bearing document used by ZION CORE.
+- Source: Hebrew `megillah`, a scroll or written document.
+- Canonical schema: `megillah.schema.json`.
+- Legacy compatibility: `mission_envelope.schema.json` remains temporarily available while callers migrate.
+
 ### EXAPOSTELLO
 - Canonical technical name: `EXAPOSTELLO`.
 - Function: the SAN GABRIEL process that sends/dispatches an authorized mission toward its resolved command and HOST.
