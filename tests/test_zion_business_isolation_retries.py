@@ -62,5 +62,29 @@ class BusinessIsolationRetryTests(unittest.TestCase):
             self.assertEqual(len(runtime.history(event_type="MISSION_DECISION",mission_id="shared-id")),2)
 
 
+    def test_same_mission_and_angel_identity_remains_isolated_at_close(self):
+        from zion_core import LearningIntent, apokrisis
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"ZMARK.md").write_text("# Zmart\\n",encoding="utf-8")
+            (root/"SCAN.md").write_text("# Scan\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{
+                "zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["ZMARK.md"]},
+                "scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["SCAN.md"]}
+            }}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\\n  - intent: internal_dispatch\\n    command: SANGABRIEL\\n    host: SANGABRIEL.HOST-01\\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            base={"mission_id":"shared-close","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW"}
+            runtime.dispatch({**base,"business_id":"zmart-consumer-rights"})
+            runtime.dispatch({**base,"business_id":"scan-water-intelligence"})
+            for business in ("zmart-consumer-rights","scan-water-intelligence"):
+                response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="shared-close",status="SUCCESS",summary=business,business_id=business)
+                self.assertTrue(runtime.close(response,learning=LearningIntent()).processed)
+            self.assertEqual(len(runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="shared-close")),1)
+            self.assertEqual(len(runtime.history(business_id="scan-water-intelligence",event_type="ANGEL_RESPONSE",mission_id="shared-close")),1)
+
+
 if __name__=="__main__":
     unittest.main()
