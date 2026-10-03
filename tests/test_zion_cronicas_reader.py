@@ -1,8 +1,11 @@
 import tempfile
 import unittest
+import threading
+import time
 from pathlib import Path
 
 from zion_core import CronicaEvent, CronicasJsonlSink, CronicasReadError, read_cronicas
+from zion_core.persistence import LocalOperationLock
 
 
 class CronicasReaderTests(unittest.TestCase):
@@ -39,6 +42,36 @@ class CronicasReaderTests(unittest.TestCase):
             path.write_text('{"broken":\n',encoding="utf-8")
             with self.assertRaisesRegex(CronicasReadError,"INVALID_CRONICAS_LINE:1"):
                 read_cronicas(path)
+
+    def test_reader_waits_for_active_append_lock_before_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"cronicas.jsonl"
+            sink=CronicasJsonlSink(path)
+            sink(self.event("1","zmart-consumer-rights","MISSION_DECISION","m1"))
+            lock=LocalOperationLock(path.parent/(path.name+".append-locks"))
+            results=[]
+            errors=[]
+
+            with lock.hold("CRONICAS","JSONL_APPEND",str(path.resolve())):
+                thread=threading.Thread(
+                    target=lambda: self._capture_read(path,results,errors)
+                )
+                thread.start()
+                time.sleep(0.1)
+                self.assertTrue(thread.is_alive())
+                self.assertEqual(results,[])
+            thread.join(5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(errors,[])
+            self.assertEqual(len(results),1)
+            self.assertEqual(results[0][0].event_id,"1")
+
+    @staticmethod
+    def _capture_read(path,results,errors):
+        try:
+            results.append(read_cronicas(path))
+        except Exception as exc:
+            errors.append(exc)
 
 
 if __name__=="__main__":
