@@ -134,6 +134,29 @@ class OmarRuntime:
             mission_id=mission_id.strip(),
         )
 
+    def reconcile_biblia_mutation(self, decision: Any):
+        """Repair missing mutation history without replaying work or rewriting BIBLIA."""
+        business_id=getattr(decision,"business_id",None)
+        mission_id=getattr(decision,"mission_id",None)
+        destination_ref=getattr(decision,"destination_ref",None)
+        if not all(isinstance(value,str) and value.strip()
+                   for value in (business_id,mission_id,destination_ref)):
+            raise ValueError("RECONCILIATION_IDENTITY_REQUIRED")
+        bid=business_id.strip()
+        mid=mission_id.strip()
+        with self.operation_lock.hold(bid,"BIBLIA_RECONCILIATION",mid):
+            prior=self.history(
+                business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
+            )
+            if prior:
+                return None
+            from .grapho import grapho_reconcile_committed_mutation
+            return grapho_reconcile_committed_mutation(
+                self.biblia_root/destination_ref,
+                decision,
+                self.cronicas_sink,
+            )
+
     def owner_correction(
         self,
         correction: str,
