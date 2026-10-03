@@ -33,6 +33,9 @@ Production storage is intentionally not selected by this composition.
 - The local adapter serializes each idempotency critical section with a short-lived operation lock. Dispatch is keyed by business + mission; APOKRISIS by business + mission + ANGEL; owner correction by business + correction ID.
 - Correction repetition memory separately serializes updates by business + correction fingerprint so distinct human correction events cannot lose increments.
 - Local crash recovery may reclaim a lock only when its recorded owner can be proven dead or its PID can be proven reused through process-start identity. Unknown ownership fails closed by timeout.
+- CRONICAS JSONL appends are serialized per physical file across cooperating local processes, flushed and fsynced before the append lock is released. Multiprocess spawn tests verify complete unique records under concurrent writers.
+- GRAPHO serializes mutation per physical BIBLIA file, fsyncs the temporary file before atomic replacement, then fsyncs the parent directory. A failed pre-replace write leaves canonical BIBLIA intact and a later retry overwrites stale temporary content.
+- Persistent correction memory uses the same fsync-before-replace and parent-directory fsync durability pattern; a failed pre-replace attempt does not advance the canonical correction count.
 - These are local-filesystem concurrency guarantees. They are NOT a claim of distributed exactly-once execution.
 - A production persistence implementation MUST provide an equivalent atomic uniqueness/transaction boundary across all participating workers before this idempotency contract may be relied on in distributed production.
 
