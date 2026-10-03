@@ -34,37 +34,13 @@ class CronicasJsonlSink:
                 os.fsync(handle.fileno())
 
 
-class AtomicClaimStore:
-    """Local atomic idempotency claims using exclusive file creation.
-
-    This is a local adapter only. Production persistence may implement the same
-    claim contract with a transactional datastore or unique constraint.
-    """
-    def __init__(self,root: Path):
-        self.root=Path(root)
-
-    @staticmethod
-    def _digest(business_id: str,operation: str,identity: str)->str:
-        parts=(business_id,operation,identity)
-        if not all(isinstance(x,str) and x.strip() for x in parts):
-            raise ValueError("ATOMIC_CLAIM_IDENTITY_REQUIRED")
-        raw="\x1f".join(x.strip() for x in parts).encode("utf-8")
-        return hashlib.sha256(raw).hexdigest()
-
-    def claim(self,business_id: str,operation: str,identity: str)->bool:
-        digest=self._digest(business_id,operation,identity)
-        self.root.mkdir(parents=True,exist_ok=True)
-        path=self.root/(digest+".claim")
-        try:
-            fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
-        except FileExistsError:
-            return False
-        try:
-            payload={"business_id":business_id.strip(),"operation":operation.strip(),"identity":identity.strip()}
-            os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
-        finally:
-            os.close(fd)
-        return True
+def _operation_digest(business_id: str,operation: str,identity: str)->str:
+    """Stable local lock identity; not a durable pre-action claim."""
+    parts=(business_id,operation,identity)
+    if not all(isinstance(x,str) and x.strip() for x in parts):
+        raise ValueError("OPERATION_LOCK_IDENTITY_REQUIRED")
+    raw="\x1f".join(x.strip() for x in parts).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 class LocalOperationLock:
@@ -141,7 +117,7 @@ class LocalOperationLock:
 
     @contextmanager
     def hold(self,business_id: str,operation: str,identity: str):
-        digest=AtomicClaimStore._digest(business_id,operation,identity)
+        digest=_operation_digest(business_id,operation,identity)
         self.root.mkdir(parents=True,exist_ok=True)
         path=self.root/(digest+".lock")
         deadline=time.monotonic()+self.timeout_seconds
