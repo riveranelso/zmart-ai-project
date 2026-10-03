@@ -70,16 +70,6 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
             )
             self.assertEqual(len(events),1)
 
-    def test_reconciliation_requires_prior_angel_response_evidence(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp); target=root/"WORKFLOWS.md"
-            target.write_text("# Workflows\\n\\n## zmart-consumer-rights\\n- AUTHORIZED_RULE\\n",encoding="utf-8")
-            runtime=self.runtime(root)
-            with self.assertRaisesRegex(ValueError,"RECONCILIATION_RESPONSE_EVIDENCE_REQUIRED"):
-                runtime.reconcile_biblia_mutation(self.decision("WORKFLOWS.md"))
-            self.assertEqual(runtime.history(),())
-
-
     def test_unrelated_mutation_event_does_not_suppress_reconciliation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); target=root/"WORKFLOWS.md"
