@@ -72,3 +72,10 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - Reconstructed history is marked `status=RECONCILED` and leaves BIBLIA byte-for-byte unchanged.
 
 - Local CRONICAS recovery/history reads serialize snapshot capture against active append using the same physical-file lock; parsing occurs after release, preventing partial active records from being treated as corruption in the cooperating local runtime.
+
+### Local atomic-replace commit boundary
+- GRAPHO and persistent correction memory require the temporary file to be flushed and fsynced before atomic replacement; a pre-replace durability failure aborts the operation.
+- Once atomic replacement succeeds, the new canonical file is the logical committed state for the live runtime.
+- Parent-directory fsync is attempted after replacement as local durability hardening, but an `OSError` at that post-commit step does not convert the already-applied logical commit into a retryable failure.
+- This prevents duplicate correction counts or duplicate BIBLIA mutation attempts caused solely by a post-commit metadata-sync error.
+- The distinction is local-filesystem behavior and does not claim distributed transaction or power-loss exactly-once semantics.
