@@ -10,50 +10,50 @@ A HOST is a specialized operational unit. An ANGEL is an individual bounded exec
 
 LEGION is reserved exclusively for the external coordinated-threat classification and must never name a trusted ZION unit.
 
-## MICHAEL COMMAND — Defense & Response
+## SAN MIGUEL COMMAND — Defense & Response
 
-### MICHAEL HOST I — Watch
+### SAN MIGUEL HOST I — Watch
 Detection, security observation, anomaly triage and threat evidence.
 
-### MICHAEL HOST II — Defense
+### SAN MIGUEL HOST II — Defense
 Containment, isolation and coordinated defensive response under CHERUBIM/POWERS controls.
 
-### MICHAEL HOST III — Incident Response
+### SAN MIGUEL HOST III — Incident Response
 Incident coordination, evidence preservation, damage assessment and protected handoff to restoration.
 
-Michael has the strongest direct biblical basis for command imagery: Revelation 12:7 describes Michael and his angels. The software mapping remains metaphorical.
+San Miguel has the strongest direct biblical basis for command imagery: Revelation 12:7 describes San Miguel and his angels. The software mapping remains metaphorical.
 
-## GABRIEL COMMAND — Communications & Dispatch
+## SAN GABRIEL COMMAND — Communications & Dispatch
 
-### GABRIEL HOST I — Internal Dispatch
+### SAN GABRIEL HOST I — Internal Dispatch
 Internal task/event delivery between ZION components.
 
-### GABRIEL HOST II — External Communications
+### SAN GABRIEL HOST II — External Communications
 Authorized outbound communications through approved channels and integrations.
 
-### GABRIEL HOST III — Delivery & Notification
+### SAN GABRIEL HOST III — Delivery & Notification
 Notifications, delivery confirmation, routing failures and communication observability.
 
-Gabriel's software role is a functional metaphor based on his biblical messenger role. Scripture does not explicitly describe a Gabriel-led army equivalent to "Michael and his angels."
+Gabriel's software role is a functional metaphor based on his biblical messenger role. Scripture does not explicitly describe a Gabriel-led army equivalent to "San Miguel and his angels."
 
-## RAPHAEL COMMAND — Recovery & Restoration
+## SAN RAFAEL COMMAND — Recovery & Restoration
 
-### RAPHAEL HOST I — Health
+### SAN RAFAEL HOST I — Health
 Service health, workflow health, dependency checks and recovery readiness.
 
-### RAPHAEL HOST II — Repair
+### SAN RAFAEL HOST II — Repair
 Rollback, repair, state recovery and restoration workflows under authorization.
 
-### RAPHAEL HOST III — Verification
+### SAN RAFAEL HOST III — Verification
 Post-recovery verification, integrity checks and safe return to service.
 
-Raphael's restoration/healing mapping draws from Tobit, which is deuterocanonical in Catholic and Orthodox traditions and is not part of the Protestant canon.
+San Rafael's restoration/healing mapping draws from Tobit, which is deuterocanonical in Catholic and Orthodox traditions and is not part of the Protestant canon.
 
 ## Identity format
 Recommended machine identity:
-- MICHAEL.HOST-01.ANGEL-001
-- GABRIEL.HOST-02.ANGEL-001
-- RAPHAEL.HOST-03.ANGEL-001
+- SANMIGUEL.HOST-01.ANGEL-001
+- SANGABRIEL.HOST-02.ANGEL-001
+- SANRAFAEL.HOST-03.ANGEL-001
 
 Human-readable role names may be attached separately. Identity does not imply elevated authority beyond the mission's granted scope.
 
