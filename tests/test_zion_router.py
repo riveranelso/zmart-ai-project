@@ -51,4 +51,23 @@ class ZionRouterTests(unittest.TestCase):
                 with self.assertRaisesRegex(MissionValidationError,"INVALID_STRING:"+field):
                     validate_mission(malformed)
 
+    def test_required_and_optional_identity_strings_must_be_canonical(self):
+        mission=self.mission()
+        for field in ("mission_id","intent","requested_by","scope","business_id"):
+            malformed=dict(mission)
+            malformed[field]=" "+mission[field]+" "
+            with self.subTest(required=field):
+                with self.assertRaisesRegex(MissionValidationError,"NONCANONICAL_REQUIRED_FIELDS"):
+                    validate_mission(malformed)
+        for field,value in (
+            ("target_command","SANGABRIEL"),("target_host","SANGABRIEL.HOST-01"),
+            ("payload_ref","payload-1"),("correlation_id","corr-1"),
+            ("isolation_key","zmart-consumer-rights"),("project_id","project-1"),
+        ):
+            malformed=dict(mission)
+            malformed[field]=" "+value+" "
+            with self.subTest(optional=field):
+                with self.assertRaisesRegex(MissionValidationError,"INVALID_STRING:"+field):
+                    validate_mission(malformed)
+
 if __name__=="__main__": unittest.main()
