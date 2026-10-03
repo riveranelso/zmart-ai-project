@@ -226,3 +226,17 @@ def prepare_learning_cycle(
         conflict=conflict,
     )
     return LearningCycle(signal,proposal,destination,promotion,None)
+
+
+def persist_learning_cycle(
+    cycle: LearningCycle,
+    path: Path,
+    *,
+    cronicas_sink: Any = None,
+) -> LearningCycle:
+    """Persist an eligible prepared cycle through GRAPHO."""
+    if cycle.promotion.action not in {"ADD","UPDATE"}:
+        return cycle
+    from .grapho import grapho_write
+    result=grapho_write(path,cycle.promotion,cronicas_sink)
+    return LearningCycle(cycle.signal,cycle.proposal,cycle.destination,cycle.promotion,result)
