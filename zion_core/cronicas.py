@@ -36,8 +36,11 @@ def build_dispatch_fingerprint(mission:dict[str,Any],security_context:Any=None)-
     correlation_id=mission.get("correlation_id")
     if isinstance(correlation_id,str):
         correlation_id=correlation_id.strip()
+    defaults={"risk_level":"low","angel_count_max":1,"human_approval_required":False,
+              "integrity_conflict":False,"policy_conflict":False,"kill_switch":False,
+              "runtime_enabled":True}
     mission_identity={
-        key:(correlation_id if key=="correlation_id" else (mission.get("angel_count_max",1) if key=="angel_count_max" else mission.get(key)))
+        key:(correlation_id if key=="correlation_id" else mission.get(key,defaults.get(key)))
         for key in (
             "mission_id","intent","requested_by","scope","business_id","project_id",
             "risk_level","human_approval_required","target_command","target_host",
