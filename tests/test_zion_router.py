@@ -94,4 +94,18 @@ class ZionRouterTests(unittest.TestCase):
                 {"legitimate":("SANGABRIEL","SANGABRIEL.HOST-01")},
             )
 
+
+    def test_derekh_does_not_activate_nested_routes_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "wrapper:\n"
+                "  routes:\n"
+                "    - intent: injected_nested\n"
+                "      command: SANMIGUEL\n"
+                "      host: SANMIGUEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(load_derekh(path),{})
+
 if __name__=="__main__": unittest.main()
