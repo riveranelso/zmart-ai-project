@@ -4,7 +4,9 @@ These adapters are local/runtime primitives. Production storage is intentionally
 not selected here.
 """
 from dataclasses import asdict
+import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,39 @@ class CronicasJsonlSink:
         self.path.parent.mkdir(parents=True,exist_ok=True)
         with self.path.open("a",encoding="utf-8") as handle:
             handle.write(json.dumps(asdict(event),ensure_ascii=False,sort_keys=True)+"\n")
+
+
+class AtomicClaimStore:
+    """Local atomic idempotency claims using exclusive file creation.
+
+    This is a local adapter only. Production persistence may implement the same
+    claim contract with a transactional datastore or unique constraint.
+    """
+    def __init__(self,root: Path):
+        self.root=Path(root)
+
+    @staticmethod
+    def _digest(business_id: str,operation: str,identity: str)->str:
+        parts=(business_id,operation,identity)
+        if not all(isinstance(x,str) and x.strip() for x in parts):
+            raise ValueError("ATOMIC_CLAIM_IDENTITY_REQUIRED")
+        raw="\x1f".join(x.strip() for x in parts).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
+
+    def claim(self,business_id: str,operation: str,identity: str)->bool:
+        digest=self._digest(business_id,operation,identity)
+        self.root.mkdir(parents=True,exist_ok=True)
+        path=self.root/(digest+".claim")
+        try:
+            fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+        except FileExistsError:
+            return False
+        try:
+            payload={"business_id":business_id.strip(),"operation":operation.strip(),"identity":identity.strip()}
+            os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
+        finally:
+            os.close(fd)
+        return True
 
 
 class PersistentCorrectionMemory:
