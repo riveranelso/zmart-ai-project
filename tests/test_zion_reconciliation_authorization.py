@@ -70,6 +70,29 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
             )
             self.assertEqual(len(events),1)
 
+    def test_unrelated_mutation_event_does_not_suppress_reconciliation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); target=root/"WORKFLOWS.md"
+            target.write_text("# Workflows\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n",encoding="utf-8")
+            runtime=self.runtime(root)
+            from zion_core.cronicas import CronicaEvent
+            runtime.cronicas_sink(CronicaEvent(
+                event_id="unrelated",occurred_at="2026-10-03T00:00:00+00:00",
+                event_type="BIBLIA_MUTATION",mission_id="reconcile-auth-001",
+                action="ADD",reason="RULES_APPENDED",business_id="zmart-consumer-rights",
+                status="CHANGED",evidence_refs=("BRANDS.md",),
+            ))
+
+            result=runtime.reconcile_biblia_mutation(self.decision("WORKFLOWS.md"))
+
+            self.assertEqual(result.reason,"RECONCILED_ALREADY_COMMITTED")
+            events=runtime.history(
+                business_id="zmart-consumer-rights",event_type="BIBLIA_MUTATION",
+                mission_id="reconcile-auth-001",
+            )
+            self.assertEqual(len(events),2)
+            self.assertEqual(events[-1].evidence_refs,("WORKFLOWS.md",))
+
     def test_scope_destination_mismatch_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
