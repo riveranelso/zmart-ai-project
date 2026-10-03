@@ -90,6 +90,28 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"SUPERSESSION_CANDIDATE_NOT_FOUND")
         self.assertEqual(result.content,existing)
 
+    def test_update_same_rule_is_exact_noop(self):
+        original="# BIBLIA\n\n## los-duros\n- Keep same rule.\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Keep same rule.",),matched_rules=("Keep same rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.content,original)
+        self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
+
+    def test_supersede_same_rule_is_exact_noop(self):
+        original="# BIBLIA\n\n## los-duros\n- Keep same rule.\n"
+        decision=SimpleNamespace(
+            action="SUPERSEDE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Keep same rule.",),matched_rules=("Keep same rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.content,original)
+        self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
+
 
 if __name__=="__main__":
     unittest.main()
