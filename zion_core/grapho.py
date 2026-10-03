@@ -30,6 +30,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
                             "PROMOTION_ACTION_NOT_WRITABLE")
     business_id=getattr(decision,"business_id",None)
     if (not isinstance(business_id,str) or not business_id.strip()
+            or business_id!=business_id.strip()
             or "\n" in business_id or "\r" in business_id):
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "INVALID_BUSINESS_ID")
