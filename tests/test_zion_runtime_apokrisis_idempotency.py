@@ -53,5 +53,36 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             )
 
 
+    def test_response_must_match_dispatched_angel_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            runtime.dispatch({
+                "mission_id":"m-bound","intent":"internal_dispatch","requested_by":"OMAR",
+                "scope":"WORKFLOW","business_id":"zmart-consumer-rights","angel_count_max":1,
+            })
+            forged=apokrisis(
+                angel_id="SANMIGUEL.HOST-01.ANGEL-001",mission_id="m-bound",
+                status="SUCCESS",summary="forged",business_id="zmart-consumer-rights",
+            )
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_ANGEL_NOT_COMMISSIONED"):
+                runtime.close(forged,learning=LearningIntent())
+
+
+
 if __name__=="__main__":
     unittest.main()
