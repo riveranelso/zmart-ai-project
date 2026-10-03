@@ -117,22 +117,25 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
     if cronicas_sink is None:
         raise ValueError("CRONICAS_SINK_REQUIRED")
     target=Path(path)
-    existing=target.read_text(encoding="utf-8")
-    header=_section_header(decision.business_id)
-    if header not in existing:
-        return GraphoResult(decision.action,decision.destination_ref,False,existing,
-                            "RECONCILIATION_BUSINESS_SECTION_NOT_FOUND")
-    start=existing.index(header)+len(header)
-    end=existing.find("\n## ",start)
-    if end==-1:
-        end=len(existing)
-    section=existing[start:end]
-    rules=tuple(x.strip() for x in decision.proposed_rules if isinstance(x,str) and x.strip())
-    if not rules or not all(_rule_line(rule) in section for rule in rules):
-        return GraphoResult(decision.action,decision.destination_ref,False,existing,
-                            "RECONCILIATION_RULES_NOT_PROVEN")
-    result=GraphoResult(decision.action,decision.destination_ref,False,existing,
-                        "RECONCILED_ALREADY_COMMITTED")
-    from .cronicas import cronicas_emit_grapho
-    cronicas_emit_grapho(decision,result,cronicas_sink)
-    return result
+    lock=LocalOperationLock(target.parent/".zion-biblia-locks")
+    identity=str(target.resolve())
+    with lock.hold("BIBLIA","GRAPHO_WRITE",identity):
+        existing=target.read_text(encoding="utf-8")
+        header=_section_header(decision.business_id)
+        if header not in existing:
+            return GraphoResult(decision.action,decision.destination_ref,False,existing,
+                                "RECONCILIATION_BUSINESS_SECTION_NOT_FOUND")
+        start=existing.index(header)+len(header)
+        end=existing.find("\n## ",start)
+        if end==-1:
+            end=len(existing)
+        section=existing[start:end]
+        rules=tuple(x.strip() for x in decision.proposed_rules if isinstance(x,str) and x.strip())
+        if not rules or not all(_rule_line(rule) in section for rule in rules):
+            return GraphoResult(decision.action,decision.destination_ref,False,existing,
+                                "RECONCILIATION_RULES_NOT_PROVEN")
+        result=GraphoResult(decision.action,decision.destination_ref,False,existing,
+                            "RECONCILED_ALREADY_COMMITTED")
+        from .cronicas import cronicas_emit_grapho
+        cronicas_emit_grapho(decision,result,cronicas_sink)
+        return result
