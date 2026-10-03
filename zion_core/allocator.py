@@ -33,9 +33,15 @@ def diatasso(*, mission:dict[str,Any], command:str, host:str, business_id:str,
     if not isinstance(isolation_key,str) or not isolation_key.strip():
         raise ValueError("ISOLATION_KEY_REQUIRED")
     if not isinstance(context_refs,tuple) or not context_refs or not all(
-        isinstance(ref,str) and ref for ref in context_refs
+        isinstance(ref,str) and ref.strip() and ref==ref.strip()
+        for ref in context_refs
     ):
         raise ValueError("CONTEXT_REFS_REQUIRED")
+    payload_ref=mission.get("payload_ref")
+    if payload_ref is not None and (
+        not isinstance(payload_ref,str) or not payload_ref.strip()
+    ):
+        raise ValueError("INVALID_PAYLOAD_REF")
     return tuple(
         DiatassoCommission(
             angel_id=f"{host}.ANGEL-{i:03d}",
@@ -46,7 +52,7 @@ def diatasso(*, mission:dict[str,Any], command:str, host:str, business_id:str,
             isolation_key=isolation_key,
             scope=scope.strip(),
             context_refs=context_refs,
-            payload_ref=mission.get("payload_ref"),
+            payload_ref=payload_ref.strip() if payload_ref is not None else None,
         )
         for i in range(1,count+1)
     )
