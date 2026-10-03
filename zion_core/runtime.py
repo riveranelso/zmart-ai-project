@@ -232,8 +232,12 @@ class OmarRuntime:
                 mission_id=cid,
             )
             if any("OMAR.OWNER-INPUT" in event.angel_ids for event in prior):
-                mutation_history=self.history(
-                    business_id=business_id,event_type="BIBLIA_MUTATION",mission_id=cid,
+                owner_mutation=any(
+                    "OMAR.OWNER-INPUT" in mutation.angel_ids
+                    for mutation in self.history(
+                        business_id=business_id,event_type="BIBLIA_MUTATION",
+                        mission_id=cid,
+                    )
                 )
                 auto_write=True if learning is None else learning.auto_write
                 recovery_learning=learning
@@ -265,7 +269,7 @@ class OmarRuntime:
                     or recovery_learning.locked_asset
                     or recovery_learning.active_campaign
                 )
-                if not auto_write or not durable_learning or mutation_history:
+                if not auto_write or not durable_learning or owner_mutation:
                     return OmarCloseResult(
                         processed=False,
                         reason="OWNER_CORRECTION_ALREADY_PROCESSED",
