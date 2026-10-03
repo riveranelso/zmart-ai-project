@@ -178,6 +178,11 @@ def propose_biblia_promotion(
                                  destination.destination_ref, "NO_CHANGE", rules, exact,
                                  "RULE_ALREADY_PRESENT", False)
     candidates=tuple(x.strip() for x in existing_rule_candidates if isinstance(x,str) and x.strip())
+    missing_candidates=tuple(x for x in candidates if _normalize_rule(x) not in normalized_text)
+    if missing_candidates:
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "CONFLICT", rules, candidates,
+                                 "CANDIDATE_OUTSIDE_AUTHORIZED_CONTEXT", True)
     if supersede:
         if not candidates:
             return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
