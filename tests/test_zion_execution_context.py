@@ -248,6 +248,24 @@ class AngelExecutionContextTests(unittest.TestCase):
                 execution_contexts(replace(dispatch,context=changed))
 
 
+    def test_dispatch_with_gate_denial_marker_cannot_materialize_angels(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Approved.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["BIBLIA.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            mission={"mission_id":"m-denied-marker","intent":"internal_dispatch","requested_by":"OMAR",
+                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            dispatch=dispatch_mission(mission,biblia_root=root,routes_path=routes,registry_path=registry)
+            tampered=replace(dispatch.decision,denied_by="THRONES")
+            with self.assertRaisesRegex(ValueError,"ANGEL_CONTEXT_GATE_DENIAL_CONFLICT"):
+                execution_contexts(replace(dispatch,decision=tampered))
+
+
     def test_dispatch_marked_for_human_review_cannot_materialize_angels(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
