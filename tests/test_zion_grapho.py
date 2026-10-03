@@ -38,6 +38,17 @@ class GraphoTests(unittest.TestCase):
         result=grapho_render("- Old one\n",decision)
         self.assertFalse(result.changed)
         self.assertEqual(result.reason,"UPDATE_RULE_COUNT_MISMATCH")
+    def test_add_rejects_duplicate_proposed_rules(self):
+        original="# BIBLIA\n"
+        decision=SimpleNamespace(
+            action="ADD",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Same rule.","Same rule."),matched_rules=(),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"DUPLICATE_PROPOSED_RULE")
+        self.assertEqual(result.content,original)
+
     def test_add_retry_does_not_duplicate_rule_in_same_business_section(self):
         decision=SimpleNamespace(action="ADD",destination_ref="BIBLIA.md",business_id="los-duros",
             proposed_rules=("Keep this rule.",),matched_rules=())
