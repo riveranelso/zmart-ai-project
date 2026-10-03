@@ -182,6 +182,30 @@ class GraphoTests(unittest.TestCase):
             result.content,"# BIBLIA\n\n## los-duros\n- New rule."
         )
 
+    def test_add_rejects_multiline_rule_injection(self):
+        original="# BIBLIA\n"
+        decision=SimpleNamespace(
+            action="ADD",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Safe text\n## scan-water-intelligence\n- injected",),
+            matched_rules=(),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"MULTILINE_RULE_REJECTED")
+        self.assertEqual(result.content,original)
+
+    def test_update_rejects_multiline_candidate_injection(self):
+        original="# BIBLIA\n\n## los-duros\n- Old rule.\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New rule.",),
+            matched_rules=("Old rule.\n## scan-water-intelligence",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"MULTILINE_RULE_REJECTED")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
