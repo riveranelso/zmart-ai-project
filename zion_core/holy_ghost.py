@@ -184,3 +184,45 @@ def propose_biblia_promotion(
     return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                              destination.destination_ref, "ADD", rules, (),
                              "NEW_RULE", True)
+
+
+@dataclass(frozen=True)
+class LearningCycle:
+    signal: Any
+    proposal: LearningProposal
+    destination: LearningDestination
+    promotion: PromotionDecision
+    grapho: Any = None
+
+def prepare_learning_cycle(
+    response: Any,
+    existing_text: str = "",
+    *,
+    registry_path: Path | None = None,
+    scope_hint: str | None = None,
+    explicit_durable_instruction: bool = False,
+    repeated_correction: bool = False,
+    stable_workflow: bool = False,
+    locked_asset: bool = False,
+    active_campaign: bool = False,
+    existing_rule_candidates: tuple[str, ...] = (),
+    conflict: bool = False,
+) -> LearningCycle:
+    """Prepare the complete learning decision before persistence."""
+    signal=holy_ghost_receive(response)
+    proposal=evaluate_learning(
+        signal,
+        scope_hint=scope_hint,
+        explicit_durable_instruction=explicit_durable_instruction,
+        repeated_correction=repeated_correction,
+        stable_workflow=stable_workflow,
+        locked_asset=locked_asset,
+        active_campaign=active_campaign,
+    )
+    destination=resolve_learning_destination(proposal,registry_path)
+    promotion=propose_biblia_promotion(
+        proposal,destination,existing_text,
+        existing_rule_candidates=existing_rule_candidates,
+        conflict=conflict,
+    )
+    return LearningCycle(signal,proposal,destination,promotion,None)
