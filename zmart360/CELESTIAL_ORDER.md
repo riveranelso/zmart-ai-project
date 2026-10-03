@@ -10,7 +10,7 @@ This is a technological metaphor inspired by biblical and Christian terminology.
 - SAN PEDRO — keys / registry.
 - SAN GABRIEL — messenger / dispatch.
 - BIBLIA — canonical current knowledge.
-- BOOK OF REMEMBRANCE — events, corrections and historical learning evidence.
+- CRÓNICAS — events, corrections and historical learning evidence.
 
 ## First order — Core
 - SERAPHIM — integrity / alignment.
