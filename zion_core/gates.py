@@ -38,8 +38,9 @@ def cherubim(mission: dict[str, Any], isolation_key: str, security: SecurityCont
 def thrones(mission: dict[str, Any], security: SecurityContext | None) -> GateResult:
     if mission.get("policy_conflict") is True:
         return GateResult("THRONES", False, "POLICY_CONFLICT")
-    if mission.get("human_approval_required") is True and security is not None and not security.human_approval_granted:
-        return GateResult("THRONES", False, "HUMAN_APPROVAL_REQUIRED")
+    if mission.get("human_approval_required") is True:
+        if security is None or not security.human_approval_granted:
+            return GateResult("THRONES", False, "HUMAN_APPROVAL_REQUIRED")
     return GateResult("THRONES", True, "POLICY_OK")
 
 def powers(mission: dict[str, Any]) -> GateResult:
