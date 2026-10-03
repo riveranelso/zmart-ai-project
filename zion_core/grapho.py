@@ -1,4 +1,5 @@
 """GRAPHO: deterministic writer for approved BIBLIA promotion decisions."""
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -87,8 +88,16 @@ def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> Grapho
         result=grapho_render(existing,decision)
         if result.changed:
             temp=target.with_suffix(target.suffix+".grapho.tmp")
-            temp.write_text(result.content,encoding="utf-8")
+            with temp.open("w",encoding="utf-8") as handle:
+                handle.write(result.content)
+                handle.flush()
+                os.fsync(handle.fileno())
             temp.replace(target)
+            dir_fd=os.open(target.parent,os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
         if cronicas_sink is not None:
             from .cronicas import cronicas_emit_grapho
             cronicas_emit_grapho(decision,result,cronicas_sink)
