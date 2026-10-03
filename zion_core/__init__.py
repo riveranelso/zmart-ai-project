@@ -40,6 +40,6 @@ __all__ = [
     "CronicasJsonlSink", "PersistentCorrectionMemory",
 ]
 
-from .runtime import OmarRuntime
+from .runtime import OmarRuntime, OmarCloseResult
 
 from .persistence import CronicasReadError, read_cronicas
