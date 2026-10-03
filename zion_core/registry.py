@@ -47,6 +47,19 @@ def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessCont
     )
 
 
+
+def sanpedro_business_ids(path: Path | None = None) -> tuple[str, ...]:
+    """Return canonical registered business IDs for isolation-aware parsing."""
+    registry=json.loads((path or DEFAULT_REGISTRY).read_text(encoding="utf-8"))
+    businesses=registry.get("businesses")
+    if not isinstance(businesses,dict):
+        raise SanPedroError("INVALID_REGISTRY")
+    return tuple(
+        business_id for business_id,entry in businesses.items()
+        if isinstance(business_id,str) and business_id
+        and isinstance(entry,dict) and entry.get("enabled") is True
+    )
+
 RegistryError = SanPedroError  # compatibility alias
 
 def resolve_business(business_id: str, path: Path | None = None) -> BusinessContext:
