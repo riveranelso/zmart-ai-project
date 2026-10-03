@@ -100,8 +100,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "RULES_ALREADY_PRESENT")
     content=prefix+section+suffix
-    rendered=content if content.endswith("\n") else content+"\n"
-    return GraphoResult(decision.action,decision.destination_ref,True,rendered,
+    return GraphoResult(decision.action,decision.destination_ref,True,content,
                         "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
 def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None, *, origin_angel_id: str | None = None, correlation_id: str | None = None) -> GraphoResult:
