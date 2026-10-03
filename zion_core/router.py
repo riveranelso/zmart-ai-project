@@ -47,15 +47,24 @@ def load_routes(path:Path|None=None)->dict[str,tuple[str,str]]:
     return load_derekh(path)
 
 def validate_mission(mission:dict[str,Any])->None:
-    if not isinstance(mission,dict): raise MissionValidationError("MISSION_OBJECT_REQUIRED")
-    unknown=set(mission)-MEGILLAH_FIELDS
-    if unknown: raise MissionValidationError("UNKNOWN_MEGILLAH_FIELDS:"+",".join(sorted(unknown)))
+    """Validate the stable MEGILLAH core while allowing runtime extension signals."""
+    if not isinstance(mission,dict):
+        raise MissionValidationError("MISSION_OBJECT_REQUIRED")
     required=("mission_id","intent","requested_by","scope","business_id")
-    missing=[k for k in required if not mission.get(k)]
-    if missing: raise MissionValidationError("MISSING_REQUIRED_FIELDS:"+",".join(missing))
-    if mission.get("risk_level","low") not in ALLOWED_RISK: raise MissionValidationError("INVALID_RISK_LEVEL")
+    missing=[k for k in required if not isinstance(mission.get(k),str) or not mission[k].strip()]
+    if missing:
+        raise MissionValidationError("MISSING_OR_INVALID_REQUIRED_FIELDS:"+",".join(missing))
+    if mission.get("risk_level","low") not in ALLOWED_RISK:
+        raise MissionValidationError("INVALID_RISK_LEVEL")
     count=mission.get("angel_count_max",1)
-    if not isinstance(count,int) or isinstance(count,bool) or count<1: raise MissionValidationError("INVALID_ANGEL_COUNT")
+    if not isinstance(count,int) or isinstance(count,bool) or count<1 or count>100:
+        raise MissionValidationError("INVALID_ANGEL_COUNT")
+    for key in ("human_approval_required","integrity_conflict","policy_conflict","kill_switch","runtime_enabled"):
+        if key in mission and not isinstance(mission[key],bool):
+            raise MissionValidationError("INVALID_BOOLEAN:"+key)
+    for key in ("project_id","target_command","target_host","payload_ref","correlation_id","isolation_key"):
+        if key in mission and mission[key] is not None and not isinstance(mission[key],str):
+            raise MissionValidationError("INVALID_STRING:"+key)
 
 def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None,security_context:SecurityContext|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
