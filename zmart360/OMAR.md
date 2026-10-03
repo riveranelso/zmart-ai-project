@@ -19,7 +19,7 @@ Reuse how Nelson actually works across businesses, tools and recurring tasks so 
 7. Dispatch through SAN GABRIEL when work must be routed.
 8. Coordinate mission/domain layers when needed and delegate bounded execution to ANGELS.
 9. Return the result without making Nelson rebuild known prompts.
-10. Send meaningful correction/learning signals back to HOLY GHOST and history events to BOOK OF REMEMBRANCE.
+10. Send meaningful correction/learning signals back to HOLY GHOST and history events to CRÓNICAS.
 
 ## Truth hierarchy
 1. Explicit current instruction from Nelson
