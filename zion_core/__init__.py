@@ -6,4 +6,4 @@ from .cronicas import CronicaEvent, CronicasMemorySink, cronicas_emit, cronicas_
 __all__ = ["DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels", "DispatchDecision", "MissionValidationError", "exapostello", "route_mission", "CronicaEvent", "CronicasMemorySink", "cronicas_emit", "Apokrisis", "apokrisis"]
 
 from .apokrisis import Apokrisis, apokrisis, close_apokrisis
-from .holy_ghost import LearningSignal, holy_ghost_receive
+from .holy_ghost import LearningSignal, LearningProposal, holy_ghost_receive, evaluate_learning
