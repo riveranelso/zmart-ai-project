@@ -108,4 +108,39 @@ class ZionRouterTests(unittest.TestCase):
             )
             self.assertEqual(load_derekh(path),{})
 
+
+    def test_derekh_rejects_unknown_route_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: legitimate\n"
+                "    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-01\n"
+                "    privileged: true\n"
+                "fallback:\n"
+                "  action: REQUIRE_HUMAN_REVIEW\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"UNKNOWN_ROUTE_KEY"):
+                load_derekh(path)
+
+    def test_derekh_rejects_incomplete_route(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: incomplete\n"
+                "    command: SANGABRIEL\n"
+                "  - intent: legitimate\n"
+                "    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-01\n"
+                "fallback:\n"
+                "  action: REQUIRE_HUMAN_REVIEW\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"INCOMPLETE_ROUTE"):
+                load_derekh(path)
+
+
 if __name__=="__main__": unittest.main()
