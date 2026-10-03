@@ -1,8 +1,10 @@
-# SAN PEDRO — Zmart 360 Context Gate
+# SAN PEDRO — Zmart 360 Registry
 
-SAN PEDRO is the registry and context gate for OMAR.
+SAN PEDRO is the authoritative registry of Zmart 360.
 
-Its job is to know which business, brand, project, workflow and active context must be opened before OMAR executes.
+Its job is to know what businesses, brands, projects, workflows, protocols and active-context locations exist and where their canonical knowledge lives.
+
+SAN PEDRO does not execute agent work and does not perform HOLY GHOST learning.
 
 ## Known business/work areas
 - Zmart Consumer Rights
@@ -14,18 +16,18 @@ Its job is to know which business, brand, project, workflow and active context m
 - Full Nelson AI
 - Zmart AI / Jessica
 
-## Gate rule
-Before execution, identify the destination and open only its relevant context. Do not mix contexts.
+## Registry contract
+For each registered domain, maintain pointers to the narrowest authoritative context. Do not duplicate the knowledge itself when a canonical source already exists.
 
-## Routing principle
-Do not assume shared rules merely because businesses are owned or operated by the same person.
-Global OMAR workflow rules may be shared; brand identity, claims, assets, markets and compliance remain isolated.
+## Isolation
+Do not assume shared rules merely because businesses are owned or operated by the same person. Brand identity, claims, assets, markets and compliance remain isolated.
 
-## Active-context principle
-Operational service territory is not the same as active advertising market.
-Campaign configuration must be loaded before creative work.
+## Active context
+Operational service territory is not the same as active advertising market. Register active campaign/project context separately from broad business scope.
 
 ## Relationship
-SAN PEDRO opens the correct gate.
-OMAR routes and executes.
-HOLY GHOST observes corrections and improves what the system knows for the next execution.
+- HOLY GHOST guides and learns.
+- OMAR interprets, coordinates and retrieves.
+- SAN PEDRO tells OMAR where canonical context lives.
+- BIBLIA contains canonical durable knowledge.
+- SERAFINES execute assigned work.
