@@ -84,5 +84,33 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
 
 
 
+    def test_same_angel_cannot_replay_changed_response_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            first=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-replay",
+                status="SUCCESS",summary="done",business_id="zmart-consumer-rights",
+                correlation_id="corr-1",evidence_refs=("proof-a",),
+            )
+            runtime.close(first,learning=LearningIntent())
+            changed=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-replay",
+                status="PARTIAL",summary="changed",business_id="zmart-consumer-rights",
+                correlation_id="corr-2",evidence_refs=("proof-b",),
+            )
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_REUSE_CONFLICT"):
+                runtime.close(changed,learning=LearningIntent())
+
+
+
 if __name__=="__main__":
     unittest.main()
