@@ -65,8 +65,8 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 biblia_root=root,registry_path=registry,
                 cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
             )
-            from zion_core.cronicas import CronicasEvent, JsonlCronicasSink
-            JsonlCronicasSink(root/"cronicas.jsonl").append(CronicasEvent(
+            from zion_core.cronicas import CronicaEvent\n            from zion_core.persistence import CronicasJsonlSink\n            from datetime import datetime, timezone
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(\n                event_id="test-empty-commission",occurred_at=datetime.now(timezone.utc).isoformat(),
                 event_type="MISSION_DECISION",mission_id="m-empty-commission",
                 business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",
                 angel_ids=(),
