@@ -5,9 +5,9 @@ ANGELS are bounded individual execution agents organized into HOSTS under ARCHAN
 Canonical identity: `<COMMAND>.HOST-<NN>.ANGEL-<NNN>`.
 
 Examples:
-- `MICHAEL.HOST-01.ANGEL-001`
-- `GABRIEL.HOST-02.ANGEL-001`
-- `RAPHAEL.HOST-03.ANGEL-001`
+- `SANMIGUEL.HOST-01.ANGEL-001`
+- `SANGABRIEL.HOST-02.ANGEL-001`
+- `SANRAFAEL.HOST-03.ANGEL-001`
 
 HOST membership is dynamic. Create only the ANGELS required for a mission and retire them when no longer needed.
 
