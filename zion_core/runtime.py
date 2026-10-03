@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .router import DispatchDecision
+from .cronicas import build_dispatch_fingerprint
 from .registry import sanpedro_resolve
 from .holy_ghost import SCOPE_DESTINATION_NAMES
 from .omar import (
@@ -63,6 +64,10 @@ class OmarRuntime:
                     # Reusing a mission id with different routing identity is
                     # not an idempotent retry; fail closed instead of silently
                     # returning the earlier decision.
+                    current_fingerprint=build_dispatch_fingerprint(mission,security_context)
+                    if event.dispatch_fingerprint is not None:
+                        if event.dispatch_fingerprint != current_fingerprint:
+                            raise ValueError("MISSION_ID_REUSE_CONFLICT")
                     requested_intent=mission.get("intent")
                     routes={}
                     if isinstance(requested_intent,str):
