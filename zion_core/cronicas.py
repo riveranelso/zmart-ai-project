@@ -100,7 +100,7 @@ def build_grapho_event(decision:Any,result:Any)->CronicaEvent:
         action=str(result.action),
         reason=str(result.reason),
         business_id=str(decision.business_id),
-        status="CHANGED" if result.changed else "UNCHANGED",
+        status="RECONCILED" if result.reason=="RECONCILED_ALREADY_COMMITTED" else ("CHANGED" if result.changed else "UNCHANGED"),
         evidence_refs=(str(result.destination_ref),) if result.destination_ref else (),
         correction_count=len(getattr(decision,"proposed_rules",()) or ()),
     )
