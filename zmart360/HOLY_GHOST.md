@@ -41,3 +41,13 @@ When a workflow has an established quality gate, guide OMAR to run it automatica
 ## Boundaries
 HOLY GHOST learns working methods and durable operating rules. It must not indiscriminately record everything.
 Never store secrets, credentials, API keys, tokens, customer PII or private lead data.
+
+
+## Override and supersession semantics
+Scope specificity and source mutation are separate decisions.
+
+A narrower active scope may override broader knowledge during retrieval without deleting or rewriting the broader source. Retrieval order is GLOBAL -> WORKFLOW -> BRAND -> PROJECT -> CAMPAIGN.
+
+SUPERSEDE is reserved for an explicit replacement inside the selected canonical scope. It requires deterministic candidate mapping. If the intended prior rule cannot be identified safely, HOLY GHOST returns CONFLICT and GRAPHO does not write.
+
+Technical retries are not learning evidence. A repeated delivery with the same correction identity must not be counted as a second human correction. Genuine repetition requires a distinct human correction event.
