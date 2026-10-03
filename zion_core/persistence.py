@@ -61,3 +61,41 @@ class PersistentCorrectionMemory:
 
     def count(self,business_id: str,correction: str)->int:
         return self._load().get(self._key(business_id,correction),0)
+
+
+class CronicasReadError(ValueError):
+    """Raised when persisted CRONICAS cannot be safely decoded."""
+
+
+def read_cronicas(
+    path: Path,
+    *,
+    business_id: str | None = None,
+    event_type: str | None = None,
+    mission_id: str | None = None,
+) -> tuple[CronicaEvent, ...]:
+    """Read append-only CRONICAS metadata without granting it canonical authority."""
+    source=Path(path)
+    if not source.is_file():
+        return ()
+    events=[]
+    for line_number,line in enumerate(source.read_text(encoding="utf-8").splitlines(),start=1):
+        if not line.strip():
+            continue
+        try:
+            raw=json.loads(line)
+            if not isinstance(raw,dict):
+                raise TypeError
+            raw["angel_ids"]=tuple(raw.get("angel_ids") or ())
+            raw["evidence_refs"]=tuple(raw.get("evidence_refs") or ())
+            event=CronicaEvent(**raw)
+        except (json.JSONDecodeError,TypeError,KeyError,ValueError) as exc:
+            raise CronicasReadError(f"INVALID_CRONICAS_LINE:{line_number}") from exc
+        if business_id is not None and event.business_id != business_id:
+            continue
+        if event_type is not None and event.event_type != event_type:
+            continue
+        if mission_id is not None and event.mission_id != mission_id:
+            continue
+        events.append(event)
+    return tuple(events)
