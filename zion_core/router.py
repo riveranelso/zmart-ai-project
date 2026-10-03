@@ -63,8 +63,12 @@ def validate_mission(mission:dict[str,Any])->None:
         if key in mission and not isinstance(mission[key],bool):
             raise MissionValidationError("INVALID_BOOLEAN:"+key)
     for key in ("project_id","target_command","target_host","payload_ref","correlation_id","isolation_key"):
-        if key in mission and mission[key] is not None and not isinstance(mission[key],str):
-            raise MissionValidationError("INVALID_STRING:"+key)
+        if key in mission and mission[key] is not None:
+            value=mission[key]
+            if not isinstance(value,str):
+                raise MissionValidationError("INVALID_STRING:"+key)
+            if not value.strip():
+                raise MissionValidationError("INVALID_STRING:"+key)
 
 def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None,security_context:SecurityContext|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
