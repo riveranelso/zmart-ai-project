@@ -180,11 +180,17 @@ class PersistentCorrectionMemory:
             handle.flush()
             os.fsync(handle.fileno())
         temp.replace(self.path)
-        dir_fd=os.open(self.path.parent,os.O_RDONLY)
         try:
-            os.fsync(dir_fd)
-        finally:
-            os.close(dir_fd)
+            dir_fd=os.open(self.path.parent,os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except OSError:
+            # The atomic replacement is already logically committed. A
+            # directory-sync failure must not turn success into a retry that
+            # increments the same correction again.
+            pass
 
     @staticmethod
     def _key(business_id: str,correction: str)->str:
