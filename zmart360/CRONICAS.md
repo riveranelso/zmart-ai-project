@@ -38,3 +38,8 @@ Corrupt persisted history fails closed with the affected line number rather than
 Local JSONL append integrity is protected by a short-lived per-file filesystem lock. Each completed append is flushed and fsynced before the lock is released. Thread and spawned-process concurrency tests verify that cooperating local writers produce complete, parseable, unique records.
 
 This is a local-filesystem persistence guarantee only. It does not provide distributed exactly-once semantics across hosts or independent storage systems.
+
+### Reconciled BIBLIA mutation evidence
+- `BIBLIA_MUTATION` may use `status=RECONCILED` only when recovery proves the intended rules are already present in the authorized business section but the original mutation event is missing.
+- RECONCILED is historical repair, not a new mutation and not a replay of the ANGEL or owner correction.
+- Reconciliation is idempotent and serialized by business + mission; concurrent attempts produce at most one recovered mutation event in the local runtime.
