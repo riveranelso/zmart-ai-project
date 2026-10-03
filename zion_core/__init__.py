@@ -39,3 +39,5 @@ __all__ = [
     "CorrectionMemory", "correction_fingerprint",
     "CronicasJsonlSink", "PersistentCorrectionMemory",
 ]
+
+from .runtime import OmarRuntime
