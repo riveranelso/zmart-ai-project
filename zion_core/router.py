@@ -80,28 +80,28 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     try: ctx=sanpedro_resolve(bid,registry_path)
     except SanPedroError as exc:
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
-        cronicas_emit(mission,decision,cronicas_sink); return decision
+        cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
     base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     route=load_derekh(routes_path).get(str(mission["intent"]))
     if route is None:
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
-        cronicas_emit(mission,decision,cronicas_sink); return decision
+        cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
     command,host=route
     if mission.get("target_command") not in (None,command):
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_COMMAND_CONFLICT",human_review_required=True,**base)
-        cronicas_emit(mission,decision,cronicas_sink); return decision
+        cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
     if mission.get("target_host") not in (None,host):
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_HOST_CONFLICT",human_review_required=True,**base)
-        cronicas_emit(mission,decision,cronicas_sink); return decision
+        cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
     for gate in evaluate_gates(mission,ctx.isolation_key,ctx.context_refs,security_context):
         if not gate.allowed:
             decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
-            cronicas_emit(mission,decision,cronicas_sink); return decision
+            cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
     angels=diatasso(mission=mission,command=command,host=host,business_id=ctx.business_id,
                            isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     decision=DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
                             angel_prefix=host+".ANGEL-",angels=angels,**base)
-    cronicas_emit(mission,decision,cronicas_sink); return decision
+    cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
 
 def route_mission(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None)->DispatchDecision:
     """Compatibility alias for EXAPOSTELLO. New ZION code should call exapostello()."""
