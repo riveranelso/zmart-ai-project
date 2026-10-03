@@ -80,7 +80,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     return GraphoResult(decision.action,decision.destination_ref,True,content+"\n",
                         "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
-def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> GraphoResult:
+def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None, *, origin_angel_id: str | None = None) -> GraphoResult:
     """Persist one local BIBLIA file mutation without lost concurrent updates."""
     target=Path(path)
     lock=LocalOperationLock(target.parent/".zion-biblia-locks")
@@ -107,7 +107,7 @@ def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> Grapho
                 pass
         if cronicas_sink is not None:
             from .cronicas import cronicas_emit_grapho
-            cronicas_emit_grapho(decision,result,cronicas_sink)
+            cronicas_emit_grapho(decision,result,cronicas_sink,origin_angel_id=origin_angel_id)
         return result
 
 
