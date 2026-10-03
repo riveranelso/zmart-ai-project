@@ -153,3 +153,34 @@ def dispatch_mission(
         security_context=security_context,
     )
     return OmarMissionDispatch(context=context,decision=decision)
+
+
+@dataclass(frozen=True)
+class AngelExecutionContext:
+    """Bounded ANGEL commission paired with OMAR's already-isolated knowledge."""
+    commission: Any
+    mission_context: MissionContext
+
+    @property
+    def knowledge(self) -> str:
+        return self.mission_context.knowledge
+
+
+def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionContext, ...]:
+    """Materialize execution contexts only for commissions authorized by EXAPOSTELLO."""
+    decision=dispatch.decision
+    if getattr(decision,"action",None)!="DISPATCH":
+        return ()
+    contexts=[]
+    for commission in getattr(decision,"angels",()) or ():
+        if commission.business_id != dispatch.context.business_id:
+            raise ValueError("ANGEL_CONTEXT_BUSINESS_MISMATCH")
+        if tuple(commission.context_refs) != tuple(dispatch.context.biblia.refs):
+            raise ValueError("ANGEL_CONTEXT_REFS_MISMATCH")
+        contexts.append(
+            AngelExecutionContext(
+                commission=commission,
+                mission_context=dispatch.context,
+            )
+        )
+    return tuple(contexts)
