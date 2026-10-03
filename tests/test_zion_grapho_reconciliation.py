@@ -121,6 +121,24 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(result.reason,"RECONCILIATION_INVALID_RULES")
             self.assertFalse(cronicas.exists())
 
+    def test_direct_reconciliation_rejects_destination_path_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            rule="Persist this exact durable rule."
+            target.write_text(
+                "# Workflows\n\n## zmart-consumer-rights\n- "+rule+"\n",
+                encoding="utf-8",
+            )
+            cronicas=root/"cronicas.jsonl"
+            decision=self.decision(rule)
+            decision.destination_ref="BRANDS.md"
+            result=grapho_reconcile_committed_mutation(
+                target,decision,CronicasJsonlSink(cronicas),
+            )
+            self.assertEqual(result.reason,"RECONCILIATION_DESTINATION_MISMATCH")
+            self.assertFalse(cronicas.exists())
+
     def test_reconciliation_waits_for_active_biblia_writer_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
