@@ -106,11 +106,8 @@ class OmarRuntime:
                             or learning.active_campaign
                         )
                     )
-                    mutation_history=self.history(
-                        business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
-                    )
                     if (not correction_signals or not auto_write
-                            or not durable_learning or mutation_history):
+                            or not durable_learning):
                         return OmarCloseResult(
                             processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
                         )
