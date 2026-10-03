@@ -63,3 +63,10 @@ Unknown routes, invalid missions, boundary conflicts and applicable gate denials
 
 ## Not production deployment
 This branch is architecture/runtime work only. No production backend, n8n, Fly deployment, customer traffic or `main` branch is changed by these runtime documents.
+
+### BIBLIA mutation reconciliation
+- If BIBLIA was committed but its `BIBLIA_MUTATION` CRONICAS append failed, OMAR may run explicit reconciliation.
+- Reconciliation is verify-and-record only: it MUST NOT replay ANGEL work, owner correction intake, HOLY GHOST learning, or GRAPHO mutation.
+- The intended rules must already be proven inside the authorized business section of the target BIBLIA file; otherwise reconciliation fails closed.
+- Recovery is serialized by business + mission and is idempotent: an existing mutation event makes subsequent recovery a no-op.
+- Reconstructed history is marked `status=RECONCILED` and leaves BIBLIA byte-for-byte unchanged.
