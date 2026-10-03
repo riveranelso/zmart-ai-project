@@ -26,5 +26,18 @@ class GraphoTests(unittest.TestCase):
         self.assertIn("- Use approved logo only.",result.content)
         self.assertNotIn("- Old logo rule.",result.content)
 
+
+    def test_add_stays_inside_target_business_section(self):
+        existing="# BIBLIA\n\n## los-duros\n- Existing Los Duros rule.\n\n## yek-family\n- Existing Yek rule.\n"
+        result=grapho_render(existing,self.decision("ADD"))
+        self.assertLess(result.content.index("- Use approved logo only."),result.content.index("## yek-family"))
+
+    def test_update_rejects_rule_candidate_count_mismatch(self):
+        decision=SimpleNamespace(action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New one","New two"),matched_rules=("Old one",))
+        result=grapho_render("- Old one\n",decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"UPDATE_RULE_COUNT_MISMATCH")
+
 if __name__=="__main__":
     unittest.main()
