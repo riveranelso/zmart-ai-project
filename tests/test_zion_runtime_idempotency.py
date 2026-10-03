@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from zion_core import OmarRuntime
+from zion_core.gates import SecurityContext
 
 
 class RuntimeIdempotencyTests(unittest.TestCase):
@@ -95,6 +96,110 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             self.assertEqual(first.decision.reason,"ROUTE_NOT_FOUND")
             second=runtime.dispatch(dict(mission))
             self.assertEqual(second.decision.action,"IDEMPOTENT_NOOP")
+
+
+    def test_same_mission_id_cannot_change_dispatch_affecting_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            base={"mission_id":"identity-reuse","intent":"internal_dispatch",
+                  "requested_by":"OMAR","scope":"WORKFLOW",
+                  "business_id":"zmart-consumer-rights","payload_ref":"payload-a"}
+            self.assertEqual(runtime.dispatch(dict(base)).decision.action,"DISPATCH")
+            for changed in (
+                dict(base,payload_ref="payload-b"),
+                dict(base,kill_switch=True),
+                dict(base,scope="BUSINESS"),
+            ):
+                with self.subTest(changed=changed):
+                    with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
+                        runtime.dispatch(changed)
+
+    def test_correlation_id_whitespace_remains_same_dispatch_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            base={"mission_id":"corr-canonical","intent":"internal_dispatch",
+                  "requested_by":"OMAR","scope":"WORKFLOW",
+                  "business_id":"zmart-consumer-rights"}
+            self.assertEqual(
+                runtime.dispatch(dict(base,correlation_id="  corr-1  ")).decision.action,
+                "DISPATCH",
+            )
+            self.assertEqual(
+                runtime.dispatch(dict(base,correlation_id="corr-1")).decision.action,
+                "IDEMPOTENT_NOOP",
+            )
+
+    def test_same_mission_id_cannot_change_security_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            mission={"mission_id":"security-reuse","intent":"internal_dispatch",
+                     "requested_by":"OMAR","scope":"WORKFLOW",
+                     "business_id":"zmart-consumer-rights"}
+            first=SecurityContext(
+                authenticated=True,principal_id="owner-a",
+                allowed_business_ids=("zmart-consumer-rights",),
+            )
+            second=SecurityContext(
+                authenticated=True,principal_id="owner-b",
+                allowed_business_ids=("zmart-consumer-rights",),
+            )
+            self.assertEqual(
+                runtime.dispatch(dict(mission),security_context=first).decision.action,
+                "DISPATCH",
+            )
+            with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
+                runtime.dispatch(dict(mission),security_context=second)
 
 if __name__=="__main__":
     unittest.main()
