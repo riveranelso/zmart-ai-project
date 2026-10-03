@@ -157,6 +157,39 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
             with lock.hold("zmart-consumer-rights","MISSION_DISPATCH","release-fsync"):
                 pass
 
+    def test_dead_owner_directory_sync_failure_still_recovers_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            root.mkdir()
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="dead-owner-post-unlink-fsync"
+            path=self.lock_path(root,business,operation,identity)
+            path.write_text(json.dumps({
+                "pid":99999999,"business_id":business,
+                "operation":operation,"identity":identity,
+            }),encoding="utf-8")
+            lock=LocalOperationLock(root,timeout_seconds=0.2)
+            real_fsync=os.fsync
+            failed_directory_sync=False
+
+            def fail_first_directory_fsync(fd):
+                nonlocal failed_directory_sync
+                if stat.S_ISDIR(os.fstat(fd).st_mode) and not failed_directory_sync:
+                    failed_directory_sync=True
+                    raise OSError("SIMULATED_RECOVERY_DIRECTORY_FSYNC_FAILURE")
+                return real_fsync(fd)
+
+            completed=[]
+            with patch.object(LocalOperationLock,"_owner_alive",return_value=False), \
+                 patch("zion_core.persistence.os.fsync",side_effect=fail_first_directory_fsync):
+                with lock.hold(business,operation,identity):
+                    completed.append(True)
+
+            self.assertEqual(completed,[True])
+            self.assertTrue(failed_directory_sync)
+            self.assertFalse(path.exists())
+
 
 if __name__=="__main__":
     unittest.main()
