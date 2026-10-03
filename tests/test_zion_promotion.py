@@ -30,6 +30,24 @@ class PromotionTests(unittest.TestCase):
         )
         self.assertEqual(d.action,"ADD")
 
+    def test_duplicate_semantic_rules_are_collapsed_before_add(self):
+        d=propose_biblia_promotion(
+            self.proposal(("Keep this rule.","  KEEP   this rule.  ")),
+            self.destination(),"",
+        )
+        self.assertEqual(d.action,"ADD")
+        self.assertEqual(d.proposed_rules,("Keep this rule.",))
+
+    def test_duplicate_semantic_rules_do_not_create_false_update_count_mismatch(self):
+        d=propose_biblia_promotion(
+            self.proposal(("New rule."," new   rule. ")),
+            self.destination(),"- Old rule.\n",
+            existing_rule_candidates=("Old rule.",),
+        )
+        self.assertEqual(d.action,"UPDATE")
+        self.assertEqual(d.proposed_rules,("New rule.",))
+        self.assertEqual(d.matched_rules,("Old rule.",))
+
     def test_candidate_rule_is_update(self):
         d=propose_biblia_promotion(self.proposal(),self.destination(),"- Old logo rule\n",existing_rule_candidates=("Old logo rule",))
         self.assertEqual(d.action,"UPDATE")
