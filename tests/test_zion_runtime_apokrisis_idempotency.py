@@ -11,7 +11,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             (root/"WORKFLOWS.md").write_text(
-                "# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8"
+                "# Workflows
+
+## zmart-consumer-rights
+",encoding="utf-8"
             )
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
@@ -56,7 +59,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_dispatched_mission_with_empty_commission_evidence_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows\
+\
+## zmart-consumer-rights\
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
@@ -65,8 +71,11 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 biblia_root=root,registry_path=registry,
                 cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
             )
-            from zion_core.cronicas import CronicaEvent\n            from zion_core.persistence import CronicasJsonlSink\n            from datetime import datetime, timezone
-            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(\n                event_id="test-empty-commission",occurred_at=datetime.now(timezone.utc).isoformat(),
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            from datetime import datetime, timezone
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(
+                event_id="test-empty-commission",occurred_at=datetime.now(timezone.utc).isoformat(),
                 event_type="MISSION_DECISION",mission_id="m-empty-commission",
                 business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",
                 angel_ids=(),
@@ -82,13 +91,17 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_denied_mission_cannot_accept_angel_response(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows\
+\
+## zmart-consumer-rights\
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
             }}}),encoding="utf-8")
             routes=root/"derekh.yaml"
-            routes.write_text("routes:\\n",encoding="utf-8")
+            routes.write_text("routes:\
+",encoding="utf-8")
             runtime=OmarRuntime(
                 biblia_root=root,registry_path=registry,routes_path=routes,
                 cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
@@ -109,15 +122,22 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_response_must_match_dispatched_angel_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows
+
+## zmart-consumer-rights
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
             }}}),encoding="utf-8")
             routes=root/"derekh.yaml"
             routes.write_text(
-                "routes:\n  - intent: internal_dispatch\n"
-                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+                "routes:
+  - intent: internal_dispatch
+"
+                "    command: SANGABRIEL
+    host: SANGABRIEL.HOST-01
+",
                 encoding="utf-8",
             )
             runtime=OmarRuntime(
@@ -140,7 +160,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_same_angel_cannot_replay_changed_response_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows
+
+## zmart-consumer-rights
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
@@ -169,7 +192,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_changed_summary_is_not_silent_retry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows
+
+## zmart-consumer-rights
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
@@ -194,7 +220,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
     def test_same_count_changed_correction_signal_is_not_silent_retry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            (root/"WORKFLOWS.md").write_text("# Workflows\n\n## zmart-consumer-rights\n",encoding="utf-8")
+            (root/"WORKFLOWS.md").write_text("# Workflows
+
+## zmart-consumer-rights
+",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
                 "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
