@@ -184,6 +184,12 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         raise ValueError("ANGEL_CONTEXT_ID_INVALID")
     if len(set(angel_ids)) != len(angel_ids):
         raise ValueError("ANGEL_CONTEXT_DUPLICATE_ANGEL")
+    scopes={getattr(commission,"scope",None) for commission in angels}
+    payload_refs={getattr(commission,"payload_ref",None) for commission in angels}
+    if len(scopes) != 1:
+        raise ValueError("ANGEL_CONTEXT_SCOPE_MISMATCH")
+    if len(payload_refs) != 1:
+        raise ValueError("ANGEL_CONTEXT_PAYLOAD_MISMATCH")
     for commission in angels:
         if commission.business_id != dispatch.context.business_id:
             raise ValueError("ANGEL_CONTEXT_BUSINESS_MISMATCH")
