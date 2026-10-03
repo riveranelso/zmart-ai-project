@@ -152,11 +152,16 @@ class LocalOperationLock:
             except FileNotFoundError:
                 pass
             else:
-                dir_fd=os.open(self.root,os.O_RDONLY)
                 try:
-                    os.fsync(dir_fd)
-                finally:
-                    os.close(dir_fd)
+                    dir_fd=os.open(self.root,os.O_RDONLY)
+                    try:
+                        os.fsync(dir_fd)
+                    finally:
+                        os.close(dir_fd)
+                except OSError:
+                    # The coordination lock is already removed. Do not turn
+                    # completed protected work into a false retryable failure.
+                    pass
 
 
 class PersistentCorrectionMemory:
