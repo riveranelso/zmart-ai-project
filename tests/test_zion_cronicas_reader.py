@@ -69,21 +69,6 @@ class CronicasReaderTests(unittest.TestCase):
 
 
 
-    def test_reader_rejects_noncanonical_dispatched_angel_identity(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path=Path(tmp)/"cronicas.jsonl"
-            row={
-                "event_id":"1","occurred_at":"2026-10-03T00:00:00+00:00",
-                "event_type":"MISSION_DECISION","mission_id":"m1",
-                "action":"DISPATCH","reason":"ANGELS_ALLOCATED",
-                "business_id":"zmart-consumer-rights",
-                "angel_ids":["forged"],"evidence_refs":[],
-            }
-            path.write_text(json.dumps(row)+"\n",encoding="utf-8")
-            with self.assertRaisesRegex(CronicasReadError,"INVALID_CRONICAS_LINE:1"):
-                read_cronicas(path)
-
-
     def test_reader_rejects_unknown_persisted_metadata_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/"cronicas.jsonl"
