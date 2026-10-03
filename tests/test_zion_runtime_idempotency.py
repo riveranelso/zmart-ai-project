@@ -45,6 +45,24 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             self.assertEqual(len(events),1)
 
 
+    def test_same_mission_id_cannot_cross_business_even_when_other_tenant_has_no_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{
+                "zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart","context_refs":["GLOBAL.md"]},
+                "scan-water-intelligence":{"enabled":True,"isolation_key":"scan","context_refs":["GLOBAL.md"]}
+            }}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\\n  - intent: internal_dispatch\\n    command: SANGABRIEL\\n    host: SANGABRIEL.HOST-01\\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            base={"mission_id":"global-mission-id","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW"}
+            self.assertEqual(runtime.dispatch(dict(base,business_id="zmart-consumer-rights")).decision.action,"DISPATCH")
+            with self.assertRaisesRegex(ValueError,"MISSION_ID_CROSS_BUSINESS_CONFLICT"):
+                runtime.dispatch(dict(base,business_id="scan-water-intelligence"))
+
+
     def test_same_mission_id_cannot_change_from_routed_to_unknown_intent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
