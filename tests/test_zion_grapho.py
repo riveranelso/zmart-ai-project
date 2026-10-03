@@ -38,6 +38,31 @@ class GraphoTests(unittest.TestCase):
         result=grapho_render("- Old one\n",decision)
         self.assertFalse(result.changed)
         self.assertEqual(result.reason,"UPDATE_RULE_COUNT_MISMATCH")
+    def test_add_retry_does_not_duplicate_rule_in_same_business_section(self):
+        decision=self.decision("ADD",rules=("Keep this rule.",))
+        first=grapho_render("# BIBLIA\n",decision)
+        second=grapho_render(first.content,decision)
+        self.assertTrue(first.changed)
+        self.assertFalse(second.changed)
+        self.assertEqual(second.reason,"RULES_ALREADY_PRESENT")
+        self.assertEqual(second.content.count("- Keep this rule."),1)
+
+    def test_same_rule_in_other_business_does_not_suppress_target_add(self):
+        existing="# BIBLIA\n\n## scan-water-intelligence\n- Shared wording.\n"
+        decision=self.decision("ADD",rules=("Shared wording.",))
+        result=grapho_render(existing,decision)
+        self.assertTrue(result.changed)
+        self.assertIn("## zmart-consumer-rights\n- Shared wording.",result.content)
+        self.assertEqual(result.content.count("- Shared wording."),2)
+
+    def test_add_only_appends_missing_rules_on_partial_retry(self):
+        existing="# BIBLIA\n\n## zmart-consumer-rights\n- Existing rule.\n"
+        decision=self.decision("ADD",rules=("Existing rule.","New rule."))
+        result=grapho_render(existing,decision)
+        self.assertTrue(result.changed)
+        self.assertEqual(result.content.count("- Existing rule."),1)
+        self.assertEqual(result.content.count("- New rule."),1)
+
 
 if __name__=="__main__":
     unittest.main()
