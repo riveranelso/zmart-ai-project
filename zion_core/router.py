@@ -24,9 +24,16 @@ class DispatchDecision:
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
-    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None
+    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False
     for raw in path.read_text(encoding="utf-8").splitlines():
         line=raw.strip()
+        if line=="routes:":
+            in_routes=True
+            continue
+        if not in_routes:
+            continue
+        if line=="fallback:":
+            break
         if line.startswith("- intent:"):
             if intent and command and host:
                 if intent in routes: raise RuntimeError("DUPLICATE_ROUTE")
@@ -34,7 +41,6 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
             intent=line.split(":",1)[1].strip(); command=host=None
         elif intent and line.startswith("command:"): command=line.split(":",1)[1].strip()
         elif intent and line.startswith("host:"): host=line.split(":",1)[1].strip()
-        elif line=="fallback:": break
     if intent and command and host:
         if intent in routes: raise RuntimeError("DUPLICATE_ROUTE")
         routes[intent]=(command,host)
