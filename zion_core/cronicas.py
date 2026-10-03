@@ -113,7 +113,7 @@ def build_apokrisis_fingerprint(response:Any)->str:
     identity={
         "angel_id":response.angel_id,"mission_id":response.mission_id,
         "status":response.status,"business_id":response.business_id,
-        "correlation_id":response.correlation_id,
+        "summary":response.summary,"correlation_id":response.correlation_id,
         "evidence_refs":list(response.evidence_refs),
         "uncertainty":list(response.uncertainty),
         "correction_signals":list(response.correction_signals),
