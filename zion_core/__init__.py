@@ -19,6 +19,7 @@ from .holy_ghost import (
 from .grapho import GraphoResult, grapho_render, grapho_write
 from .omar import MissionContext, prepare_mission, LearningIntent, receive_apokrisis, receive_owner_correction
 from .biblia import BibliaContext, retrieve_biblia
+from .durability import DurabilityAssessment, assess_durability
 
 __all__ = [
     "DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels",
@@ -32,4 +33,5 @@ __all__ = [
     "GraphoResult", "grapho_render", "grapho_write",
     "MissionContext", "prepare_mission", "LearningIntent", "receive_apokrisis", "receive_owner_correction",
     "BibliaContext", "retrieve_biblia",
+    "DurabilityAssessment", "assess_durability",
 ]
