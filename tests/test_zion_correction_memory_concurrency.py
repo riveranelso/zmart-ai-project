@@ -43,6 +43,30 @@ class CorrectionMemoryConcurrencyTests(unittest.TestCase):
 
 
 
+
+    def test_count_waits_for_same_correction_write_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"corrections.json"
+            memory=PersistentCorrectionMemory(path)
+            business="zmart-consumer-rights"
+            rule="Preserve this reusable workflow."
+            self.assertEqual(memory.observe(business,rule),1)
+            from zion_core.correction_memory import correction_fingerprint
+            from zion_core.persistence import LocalOperationLock
+            lock=LocalOperationLock(path.parent/(path.name+".locks"))
+            result=[]
+            thread=threading.Thread(target=lambda: result.append(memory.count(business,rule)))
+            with lock.hold(business,"CORRECTION_MEMORY",correction_fingerprint(rule)):
+                thread.start()
+                import time
+                time.sleep(0.1)
+                self.assertTrue(thread.is_alive())
+                self.assertEqual(result,[])
+            thread.join(5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(result,[1])
+
+
     def test_multiprocess_observe_does_not_lose_repetition_count(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/"corrections.json"
