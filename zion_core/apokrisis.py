@@ -51,12 +51,15 @@ def apokrisis(
             isinstance(value,str) and value.strip() for value in values
         ):
             raise ValueError("INVALID_APOKRISIS_"+name)
-    if correlation_id is not None and not isinstance(correlation_id,str):
-        raise ValueError("INVALID_APOKRISIS_CORRELATION_ID")
-    if output_ref is not None and not isinstance(output_ref,str):
-        raise ValueError("INVALID_APOKRISIS_OUTPUT_REF")
-    if error_code is not None and not isinstance(error_code,str):
-        raise ValueError("INVALID_APOKRISIS_ERROR_CODE")
+    for name, value in (
+        ("CORRELATION_ID",correlation_id),
+        ("OUTPUT_REF",output_ref),
+        ("ERROR_CODE",error_code),
+    ):
+        if value is not None and (
+            not isinstance(value,str) or not value.strip()
+        ):
+            raise ValueError("INVALID_APOKRISIS_"+name)
     if not isinstance(summary, str) or not summary.strip():
         raise ValueError("APOKRISIS_SUMMARY_REQUIRED")
     if status == "FAILED" and not error_code:
@@ -67,12 +70,12 @@ def apokrisis(
         status=status,
         summary=summary.strip(),
         business_id=business_id.strip(),
-        correlation_id=correlation_id,
-        evidence_refs=tuple(evidence_refs),
-        uncertainty=tuple(uncertainty),
-        correction_signals=tuple(correction_signals),
-        output_ref=output_ref,
-        error_code=error_code,
+        correlation_id=correlation_id.strip() if correlation_id is not None else None,
+        evidence_refs=tuple(value.strip() for value in evidence_refs),
+        uncertainty=tuple(value.strip() for value in uncertainty),
+        correction_signals=tuple(value.strip() for value in correction_signals),
+        output_ref=output_ref.strip() if output_ref is not None else None,
+        error_code=error_code.strip() if error_code is not None else None,
     )
 
 def close_apokrisis(response: Apokrisis, cronicas_sink=None):
