@@ -33,5 +33,30 @@ class SanPedroRegistryTests(unittest.TestCase):
                 resolve_business("x",p)
 
 
+    def test_registry_rejects_noncanonical_and_duplicate_context_refs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"registry.json"
+            for refs,reason in [
+                ([" BIBLIA.md "],"BUSINESS_CONTEXT_MISSING"),
+                (["BIBLIA.md","BIBLIA.md"],"BUSINESS_CONTEXT_DUPLICATE"),
+            ]:
+                with self.subTest(refs=refs):
+                    path.write_text(json.dumps({"businesses":{"zmart":{
+                        "enabled":True,"isolation_key":"zmart","context_refs":refs
+                    }}}),encoding="utf-8")
+                    with self.assertRaisesRegex(SanPedroError,reason):
+                        sanpedro_resolve("zmart",path)
+
+    def test_registry_rejects_noncanonical_identity_boundaries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"registry.json"
+            path.write_text(json.dumps({"businesses":{"zmart":{
+                "enabled":True,"isolation_key":" zmart ","context_refs":["BIBLIA.md"]
+            }}}),encoding="utf-8")
+            with self.assertRaisesRegex(SanPedroError,"BUSINESS_ID_REQUIRED"):
+                sanpedro_resolve(" zmart ",path)
+            with self.assertRaisesRegex(SanPedroError,"ISOLATION_KEY_MISSING"):
+                sanpedro_resolve("zmart",path)
+
 if __name__ == "__main__":
     unittest.main()
