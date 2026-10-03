@@ -51,14 +51,23 @@ def _scope_for_ref(ref: str)->str:
 
 
 def _business_section(text: str, business_id: str) -> str:
-    """Return only the named business section when a shared BIBLIA document is segmented."""
+    """Return one exact business section; fail closed when a segmented document lacks it."""
     header=f"## {business_id}"
-    if header not in text:
+    lines=text.splitlines(keepends=True)
+    heading_indexes=tuple(
+        idx for idx,line in enumerate(lines)
+        if line.rstrip("\r\n").startswith("## ")
+    )
+    if not heading_indexes:
         return text
-    start=text.index(header)
-    next_section=text.find("\n## ",start+len(header))
-    end=len(text) if next_section==-1 else next_section
-    return text[start:end].rstrip()+"\n"
+    target_index=next(
+        (idx for idx in heading_indexes if lines[idx].rstrip("\r\n")==header),
+        None,
+    )
+    if target_index is None:
+        return ""
+    end_index=next((idx for idx in heading_indexes if idx>target_index),len(lines))
+    return "".join(lines[target_index:end_index]).rstrip()+"\n"
 
 
 def retrieve_biblia(
