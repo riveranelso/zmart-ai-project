@@ -45,6 +45,12 @@ Canonical display names may preserve their correct human spelling, including acc
 - Boundary: DIATASSO appoints/arranges; EXAPOSTELLO performs the sending/dispatch.
 - Compatibility: legacy `allocate_angels()` and `AngelAssignment` remain temporary aliases.
 
+### APOKRISIS
+- Technical ID: `APOKRISIS`.
+- Function: structured ANGEL response returned to OMAR after bounded work.
+- Source: Greek `apokrisis`, answer or response.
+- It reports status and references; it does not dispatch or grant authority.
+
 ### EXAPOSTELLO
 - Canonical technical name: `EXAPOSTELLO`.
 - Function: the SAN GABRIEL process that sends/dispatches an authorized mission toward its resolved command and HOST.
