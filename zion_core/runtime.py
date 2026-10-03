@@ -227,11 +227,6 @@ class OmarRuntime:
                     business_id=business_id,event_type="BIBLIA_MUTATION",mission_id=cid,
                 )
                 auto_write=True if learning is None else learning.auto_write
-                if not auto_write or mutation_history:
-                    return OmarCloseResult(
-                        processed=False,
-                        reason="OWNER_CORRECTION_ALREADY_PROCESSED",
-                    )
                 recovery_learning=learning
                 if recovery_learning is None:
                     from .durability import assess_durability
@@ -242,11 +237,29 @@ class OmarRuntime:
                         correction,
                         repeated_correction=repeated,
                     )
+                    if not assessment.durable:
+                        return OmarCloseResult(
+                            processed=False,
+                            reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+                        )
                     recovery_learning=LearningIntent(
                         explicit_durable_instruction=(
                             assessment.reason=="EXPLICIT_DURABLE_LANGUAGE"
                         ),
                         repeated_correction=repeated,
+                    )
+                durable_learning=bool(
+                    recovery_learning.scope_hint is not None
+                    or recovery_learning.explicit_durable_instruction
+                    or recovery_learning.repeated_correction
+                    or recovery_learning.stable_workflow
+                    or recovery_learning.locked_asset
+                    or recovery_learning.active_campaign
+                )
+                if not auto_write or not durable_learning or mutation_history:
+                    return OmarCloseResult(
+                        processed=False,
+                        reason="OWNER_CORRECTION_ALREADY_PROCESSED",
                     )
                 event,cycle=receive_owner_correction(
                     correction,
