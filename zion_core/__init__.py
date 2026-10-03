@@ -21,6 +21,7 @@ from .omar import MissionContext, prepare_mission, LearningIntent, receive_apokr
 from .biblia import BibliaContext, retrieve_biblia
 from .durability import DurabilityAssessment, assess_durability
 from .correction_memory import CorrectionMemory, correction_fingerprint
+from .persistence import CronicasJsonlSink, PersistentCorrectionMemory
 
 __all__ = [
     "DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels",
@@ -36,4 +37,5 @@ __all__ = [
     "BibliaContext", "retrieve_biblia",
     "DurabilityAssessment", "assess_durability",
     "CorrectionMemory", "correction_fingerprint",
+    "CronicasJsonlSink", "PersistentCorrectionMemory",
 ]
