@@ -19,7 +19,7 @@ Biblical/Christian names are functional metaphors. Do not assign a sacred name m
 - SAN PEDRO — keys / registry; locates canonical context and resources
 - SAN GABRIEL — messenger / dispatch; carries instructions/events to the proper destination
 - BIBLIA — canonical current knowledge
-- BOOK OF REMEMBRANCE — event/history/correction log
+- CRÓNICAS — event/history/correction log
 - SERAPHIM — core integrity / alignment; detect corruption of canonical rules, scope and core invariants
 - CHERUBIM — security / boundaries; protect access, secrets, PII, production and domain isolation
 - THRONES — authority / policy; resolve which authorized rule governs when instructions conflict
@@ -49,4 +49,4 @@ These are threat classifications, not trusted agents and not components that rec
 - POWERS enforces runtime restrictions.
 - ANGELS perform bounded execution.
 
-SAN PEDRO, SAN GABRIEL, BIBLIA and BOOK OF REMEMBRANCE are special functional components, not ranks inserted into the angelic order.
+SAN PEDRO, SAN GABRIEL, BIBLIA and CRÓNICAS are special functional components, not ranks inserted into the angelic order.
