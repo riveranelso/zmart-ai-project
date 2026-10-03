@@ -248,6 +248,23 @@ class AngelExecutionContextTests(unittest.TestCase):
                 execution_contexts(replace(dispatch,context=changed))
 
 
+    def test_custom_registry_isolation_key_is_authoritative(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"BIBLIA.md").write_text("Approved.",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"tenant-zmart-001","context_refs":["BIBLIA.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            mission={"mission_id":"m-custom-isolation","intent":"internal_dispatch","requested_by":"OMAR",
+                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            dispatch=dispatch_mission(mission,biblia_root=root,routes_path=routes,registry_path=registry)
+            contexts=execution_contexts(dispatch)
+            self.assertEqual(contexts[0].commission.isolation_key,"tenant-zmart-001")
+
+
     def test_tampered_decision_payload_is_rejected_even_when_commissions_match(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
