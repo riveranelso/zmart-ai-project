@@ -133,6 +133,71 @@ class OwnerCorrectionIdempotencyTests(unittest.TestCase):
                 runtime.correction_memory.count("zmart-consumer-rights",rule),1
             )
 
+    def test_non_owner_mutation_with_same_id_does_not_suppress_owner_recovery(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp)
+            root=base/"biblia"
+            root.mkdir()
+            workflow=root/"WORKFLOWS.md"
+            workflow.write_text("# Workflows\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            from zion_core import LearningIntent, apokrisis
+            shared_id="shared-owner-id"
+            angel=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id=shared_id,
+                status="SUCCESS",summary="angel",business_id="zmart-consumer-rights",
+                correction_signals=("ANGEL_RULE",),
+            )
+            self.assertTrue(runtime.close(
+                angel,learning=LearningIntent(
+                    scope_hint="WORKFLOW",repeated_correction=True
+                )
+            ).processed)
+
+            outside=base/"GLOBAL.md"
+            outside.write_text("# Outside\n",encoding="utf-8")
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["../GLOBAL.md"]
+            }}}),encoding="utf-8")
+            owner_rule="From now on preserve OWNER_RULE."
+            with self.assertRaisesRegex(ValueError,"BIBLIA_DESTINATION_OUTSIDE_ROOT"):
+                runtime.owner_correction(
+                    owner_rule,business_id="zmart-consumer-rights",
+                    correction_id=shared_id,
+                )
+
+            global_target=root/"GLOBAL.md"
+            global_target.write_text("# Global\n",encoding="utf-8")
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            recovered=runtime.owner_correction(
+                owner_rule,business_id="zmart-consumer-rights",
+                correction_id=shared_id,
+            )
+            self.assertTrue(recovered.processed)
+            self.assertEqual(
+                recovered.reason,"OWNER_CORRECTION_LEARNING_RECOVERED"
+            )
+            self.assertIn(owner_rule,global_target.read_text(encoding="utf-8"))
+            mutations=runtime.history(
+                event_type="BIBLIA_MUTATION",mission_id=shared_id
+            )
+            self.assertEqual(len(mutations),2)
+            self.assertEqual(mutations[0].angel_ids,("SANGABRIEL.HOST-01.ANGEL-001",))
+            self.assertEqual(mutations[1].angel_ids,("OMAR.OWNER-INPUT",))
+
 
 if __name__=="__main__":
     unittest.main()
