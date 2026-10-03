@@ -44,3 +44,6 @@ Before substantial or recurring work:
 - If Nelson repeats a documented instruction, treat it as a retrieval or execution failure and repair the path rather than duplicating the rule.
 
 Never commit secrets, credentials, tokens, customer PII or private lead exports.
+## ZION development skill
+For ZION CORE implementation, debugging, hardening, CI repair, architecture audit, and documentation synchronization, load `.agents/skills/zion-development/SKILL.md` and follow its autonomous development loop. This skill does not authorize production deploys, main-branch mutation, secrets/permission changes, or destructive external actions.
+
