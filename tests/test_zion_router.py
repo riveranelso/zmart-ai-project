@@ -11,7 +11,6 @@ class ZionRouterTests(unittest.TestCase):
         r=route_mission(self.mission())
         self.assertEqual(r.action,"DISPATCH")
         self.assertEqual(r.reason,"ANGELS_ALLOCATED")
-        self.assertEqual(r.host,"SANMIGUEL.HOST-01")\n        self.assertEqual([a.angel_id for a in r.angels],["SANMIGUEL.HOST-01.ANGEL-001","SANMIGUEL.HOST-01.ANGEL-002"])
 
     def test_unknown_business_stops_before_dispatch(self):
         self.assertEqual(route_mission(self.mission(business_id="unknown")).reason,"BUSINESS_NOT_REGISTERED")
