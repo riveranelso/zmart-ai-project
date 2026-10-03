@@ -126,10 +126,12 @@ class PersistentCorrectionMemory:
 
     def observe(self,business_id: str,correction: str)->int:
         key=self._key(business_id,correction)
-        data=self._load()
-        data[key]=data.get(key,0)+1
-        self._save(data)
-        return data[key]
+        lock=LocalOperationLock(self.path.parent/(self.path.name+".locks"))
+        with lock.hold(business_id,"CORRECTION_MEMORY",correction_fingerprint(correction)):
+            data=self._load()
+            data[key]=data.get(key,0)+1
+            self._save(data)
+            return data[key]
 
     def count(self,business_id: str,correction: str)->int:
         return self._load().get(self._key(business_id,correction),0)
