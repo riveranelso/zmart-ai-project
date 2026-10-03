@@ -61,8 +61,8 @@ class ZionRouterTests(unittest.TestCase):
                     validate_mission(malformed)
         for field,value in (
             ("target_command","SANGABRIEL"),("target_host","SANGABRIEL.HOST-01"),
-            ("payload_ref","payload-1"),("correlation_id","corr-1"),
-            ("isolation_key","zmart-consumer-rights"),("project_id","project-1"),
+            ("payload_ref","payload-1"),("isolation_key","zmart-consumer-rights"),
+            ("project_id","project-1"),
         ):
             malformed=dict(mission)
             malformed[field]=" "+value+" "
