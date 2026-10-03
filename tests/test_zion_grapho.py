@@ -170,6 +170,18 @@ class GraphoTests(unittest.TestCase):
             "# BIBLIA\r\n\r\n## los-duros\r\n- New rule.\r\n- Keep untouched.\r\n",
         )
 
+    def test_real_update_preserves_missing_final_newline(self):
+        original="# BIBLIA\n\n## los-duros\n- Old rule."
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New rule.",),matched_rules=("Old rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertTrue(result.changed)
+        self.assertEqual(
+            result.content,"# BIBLIA\n\n## los-duros\n- New rule."
+        )
+
 
 if __name__=="__main__":
     unittest.main()
