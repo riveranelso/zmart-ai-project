@@ -133,6 +133,53 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                     pass
             self.assertTrue(path.exists())
 
+    def test_owner_metadata_write_failure_does_not_leave_unrecoverable_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            lock=LocalOperationLock(root,timeout_seconds=0.1)
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="metadata-write-failure"
+            path=self.lock_path(root,business,operation,identity)
+
+            with patch("zion_core.persistence.os.write",side_effect=OSError("SIMULATED_WRITE_FAILURE")):
+                with self.assertRaisesRegex(OSError,"SIMULATED_WRITE_FAILURE"):
+                    with lock.hold(business,operation,identity):
+                        self.fail("protected section must not be entered")
+
+            self.assertFalse(path.exists())
+            with lock.hold(business,operation,identity):
+                self.assertTrue(path.exists())
+            self.assertFalse(path.exists())
+
+    def test_owner_metadata_fsync_failure_does_not_leave_unrecoverable_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            lock=LocalOperationLock(root,timeout_seconds=0.1)
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="metadata-fsync-failure"
+            path=self.lock_path(root,business,operation,identity)
+            real_fsync=os.fsync
+            failed=False
+
+            def fail_first_file_fsync(fd):
+                nonlocal failed
+                if not stat.S_ISDIR(os.fstat(fd).st_mode) and not failed:
+                    failed=True
+                    raise OSError("SIMULATED_OWNER_FSYNC_FAILURE")
+                return real_fsync(fd)
+
+            with patch("zion_core.persistence.os.fsync",side_effect=fail_first_file_fsync):
+                with self.assertRaisesRegex(OSError,"SIMULATED_OWNER_FSYNC_FAILURE"):
+                    with lock.hold(business,operation,identity):
+                        self.fail("protected section must not be entered")
+
+            self.assertTrue(failed)
+            self.assertFalse(path.exists())
+            with lock.hold(business,operation,identity):
+                pass
+
     def test_release_directory_sync_failure_does_not_fail_completed_work(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"locks"
