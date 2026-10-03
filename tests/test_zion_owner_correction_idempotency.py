@@ -118,7 +118,9 @@ class OwnerCorrectionIdempotencyTests(unittest.TestCase):
                 runtime.correction_memory.count("zmart-consumer-rights",rule),1
             )
             self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
-            self.assertEqual(len(runtime.history(event_type="BIBLIA_MUTATION")),1)
+            mutations=runtime.history(event_type="BIBLIA_MUTATION")
+            self.assertEqual(len(mutations),1)
+            self.assertEqual(mutations[0].angel_ids,("OMAR.OWNER-INPUT",))
             self.assertIn(rule,target.read_text(encoding="utf-8"))
 
             retry=runtime.owner_correction(
