@@ -145,6 +145,18 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"SUPERSESSION_CANDIDATE_NOT_FOUND")
         self.assertEqual(result.content,original)
 
+    def test_duplicate_candidates_require_duplicate_exact_lines(self):
+        original="# BIBLIA\n\n## los-duros\n- Same rule.\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("First.","Second."),
+            matched_rules=("Same rule.","Same rule."),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"UPDATE_CANDIDATE_NOT_FOUND")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
