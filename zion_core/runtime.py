@@ -106,8 +106,15 @@ class OmarRuntime:
                             or learning.active_campaign
                         )
                     )
+                    attributed_mutation=any(
+                        aid in event.angel_ids
+                        for event in self.history(
+                            business_id=bid,event_type="BIBLIA_MUTATION",
+                            mission_id=mid,
+                        )
+                    )
                     if (not correction_signals or not auto_write
-                            or not durable_learning):
+                            or not durable_learning or attributed_mutation):
                         return OmarCloseResult(
                             processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
                         )
