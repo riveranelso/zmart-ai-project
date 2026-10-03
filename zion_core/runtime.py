@@ -13,7 +13,7 @@ from .omar import (
     receive_apokrisis,
     receive_owner_correction,
 )
-from .persistence import CronicasJsonlSink, PersistentCorrectionMemory
+from .persistence import CronicasJsonlSink, PersistentCorrectionMemory, read_cronicas
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,31 @@ class OmarRuntime:
             registry_path=self.registry_path,
             cronicas_sink=self.cronicas_sink,
             learning=learning,
+        )
+
+
+    def history(
+        self,
+        *,
+        business_id: str | None = None,
+        event_type: str | None = None,
+        mission_id: str | None = None,
+    ):
+        """Read historical metadata only; never replay or execute recorded actions."""
+        return read_cronicas(
+            self.cronicas_path,
+            business_id=business_id,
+            event_type=event_type,
+            mission_id=mission_id,
+        )
+
+    def mission_history(self, mission_id: str, *, business_id: str | None = None):
+        """Reconstruct the recorded timeline for one mission without side effects."""
+        if not isinstance(mission_id,str) or not mission_id.strip():
+            raise ValueError("MISSION_ID_REQUIRED")
+        return self.history(
+            business_id=business_id,
+            mission_id=mission_id.strip(),
         )
 
     def owner_correction(
