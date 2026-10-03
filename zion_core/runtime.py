@@ -123,6 +123,8 @@ class OmarRuntime:
                     item for event in dispatched_events
                     for item in event.angel_ids
                 }
+                if dispatched_events and not commissioned:
+                    raise ValueError("APOKRISIS_COMMISSION_EVIDENCE_MISSING")
                 if commissioned and aid not in commissioned:
                     raise ValueError("APOKRISIS_ANGEL_NOT_COMMISSIONED")
                 prior=self.history(
