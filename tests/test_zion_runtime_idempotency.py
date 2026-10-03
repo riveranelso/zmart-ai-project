@@ -33,8 +33,8 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             first=runtime.dispatch(mission)
             self.assertEqual(first.decision.action,"DISPATCH")
             before=(root/"cronicas.jsonl").read_bytes()
-            second=runtime.dispatch(dict(mission))
-            self.assertEqual(second.decision.action,"IDEMPOTENT_NOOP")
+            with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
+                runtime.dispatch(dict(mission))
             self.assertEqual(second.decision.reason,"MISSION_ALREADY_DECIDED")
             self.assertEqual((root/"cronicas.jsonl").read_bytes(),before)
             events=runtime.history(
@@ -72,6 +72,51 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
                 runtime.dispatch(dict(base,intent="unknown-now"))
+
+    def test_same_unknown_intent_retry_remains_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n",encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            mission={"mission_id":"unknown-retry","intent":"unknown","requested_by":"OMAR",
+                     "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            first=runtime.dispatch(mission)
+            self.assertEqual(first.decision.reason,"ROUTE_NOT_FOUND")
+            second=runtime.dispatch(dict(mission))
+            self.assertEqual(second.decision.action,"IDEMPOTENT_NOOP")
+
+    def test_mission_id_cannot_change_between_two_unknown_intents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n",encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            base={"mission_id":"unknown-conflict","requested_by":"OMAR",
+                  "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            runtime.dispatch(dict(base,intent="unknown-a"))
+            with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
+                runtime.dispatch(dict(base,intent="unknown-b"))
 
 if __name__=="__main__":
     unittest.main()
