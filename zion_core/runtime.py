@@ -91,8 +91,26 @@ class OmarRuntime:
                     business_id=bid,event_type="ANGEL_RESPONSE",mission_id=mid,
                 )
                 if any(aid in event.angel_ids for event in prior):
+                    correction_signals=tuple(
+                        value for value in (getattr(response,"correction_signals",()) or ())
+                        if isinstance(value,str) and value.strip()
+                    )
+                    auto_write=True if learning is None else learning.auto_write
+                    mutation_history=self.history(
+                        business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
+                    )
+                    if not correction_signals or not auto_write or mutation_history:
+                        return OmarCloseResult(
+                            processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
+                        )
+                    event,cycle=receive_apokrisis(
+                        response,biblia_root=self.biblia_root,
+                        registry_path=self.registry_path,cronicas_sink=self.cronicas_sink,
+                        learning=learning,record_response_event=False,
+                    )
                     return OmarCloseResult(
-                        processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
+                        processed=True,reason="APOKRISIS_LEARNING_RECOVERED",
+                        event=event,cycle=cycle,
                     )
                 event,cycle=receive_apokrisis(
                     response,biblia_root=self.biblia_root,
