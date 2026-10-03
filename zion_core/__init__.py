@@ -20,6 +20,7 @@ from .grapho import GraphoResult, grapho_render, grapho_write
 from .omar import MissionContext, prepare_mission, LearningIntent, receive_apokrisis, receive_owner_correction
 from .biblia import BibliaContext, retrieve_biblia
 from .durability import DurabilityAssessment, assess_durability
+from .correction_memory import CorrectionMemory, correction_fingerprint
 
 __all__ = [
     "DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels",
@@ -34,4 +35,5 @@ __all__ = [
     "MissionContext", "prepare_mission", "LearningIntent", "receive_apokrisis", "receive_owner_correction",
     "BibliaContext", "retrieve_biblia",
     "DurabilityAssessment", "assess_durability",
+    "CorrectionMemory", "correction_fingerprint",
 ]
