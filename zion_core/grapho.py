@@ -147,6 +147,17 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
 def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None, *, origin_angel_id: str | None = None, correlation_id: str | None = None) -> GraphoResult:
     """Persist one local BIBLIA file mutation without lost concurrent updates."""
     target=Path(path)
+    destination_ref=getattr(decision,"destination_ref",None)
+    if (
+        not isinstance(destination_ref,str)
+        or not destination_ref.strip()
+        or destination_ref != destination_ref.strip()
+        or destination_ref != target.name
+    ):
+        return GraphoResult(
+            getattr(decision,"action","UNKNOWN"),destination_ref,False,
+            target.read_text(encoding="utf-8"),"DESTINATION_MISMATCH",
+        )
     lock=LocalOperationLock(target.parent/".zion-biblia-locks")
     identity=str(target.resolve())
     with lock.hold("BIBLIA","GRAPHO_WRITE",identity):
