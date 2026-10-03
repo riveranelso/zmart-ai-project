@@ -14,6 +14,7 @@ class MissionContext:
     mission_id: str | None = None
     scope: str | None = None
     payload_ref: str | None = None
+    isolation_key: str | None = None
 
     @property
     def knowledge(self) -> str:
@@ -35,7 +36,9 @@ def prepare_mission(
         root=biblia_root,
         registry_path=registry_path,
     )
-    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id,scope=scope,payload_ref=payload_ref)
+    from .registry import sanpedro_resolve
+    authority=sanpedro_resolve(business_id,registry_path)
+    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id,scope=scope,payload_ref=payload_ref,isolation_key=authority.isolation_key)
 
 
 @dataclass(frozen=True)
@@ -199,7 +202,7 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
         raise ValueError("ANGEL_CONTEXT_BIBLIA_BUSINESS_MISMATCH")
     if tuple(getattr(decision,"context_refs",()) or ()) != tuple(dispatch.context.biblia.refs):
         raise ValueError("ANGEL_CONTEXT_DECISION_REFS_MISMATCH")
-    expected_isolation_key=dispatch.context.business_id
+    expected_isolation_key=dispatch.context.isolation_key
     if getattr(decision,"isolation_key",None) != expected_isolation_key:
         raise ValueError("ANGEL_CONTEXT_DECISION_ISOLATION_MISMATCH")
     angels=getattr(decision,"angels",()) or ()
