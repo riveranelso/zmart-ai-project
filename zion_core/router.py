@@ -25,7 +25,7 @@ class DispatchDecision:
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
-    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False; saw_routes=False
+    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False; saw_routes=False; after_fallback=False
     def commit_route()->None:
         nonlocal intent,command,host
         if intent is None:
@@ -46,7 +46,10 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
         if raw=="fallback:":
             commit_route()
             intent=command=host=None
-            break
+            in_routes=False; after_fallback=True
+            continue
+        if after_fallback:
+            continue
         if not line:
             continue
         if line.startswith("- intent:"):
