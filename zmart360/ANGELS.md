@@ -1,8 +1,15 @@
 # ANGELS — ZION CORE Execution Agents
 
-ANGELS are bounded execution agents.
+ANGELS are bounded individual execution agents organized into HOSTS under ARCHANGEL mission commands when multi-agent coordination is required.
 
-They receive defined missions/tasks through ZION CORE orchestration, load the correct context, execute only within granted scope, and return results/evidence.
+Canonical identity: `<COMMAND>.HOST-<NN>.ANGEL-<NNN>`.
+
+Examples:
+- `MICHAEL.HOST-01.ANGEL-001`
+- `GABRIEL.HOST-02.ANGEL-001`
+- `RAPHAEL.HOST-03.ANGEL-001`
+
+HOST membership is dynamic. Create only the ANGELS required for a mission and retire them when no longer needed.
 
 ## Execution contract
 1. Receive a bounded task.
@@ -24,4 +31,7 @@ They receive defined missions/tasks through ZION CORE orchestration, load the co
 - QA
 - deployment
 
-Specialization does not grant additional authority.
+Specialization or HOST membership does not grant additional authority.
+
+## Reserved terminology
+LEGION is not a ZION execution unit. It remains reserved for coordinated external threats.
