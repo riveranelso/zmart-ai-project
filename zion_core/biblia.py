@@ -81,10 +81,12 @@ def retrieve_biblia(
 ) -> BibliaContext:
     context=sanpedro_resolve(business_id,registry_path)
     known_business_ids=sanpedro_business_ids(registry_path)
+    root_resolved=root.resolve()
+    if not root_resolved.is_dir():
+        raise ValueError("BIBLIA_ROOT_REQUIRED")
     documents=[]
     for ref in context.context_refs:
         path=(root/ref).resolve()
-        root_resolved=root.resolve()
         if root_resolved not in path.parents and path != root_resolved:
             raise ValueError("BIBLIA_REF_OUTSIDE_ROOT")
         if path.is_file():
