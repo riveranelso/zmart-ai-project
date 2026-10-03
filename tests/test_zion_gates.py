@@ -57,6 +57,24 @@ class ZionGateTests(unittest.TestCase):
         self.assertEqual(denied[0].gate,"THRONES")
         self.assertEqual(denied[0].reason,"HUMAN_APPROVAL_REQUIRED")
 
+
+    def test_thrones_rejects_truthy_non_boolean_human_approval(self):
+        mission=self.base(human_approval_required=True,business_id="zmart-consumer-rights")
+        for value in (1,"yes"):
+            with self.subTest(value=value):
+                security=SecurityContext(
+                    authenticated=True,principal_id="owner",
+                    allowed_business_ids=("zmart-consumer-rights",),
+                    human_approval_granted=value,
+                )
+                denied=[
+                    x for x in evaluate_gates(mission,"zmart",("BIBLIA",),security)
+                    if not x.allowed
+                ]
+                self.assertEqual(denied[0].gate,"THRONES")
+                self.assertEqual(denied[0].reason,"HUMAN_APPROVAL_REQUIRED")
+
+
     def test_thrones_accepts_explicit_human_approval(self):
         mission=self.base(human_approval_required=True,business_id="zmart-consumer-rights")
         security=SecurityContext(
