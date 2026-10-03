@@ -33,5 +33,20 @@ class ZionApokrisisTests(unittest.TestCase):
                 business_id="zmart-consumer-rights",
             )
 
+    def test_non_string_identity_is_rejected(self):
+        with self.assertRaisesRegex(ValueError,"APOKRISIS_IDENTITY_REQUIRED"):
+            apokrisis(
+                angel_id=123,mission_id="m4",status="SUCCESS",
+                summary="Completed.",business_id="zmart-consumer-rights",
+            )
+
+    def test_string_is_not_accepted_as_correction_signal_collection(self):
+        with self.assertRaisesRegex(ValueError,"INVALID_APOKRISIS_CORRECTION_SIGNALS"):
+            apokrisis(
+                angel_id="ANGEL-1",mission_id="m5",status="SUCCESS",
+                summary="Completed.",business_id="zmart-consumer-rights",
+                correction_signals="not-a-tuple",
+            )
+
 if __name__ == "__main__":
     unittest.main()
