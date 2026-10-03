@@ -86,6 +86,7 @@ def receive_owner_correction(
     learning: LearningIntent | None = None,
     correction_id: str = "owner-correction",
     correction_memory: Any = None,
+    record_response_event: bool = True,
 ):
     """Receive a direct owner correction and pass it through the canonical learning loop."""
     if not isinstance(correction,str) or not correction.strip():
@@ -116,6 +117,7 @@ def receive_owner_correction(
         registry_path=registry_path,
         cronicas_sink=cronicas_sink,
         learning=intent,
+        record_response_event=record_response_event,
     )
 
 
