@@ -43,3 +43,9 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 - `BIBLIA_MUTATION` may use `status=RECONCILED` only when recovery proves the intended rules are already present in the authorized business section but the original mutation event is missing.
 - RECONCILED is historical repair, not a new mutation and not a replay of the ANGEL or owner correction.
 - Reconciliation is idempotent and serialized by business + mission; concurrent attempts produce at most one recovered mutation event in the local runtime.
+
+### Snapshot reads during local writes
+- Local CRONICAS readers acquire the same per-file append lock as writers only long enough to capture a complete text snapshot.
+- Parsing and filtering happen after the lock is released.
+- A reader therefore does not interpret an actively written partial final record as persisted corruption under the cooperating local adapter.
+- Lock timeout remains fail-closed; this is a local-filesystem guarantee, not distributed snapshot isolation.
