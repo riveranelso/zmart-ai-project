@@ -33,6 +33,31 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                     self.assertEqual(owner["pid"],os.getpid())
             self.assertFalse(path.exists())
 
+    def test_dead_owner_recovery_syncs_lock_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            root.mkdir()
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="crashed-fsync"
+            path=self.lock_path(root,business,operation,identity)
+            path.write_text(json.dumps({
+                "pid":99999999,"business_id":business,
+                "operation":operation,"identity":identity,
+            }),encoding="utf-8")
+            lock=LocalOperationLock(root,timeout_seconds=0.1)
+            real_fsync=os.fsync
+            fsync_calls=[]
+            def recording_fsync(fd):
+                fsync_calls.append(fd)
+                return real_fsync(fd)
+            with patch.object(LocalOperationLock,"_owner_alive",return_value=False), \
+                 patch("zion_core.persistence.os.fsync",side_effect=recording_fsync):
+                with lock.hold(business,operation,identity):
+                    pass
+            self.assertGreaterEqual(len(fsync_calls),3)
+            self.assertFalse(path.exists())
+
     def test_live_or_unknown_owner_is_not_stolen(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/"locks"
