@@ -80,28 +80,33 @@ class OmarRuntime:
         mission_id=getattr(response,"mission_id",None)
         angel_id=getattr(response,"angel_id",None)
         if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
-            prior=self.history(
-                business_id=business_id.strip(),
-                event_type="ANGEL_RESPONSE",
-                mission_id=mission_id.strip(),
-            )
-            if any(angel_id.strip() in event.angel_ids for event in prior):
+            bid=business_id.strip()
+            mid=mission_id.strip()
+            aid=angel_id.strip()
+            identity=mid+"\x1f"+aid
+            with self.operation_lock.hold(bid,"APOKRISIS",identity):
+                prior=self.history(
+                    business_id=bid,event_type="ANGEL_RESPONSE",mission_id=mid,
+                )
+                if any(aid in event.angel_ids for event in prior):
+                    return OmarCloseResult(
+                        processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
+                    )
+                event,cycle=receive_apokrisis(
+                    response,biblia_root=self.biblia_root,
+                    registry_path=self.registry_path,cronicas_sink=self.cronicas_sink,
+                    learning=learning,
+                )
                 return OmarCloseResult(
-                    processed=False,
-                    reason="APOKRISIS_ALREADY_PROCESSED",
+                    processed=True,reason="APOKRISIS_PROCESSED",event=event,cycle=cycle,
                 )
         event,cycle=receive_apokrisis(
-            response,
-            biblia_root=self.biblia_root,
-            registry_path=self.registry_path,
-            cronicas_sink=self.cronicas_sink,
+            response,biblia_root=self.biblia_root,
+            registry_path=self.registry_path,cronicas_sink=self.cronicas_sink,
             learning=learning,
         )
         return OmarCloseResult(
-            processed=True,
-            reason="APOKRISIS_PROCESSED",
-            event=event,
-            cycle=cycle,
+            processed=True,reason="APOKRISIS_PROCESSED",event=event,cycle=cycle,
         )
 
 
