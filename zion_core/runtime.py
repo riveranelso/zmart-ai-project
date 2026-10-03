@@ -106,16 +106,6 @@ class OmarRuntime:
             bid=business_id.strip()
             mid=mission_id.strip()
             aid=angel_id.strip()
-            if aid!="OMAR.OWNER-INPUT":
-                decisions=self.history(
-                    business_id=bid,event_type="MISSION_DECISION",mission_id=mid,
-                )
-                if not any(aid in event.angel_ids for event in decisions):
-                    raise ValueError("APOKRISIS_ANGEL_NOT_DISPATCHED")
-        if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
-            bid=business_id.strip()
-            mid=mission_id.strip()
-            aid=angel_id.strip()
             identity=mid+"\x1f"+aid
             with self.operation_lock.hold(bid,"APOKRISIS",identity):
                 prior=self.history(
