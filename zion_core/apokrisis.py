@@ -142,5 +142,6 @@ def omar_close_and_learn(
         cycle = persist_learning_cycle(
             cycle,target,cronicas_sink=cronicas_sink,
             origin_angel_id=cycle.signal.angel_id,
+            correlation_id=cycle.signal.correlation_id,
         )
     return event, cycle
