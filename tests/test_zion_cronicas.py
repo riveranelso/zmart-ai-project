@@ -39,7 +39,7 @@ class ZionCronicasTests(unittest.TestCase):
 
     def test_routing_event_rejects_non_string_correlation_id(self):
         sink = CronicasMemorySink()
-        with self.assertRaisesRegex(ValueError, "INVALID_CORRELATION_ID"):
+        with self.assertRaisesRegex(ValueError, "INVALID_STRING:correlation_id"):
             exapostello(self.mission(correlation_id=123), cronicas_sink=sink)
         self.assertEqual(sink.events, ())
 
