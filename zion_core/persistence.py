@@ -113,6 +113,12 @@ class LocalOperationLock:
             path.unlink()
         except FileNotFoundError:
             pass
+        else:
+            dir_fd=os.open(path.parent,os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
         return True
 
     @contextmanager
