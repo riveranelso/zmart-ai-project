@@ -16,24 +16,6 @@ from .correction_memory import correction_fingerprint
 from .cronicas import CronicaEvent
 
 
-class CronicasJsonlSink:
-    """Append privacy-bounded CRONICAS events as serialized JSON Lines."""
-    def __init__(self,path: Path):
-        self.path=Path(path)
-
-    def __call__(self,event: CronicaEvent)->None:
-        if not isinstance(event,CronicaEvent):
-            raise TypeError("CRONICAS_EVENT_REQUIRED")
-        self.path.parent.mkdir(parents=True,exist_ok=True)
-        lock=LocalOperationLock(self.path.parent/(self.path.name+".append-locks"))
-        with lock.hold("CRONICAS","JSONL_APPEND",str(self.path.resolve())):
-            payload=json.dumps(asdict(event),ensure_ascii=False,sort_keys=True)+"\n"
-            with self.path.open("a",encoding="utf-8") as handle:
-                handle.write(payload)
-                handle.flush()
-                os.fsync(handle.fileno())
-
-
 def _operation_digest(business_id: str,operation: str,identity: str)->str:
     """Stable local lock identity; not a durable pre-action claim."""
     parts=(business_id,operation,identity)
@@ -167,6 +149,24 @@ class LocalOperationLock:
                     # The coordination lock is already removed. Do not turn
                     # completed protected work into a false retryable failure.
                     pass
+
+
+class CronicasJsonlSink:
+    """Append privacy-bounded CRONICAS events as serialized JSON Lines."""
+    def __init__(self,path: Path):
+        self.path=Path(path)
+
+    def __call__(self,event: CronicaEvent)->None:
+        if not isinstance(event,CronicaEvent):
+            raise TypeError("CRONICAS_EVENT_REQUIRED")
+        self.path.parent.mkdir(parents=True,exist_ok=True)
+        lock=LocalOperationLock(self.path.parent/(self.path.name+".append-locks"))
+        with lock.hold("CRONICAS","JSONL_APPEND",str(self.path.resolve())):
+            payload=json.dumps(asdict(event),ensure_ascii=False,sort_keys=True)+"\n"
+            with self.path.open("a",encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
 
 
 class PersistentCorrectionMemory:
