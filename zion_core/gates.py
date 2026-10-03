@@ -40,7 +40,7 @@ def thrones(mission: dict[str, Any], security: SecurityContext | None) -> GateRe
     if mission.get("policy_conflict") is True:
         return GateResult("THRONES", False, "POLICY_CONFLICT")
     if mission.get("human_approval_required") is True:
-        if security is None or not security.human_approval_granted:
+        if security is None or security.human_approval_granted is not True:
             return GateResult("THRONES", False, "HUMAN_APPROVAL_REQUIRED")
     return GateResult("THRONES", True, "POLICY_OK")
 
