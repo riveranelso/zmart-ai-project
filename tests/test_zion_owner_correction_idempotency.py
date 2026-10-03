@@ -100,7 +100,12 @@ class OwnerCorrectionIdempotencyTests(unittest.TestCase):
                 "context_refs":["GLOBAL.md"]
             }}}),encoding="utf-8")
 
-            recovered=runtime.owner_correction(
+            restarted=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            recovered=restarted.owner_correction(
                 rule,business_id="zmart-consumer-rights",
                 correction_id="owner-recovery-1",
             )
