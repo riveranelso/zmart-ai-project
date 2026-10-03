@@ -1,5 +1,7 @@
 """CRONICAS structured event records and safe event emission."""
 from dataclasses import asdict, dataclass
+from hashlib import sha256
+import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import uuid4
@@ -22,11 +24,42 @@ class CronicaEvent:
     evidence_refs:tuple[str,...]=()
     uncertainty_count:int=0
     correction_count:int=0
+    dispatch_fingerprint:str|None=None
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 CronicasSink = Callable[[CronicaEvent], None]
 
-def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
+
+def build_dispatch_fingerprint(mission:dict[str,Any],security_context:Any=None)->str:
+    """Hash dispatch-affecting identity without persisting raw mission/security data."""
+    correlation_id=mission.get("correlation_id")
+    if isinstance(correlation_id,str):
+        correlation_id=correlation_id.strip()
+    mission_identity={
+        key:(correlation_id if key=="correlation_id" else mission.get(key))
+        for key in (
+            "mission_id","intent","requested_by","scope","business_id","project_id",
+            "risk_level","human_approval_required","target_command","target_host",
+            "angel_count_max","payload_ref","correlation_id","isolation_key",
+            "integrity_conflict","policy_conflict","kill_switch","runtime_enabled",
+        )
+    }
+    security_identity=None
+    if security_context is not None:
+        security_identity={
+            "authenticated":getattr(security_context,"authenticated",None),
+            "principal_id":getattr(security_context,"principal_id",None),
+            "allowed_business_ids":list(getattr(security_context,"allowed_business_ids",()) or ()),
+            "human_approval_granted":getattr(security_context,"human_approval_granted",None),
+            "production_write_allowed":getattr(security_context,"production_write_allowed",None),
+        }
+    encoded=json.dumps(
+        {"mission":mission_identity,"security":security_identity},
+        sort_keys=True,separators=(",",":"),ensure_ascii=False,
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
+
+def build_routing_event(mission:dict[str,Any],decision:Any,security_context:Any=None)->CronicaEvent:
     angels=getattr(decision,"angels",()) or ()
     correlation_id=mission.get("correlation_id")
     if correlation_id is not None and (
@@ -46,11 +79,12 @@ def build_routing_event(mission:dict[str,Any],decision:Any)->CronicaEvent:
         denied_by=getattr(decision,"denied_by",None),
         angel_ids=tuple(a.angel_id for a in angels),
         correlation_id=correlation_id.strip() if correlation_id is not None else None,
+        dispatch_fingerprint=build_dispatch_fingerprint(mission,security_context),
     )
 
-def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None)->CronicaEvent:
+def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None,*,security_context:Any=None)->CronicaEvent:
     """Build a privacy-bounded CRONICAS event and optionally deliver it to an injected sink."""
-    event=build_routing_event(mission,decision)
+    event=build_routing_event(mission,decision,security_context)
     if sink is not None:
         sink(event)
     return event
