@@ -37,18 +37,36 @@ def apokrisis(
 ) -> Apokrisis:
     if status not in {"SUCCESS", "PARTIAL", "FAILED", "NEEDS_REVIEW"}:
         raise ValueError("INVALID_APOKRISIS_STATUS")
-    if not angel_id or not mission_id or not business_id:
+    if not all(
+        isinstance(value,str) and value.strip()
+        for value in (angel_id,mission_id,business_id)
+    ):
         raise ValueError("APOKRISIS_IDENTITY_REQUIRED")
+    for name, values in (
+        ("EVIDENCE_REFS",evidence_refs),
+        ("UNCERTAINTY",uncertainty),
+        ("CORRECTION_SIGNALS",correction_signals),
+    ):
+        if not isinstance(values,tuple) or not all(
+            isinstance(value,str) and value.strip() for value in values
+        ):
+            raise ValueError("INVALID_APOKRISIS_"+name)
+    if correlation_id is not None and not isinstance(correlation_id,str):
+        raise ValueError("INVALID_APOKRISIS_CORRELATION_ID")
+    if output_ref is not None and not isinstance(output_ref,str):
+        raise ValueError("INVALID_APOKRISIS_OUTPUT_REF")
+    if error_code is not None and not isinstance(error_code,str):
+        raise ValueError("INVALID_APOKRISIS_ERROR_CODE")
     if not isinstance(summary, str) or not summary.strip():
         raise ValueError("APOKRISIS_SUMMARY_REQUIRED")
     if status == "FAILED" and not error_code:
         raise ValueError("APOKRISIS_ERROR_CODE_REQUIRED")
     return Apokrisis(
-        angel_id=angel_id,
-        mission_id=mission_id,
+        angel_id=angel_id.strip(),
+        mission_id=mission_id.strip(),
         status=status,
         summary=summary.strip(),
-        business_id=business_id,
+        business_id=business_id.strip(),
         correlation_id=correlation_id,
         evidence_refs=tuple(evidence_refs),
         uncertainty=tuple(uncertainty),
