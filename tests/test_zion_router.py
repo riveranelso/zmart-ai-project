@@ -1,5 +1,7 @@
 import unittest
-from zion_core.router import MissionValidationError, validate_mission, route_mission
+import tempfile
+from pathlib import Path
+from zion_core.router import MissionValidationError, validate_mission, route_mission, load_derekh
 
 class ZionRouterTests(unittest.TestCase):
     def mission(self,**changes):
@@ -69,5 +71,27 @@ class ZionRouterTests(unittest.TestCase):
             with self.subTest(optional=field):
                 with self.assertRaisesRegex(MissionValidationError,"INVALID_STRING:"+field):
                     validate_mission(malformed)
+
+
+    def test_derekh_ignores_route_like_entries_outside_routes_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "defaults:\n"
+                "  - intent: injected_before_routes\n"
+                "    command: SANMIGUEL\n"
+                "    host: SANMIGUEL.HOST-01\n"
+                "routes:\n"
+                "  - intent: legitimate\n"
+                "    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-01\n"
+                "fallback:\n"
+                "  action: REQUIRE_HUMAN_REVIEW\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                load_derekh(path),
+                {"legitimate":("SANGABRIEL","SANGABRIEL.HOST-01")},
+            )
 
 if __name__=="__main__": unittest.main()
