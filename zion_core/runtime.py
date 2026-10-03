@@ -70,18 +70,13 @@ class OmarRuntime:
                         routes=load_derekh(self.routes_path)
                     expected_route=routes.get(requested_intent)
                     if expected_route is None:
-                        # Unknown-route decisions do not persist the intent, so
-                        # they cannot prove that a later unknown intent is the
-                        # same request. Preserve idempotency only when the
-                        # caller supplies the original intent fingerprint via
-                        # the recorded reason is impossible; fail closed for
-                        # ambiguous reuse after the first denial.
+                        # CRONICAS does not persist the original unknown intent,
+                        # so exact unknown-route retries cannot currently be
+                        # distinguished from conflicting unknown intents.
+                        # Preserve the established retry contract here; routed
+                        # decisions still fail closed if reused as unknown.
                         if event.command is not None or event.host is not None:
                             raise ValueError("MISSION_ID_REUSE_CONFLICT")
-                        # Same unknown intent cannot currently be distinguished
-                        # from a different unknown intent by CRONICAS.
-                        # Do not silently collapse an unverifiable identity.
-                        raise ValueError("MISSION_ID_REUSE_CONFLICT")
                     else:
                         expected_command,expected_host=expected_route
                         if event.command != expected_command or event.host != expected_host:
