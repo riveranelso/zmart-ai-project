@@ -67,6 +67,21 @@ class CronicasReaderTests(unittest.TestCase):
                     with self.assertRaisesRegex(CronicasReadError,"INVALID_CRONICAS_LINE:1"):
                         read_cronicas(path)
 
+
+    def test_reader_rejects_unknown_persisted_metadata_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"cronicas.jsonl"
+            row={
+                "event_id":"1","occurred_at":"2026-10-03T00:00:00+00:00",
+                "event_type":"MISSION_DECISION","mission_id":"m1",
+                "action":"DISPATCH","reason":"TEST","business_id":"zmart-consumer-rights",
+                "angel_ids":[],"evidence_refs":[],"unexpected_authority":"forged",
+            }
+            path.write_text(json.dumps(row)+"\n",encoding="utf-8")
+            with self.assertRaisesRegex(CronicasReadError,"INVALID_CRONICAS_LINE:1"):
+                read_cronicas(path)
+
+
     def test_reader_waits_for_active_append_lock_before_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/"cronicas.jsonl"
