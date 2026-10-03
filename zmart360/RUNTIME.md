@@ -6,7 +6,7 @@ The first executable dispatch process is EXAPOSTELLO in `zion_core/router.py`. E
 EXAPOSTELLO validates and dispatches routing decisions. It does not execute external tools, deploy, send communications, modify production, grant permissions or mutate BIBLIA.
 
 ## Inputs
-A mission envelope compatible with `mission_envelope.schema.json`.
+A MEGILLAH compatible with `megillah.schema.json`. The legacy `mission_envelope.schema.json` remains temporarily for compatibility.
 
 ## Routing source
 `dispatch_routes.yaml` is the route authority for this runtime.
