@@ -20,6 +20,7 @@ class DispatchDecision:
     command:str|None=None; host:str|None=None; angel_prefix:str|None=None
     angels:tuple[DiatassoCommission,...]=()
     business_id:str|None=None; isolation_key:str|None=None; context_refs:tuple[str,...]=()
+    scope:str|None=None; payload_ref:str|None=None
     denied_by:str|None=None; human_review_required:bool=False
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
@@ -110,7 +111,8 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     except SanPedroError as exc:
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
         cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
-    base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
+    base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs,
+              scope=str(mission["scope"]),payload_ref=mission.get("payload_ref"))
     route=load_derekh(routes_path).get(str(mission["intent"]))
     if route is None:
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
