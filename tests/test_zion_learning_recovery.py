@@ -137,6 +137,38 @@ class LearningRecoveryTests(unittest.TestCase):
                  ("SANGABRIEL.HOST-01.ANGEL-002",)),
             )
 
+    def test_same_angel_attributed_mutation_is_terminal_retry_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            target.write_text("# Workflows\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            response=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",
+                mission_id="terminal-attributed",status="SUCCESS",summary="done",
+                business_id="zmart-consumer-rights",
+                correction_signals=("TERMINAL_RULE",),
+            )
+            intent=LearningIntent(scope_hint="WORKFLOW",repeated_correction=True)
+            first=runtime.close(response,learning=intent)
+            self.assertTrue(first.processed)
+            before=target.read_bytes()
+            retry=runtime.close(response,learning=intent)
+            self.assertFalse(retry.processed)
+            self.assertEqual(retry.reason,"APOKRISIS_ALREADY_PROCESSED")
+            self.assertEqual(target.read_bytes(),before)
+            self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
+            self.assertEqual(len(runtime.history(event_type="BIBLIA_MUTATION")),1)
+
 
 if __name__=="__main__":
     unittest.main()
