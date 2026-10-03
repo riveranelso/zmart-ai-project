@@ -69,12 +69,16 @@ class OmarRuntime:
                         from .router import load_derekh
                         routes=load_derekh(self.routes_path)
                     expected_route=routes.get(requested_intent)
-                    if expected_route is not None:
+                    if expected_route is None:
+                        # The original decision may itself have been a denied
+                        # unknown route. Only an identical unknown-route retry
+                        # is safe to collapse; a prior routed decision cannot
+                        # be reused for a now-unroutable intent.
+                        if event.command is not None or event.host is not None:
+                            raise ValueError("MISSION_ID_REUSE_CONFLICT")
+                    else:
                         expected_command,expected_host=expected_route
-                        if (
-                            (event.command is not None and event.command != expected_command)
-                            or (event.host is not None and event.host != expected_host)
-                        ):
+                        if event.command != expected_command or event.host != expected_host:
                             raise ValueError("MISSION_ID_REUSE_CONFLICT")
                     context=prepare_mission(bid,biblia_root=self.biblia_root,registry_path=self.registry_path)
                     decision=DispatchDecision(
