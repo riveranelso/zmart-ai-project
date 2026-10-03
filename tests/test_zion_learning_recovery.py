@@ -51,7 +51,12 @@ class LearningRecoveryTests(unittest.TestCase):
                 "context_refs":["WORKFLOWS.md"]
             }}}),encoding="utf-8")
 
-            recovered=runtime.close(response,learning=intent)
+            restarted=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            recovered=restarted.close(response,learning=intent)
             self.assertTrue(recovered.processed)
             self.assertEqual(recovered.reason,"APOKRISIS_LEARNING_RECOVERED")
             self.assertIsNone(recovered.event)
