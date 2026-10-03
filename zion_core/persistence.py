@@ -17,7 +17,7 @@ from .cronicas import CronicaEvent
 
 
 class CronicasJsonlSink:
-    """Append privacy-bounded CRONICAS events as JSON Lines."""
+    """Append privacy-bounded CRONICAS events as serialized JSON Lines."""
     def __init__(self,path: Path):
         self.path=Path(path)
 
@@ -25,8 +25,13 @@ class CronicasJsonlSink:
         if not isinstance(event,CronicaEvent):
             raise TypeError("CRONICAS_EVENT_REQUIRED")
         self.path.parent.mkdir(parents=True,exist_ok=True)
-        with self.path.open("a",encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(event),ensure_ascii=False,sort_keys=True)+"\n")
+        lock=LocalOperationLock(self.path.parent/(self.path.name+".append-locks"))
+        with lock.hold("CRONICAS","JSONL_APPEND",str(self.path.resolve())):
+            payload=json.dumps(asdict(event),ensure_ascii=False,sort_keys=True)+"\n"
+            with self.path.open("a",encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
 
 
 class AtomicClaimStore:
