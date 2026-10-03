@@ -102,6 +102,27 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
                 runtime.reconcile_biblia_mutation(decision)
             self.assertEqual(runtime.history(),())
 
+    def test_non_mutating_actions_cannot_create_reconciliation_evidence(self):
+        for action in ("NO_CHANGE","CONFLICT","NOT_READY"):
+            with self.subTest(action=action), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                target=root/"WORKFLOWS.md"
+                target.write_text(
+                    "# Workflows\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n",
+                    encoding="utf-8",
+                )
+                runtime=self.runtime(root)
+                decision=PromotionDecision(
+                    mission_id="reconcile-nonmutating-"+action.lower(),
+                    business_id="zmart-consumer-rights",
+                    scope="WORKFLOW",destination_ref="WORKFLOWS.md",action=action,
+                    proposed_rules=("AUTHORIZED_RULE",),matched_rules=(),
+                    reason="TEST",requires_review=True,
+                )
+                with self.assertRaisesRegex(ValueError,"RECONCILIATION_ACTION_NOT_MUTATING"):
+                    runtime.reconcile_biblia_mutation(decision)
+                self.assertEqual(runtime.history(),())
+
 
 if __name__=="__main__":
     unittest.main()
