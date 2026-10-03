@@ -13,7 +13,7 @@ class PromotionTests(unittest.TestCase):
         self.assertEqual(d.action,"ADD")
 
     def test_existing_rule_is_no_change(self):
-        d=propose_biblia_promotion(self.proposal(),self.destination(),"Rules: use approved logo only.")
+        d=propose_biblia_promotion(self.proposal(),self.destination(),"- Use approved logo only.\n")
         self.assertEqual(d.action,"NO_CHANGE")
 
     def test_rule_substring_in_prose_is_not_treated_as_existing_rule(self):
@@ -31,7 +31,7 @@ class PromotionTests(unittest.TestCase):
         self.assertEqual(d.action,"ADD")
 
     def test_candidate_rule_is_update(self):
-        d=propose_biblia_promotion(self.proposal(),self.destination(),"Rules: Old logo rule.",existing_rule_candidates=("Old logo rule",))
+        d=propose_biblia_promotion(self.proposal(),self.destination(),"- Old logo rule\n",existing_rule_candidates=("Old logo rule",))
         self.assertEqual(d.action,"UPDATE")
 
     def test_explicit_conflict_stops_promotion(self):
