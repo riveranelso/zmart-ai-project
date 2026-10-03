@@ -65,13 +65,49 @@ class AtomicClaimStore:
 class LocalOperationLock:
     """Short-lived local lock for an idempotency critical section.
 
-    The lock is not business evidence and is removed after success or failure.
-    CRONICAS remains the durable record.
+    Lock metadata identifies the owning local process. A contender may recover
+    a lock only when the recorded PID can be proven dead. Unknown ownership
+    fails closed by timeout. CRONICAS remains the durable business record.
     """
     def __init__(self,root: Path,*,poll_seconds: float=0.01,timeout_seconds: float=5.0):
         self.root=Path(root)
         self.poll_seconds=poll_seconds
         self.timeout_seconds=timeout_seconds
+
+    @staticmethod
+    def _owner_alive(pid: int)->bool | None:
+        if not isinstance(pid,int) or pid <= 0:
+            return None
+        try:
+            os.kill(pid,0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        except OSError:
+            return None
+        return True
+
+    @staticmethod
+    def _read_owner(path: Path)->dict[str,Any] | None:
+        try:
+            raw=json.loads(path.read_text(encoding="utf-8"))
+        except (OSError,json.JSONDecodeError):
+            return None
+        return raw if isinstance(raw,dict) else None
+
+    def _recover_dead_owner(self,path: Path)->bool:
+        owner=self._read_owner(path)
+        if not owner:
+            return False
+        alive=self._owner_alive(owner.get("pid"))
+        if alive is not False:
+            return False
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        return True
 
     @contextmanager
     def hold(self,business_id: str,operation: str,identity: str):
@@ -84,10 +120,16 @@ class LocalOperationLock:
             try:
                 fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
             except FileExistsError:
+                if self._recover_dead_owner(path):
+                    continue
                 if time.monotonic()>=deadline:
                     raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
                 time.sleep(self.poll_seconds)
         try:
+            payload={"pid":os.getpid(),"business_id":business_id.strip(),
+                     "operation":operation.strip(),"identity":identity.strip()}
+            os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
+            os.fsync(fd)
             yield
         finally:
             os.close(fd)
