@@ -25,10 +25,16 @@ class OmarRuntimeTests(unittest.TestCase):
                 correction_memory_path=root/"runtime"/"corrections.json",
             )
             rule="Use the approved owner close format."
-            _,first=runtime.owner_correction(rule,business_id="zmart-consumer-rights")
-            self.assertEqual(first.promotion.action,"NOT_READY")
-            _,second=runtime.owner_correction(rule,business_id="zmart-consumer-rights")
-            self.assertEqual(second.promotion.action,"ADD")
+            first=runtime.owner_correction(
+                rule,business_id="zmart-consumer-rights",correction_id="owner-1"
+            )
+            self.assertTrue(first.processed)
+            self.assertEqual(first.cycle.promotion.action,"NOT_READY")
+            second=runtime.owner_correction(
+                rule,business_id="zmart-consumer-rights",correction_id="owner-2"
+            )
+            self.assertTrue(second.processed)
+            self.assertEqual(second.cycle.promotion.action,"ADD")
             self.assertIn(rule,workflows.read_text(encoding="utf-8"))
 
             restarted=OmarRuntime(
