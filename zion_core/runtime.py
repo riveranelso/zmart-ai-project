@@ -144,29 +144,32 @@ class OmarRuntime:
     ):
         if not isinstance(correction_id,str) or not correction_id.strip():
             raise ValueError("CORRECTION_ID_REQUIRED")
-        prior=self.history(
-            business_id=business_id,
-            event_type="ANGEL_RESPONSE",
-            mission_id=correction_id.strip(),
-        )
-        if any("OMAR.OWNER-INPUT" in event.angel_ids for event in prior):
-            return OmarCloseResult(
-                processed=False,
-                reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+        cid=correction_id.strip()
+        with self.operation_lock.hold(business_id,"OWNER_CORRECTION",cid):
+            prior=self.history(
+                business_id=business_id,
+                event_type="ANGEL_RESPONSE",
+                mission_id=cid,
             )
-        event,cycle=receive_owner_correction(
-            correction,
-            business_id=business_id,
-            biblia_root=self.biblia_root,
-            registry_path=self.registry_path,
-            cronicas_sink=self.cronicas_sink,
-            learning=learning,
-            correction_id=correction_id.strip(),
-            correction_memory=self.correction_memory,
-        )
-        return OmarCloseResult(
-            processed=True,
-            reason="OWNER_CORRECTION_PROCESSED",
-            event=event,
-            cycle=cycle,
-        )
+            if any("OMAR.OWNER-INPUT" in event.angel_ids for event in prior):
+                return OmarCloseResult(
+                    processed=False,
+                    reason="OWNER_CORRECTION_ALREADY_PROCESSED",
+                )
+            event,cycle=receive_owner_correction(
+                correction,
+                business_id=business_id,
+                biblia_root=self.biblia_root,
+                registry_path=self.registry_path,
+                cronicas_sink=self.cronicas_sink,
+                learning=learning,
+                correction_id=cid,
+                correction_memory=self.correction_memory,
+            )
+            return OmarCloseResult(
+                processed=True,
+                reason="OWNER_CORRECTION_PROCESSED",
+                event=event,
+                cycle=cycle,
+            )
+
