@@ -131,6 +131,33 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,"MISSION_ID_REUSE_CONFLICT"):
                         runtime.dispatch(changed)
 
+
+    def test_omitted_default_angel_count_matches_explicit_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text(
+                "routes:\n  - intent: internal_dispatch\n"
+                "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8"
+            )
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            base={"mission_id":"default-count","intent":"internal_dispatch","requested_by":"OMAR",
+                  "scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            self.assertEqual(runtime.dispatch(dict(base)).decision.action,"DISPATCH")
+            self.assertEqual(
+                runtime.dispatch(dict(base,angel_count_max=1)).decision.action,
+                "IDEMPOTENT_NOOP",
+            )
+
+
     def test_correlation_id_whitespace_remains_same_dispatch_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
