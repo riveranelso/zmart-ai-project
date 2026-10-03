@@ -94,10 +94,15 @@ def receive_owner_correction(
         business_id=business_id,
         correction_signals=(correction.strip(),),
     )
+    intent=learning or LearningIntent()
+    if learning is None:
+        from .durability import assess_durability
+        assessment=assess_durability(correction)
+        intent=LearningIntent(explicit_durable_instruction=assessment.durable)
     return receive_apokrisis(
         response,
         biblia_root=biblia_root,
         registry_path=registry_path,
         cronicas_sink=cronicas_sink,
-        learning=learning,
+        learning=intent,
     )
