@@ -96,10 +96,21 @@ class OmarRuntime:
                         if isinstance(value,str) and value.strip()
                     )
                     auto_write=True if learning is None else learning.auto_write
+                    durable_learning=bool(
+                        learning is not None and (
+                            learning.scope_hint is not None
+                            or learning.explicit_durable_instruction
+                            or learning.repeated_correction
+                            or learning.stable_workflow
+                            or learning.locked_asset
+                            or learning.active_campaign
+                        )
+                    )
                     mutation_history=self.history(
                         business_id=bid,event_type="BIBLIA_MUTATION",mission_id=mid,
                     )
-                    if not correction_signals or not auto_write or mutation_history:
+                    if (not correction_signals or not auto_write
+                            or not durable_learning or mutation_history):
                         return OmarCloseResult(
                             processed=False,reason="APOKRISIS_ALREADY_PROCESSED",
                         )
