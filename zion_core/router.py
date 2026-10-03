@@ -6,7 +6,7 @@ import json
 from typing import Any
 from .cronicas import CronicasSink, cronicas_emit
 from .allocator import DiatassoCommission, diatasso
-from .gates import evaluate_gates
+from .gates import SecurityContext, evaluate_gates
 from .registry import SanPedroError, sanpedro_resolve
 
 ROOT=Path(__file__).resolve().parents[1]; CONFIG_DIR=ROOT/"zmart360"
@@ -57,7 +57,7 @@ def validate_mission(mission:dict[str,Any])->None:
     count=mission.get("angel_count_max",1)
     if not isinstance(count,int) or isinstance(count,bool) or count<1: raise MissionValidationError("INVALID_ANGEL_COUNT")
 
-def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None)->DispatchDecision:
+def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None,security_context:SecurityContext|None=None)->DispatchDecision:
     validate_mission(mission); mid=str(mission["mission_id"]); bid=str(mission["business_id"])
     try: ctx=sanpedro_resolve(bid,registry_path)
     except SanPedroError as exc:
@@ -75,7 +75,7 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     if mission.get("target_host") not in (None,host):
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_HOST_CONFLICT",human_review_required=True,**base)
         cronicas_emit(mission,decision,cronicas_sink); return decision
-    for gate in evaluate_gates(mission,ctx.isolation_key,ctx.context_refs):
+    for gate in evaluate_gates(mission,ctx.isolation_key,ctx.context_refs,security_context):
         if not gate.allowed:
             decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
             cronicas_emit(mission,decision,cronicas_sink); return decision
