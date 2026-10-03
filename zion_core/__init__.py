@@ -17,6 +17,7 @@ from .holy_ghost import (
     persist_learning_cycle,
 )
 from .grapho import GraphoResult, grapho_render, grapho_write
+from .omar import LearningIntent, receive_apokrisis
 
 __all__ = [
     "DiatassoCommission", "diatasso", "AngelAssignment", "allocate_angels",
@@ -28,4 +29,5 @@ __all__ = [
     "resolve_learning_destination", "propose_biblia_promotion",
     "prepare_learning_cycle", "persist_learning_cycle",
     "GraphoResult", "grapho_render", "grapho_write",
+    "LearningIntent", "receive_apokrisis",
 ]
