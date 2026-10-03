@@ -93,11 +93,16 @@ def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> Grapho
                 handle.flush()
                 os.fsync(handle.fileno())
             temp.replace(target)
-            dir_fd=os.open(target.parent,os.O_RDONLY)
             try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+                dir_fd=os.open(target.parent,os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+            except OSError:
+                # The atomic replacement is already logically committed.
+                # Do not report false failure and invite duplicate mutation.
+                pass
         if cronicas_sink is not None:
             from .cronicas import cronicas_emit_grapho
             cronicas_emit_grapho(decision,result,cronicas_sink)
