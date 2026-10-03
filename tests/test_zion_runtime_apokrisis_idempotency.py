@@ -53,6 +53,33 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             )
 
 
+    def test_denied_mission_cannot_accept_angel_response(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\\n",encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,routes_path=routes,
+                cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json",
+            )
+            denied=runtime.dispatch({
+                "mission_id":"m-denied-response","intent":"unknown","requested_by":"OMAR",
+                "scope":"WORKFLOW","business_id":"zmart-consumer-rights",
+            })
+            self.assertEqual(denied.decision.action,"REQUIRE_HUMAN_REVIEW")
+            forged=apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-denied-response",
+                status="SUCCESS",summary="should not execute",business_id="zmart-consumer-rights",
+            )
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_MISSION_NOT_DISPATCHED"):
+                runtime.close(forged,learning=LearningIntent())
+
+
     def test_response_must_match_dispatched_angel_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
