@@ -1,6 +1,8 @@
 """HOLY GHOST learning signals derived from completed ANGEL work."""
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
+from .registry import SanPedroError, sanpedro_resolve
 
 @dataclass(frozen=True)
 class LearningSignal:
@@ -81,3 +83,47 @@ def evaluate_learning(
     reusable=scope!="TEMPORARY"
     return LearningProposal(signal.mission_id, signal.business_id, scope, reusable, reason,
                             signal.correction_signals, signal.uncertainty, True)
+
+SCOPE_DESTINATION_NAMES={
+    "GLOBAL":"GLOBAL.md",
+    "WORKFLOW":"WORKFLOWS.md",
+    "BRAND":"BRANDS.md",
+    "PROJECT":"PROJECTS.md",
+    "CAMPAIGN":"ACTIVE_CONTEXT.md",
+}
+
+@dataclass(frozen=True)
+class LearningDestination:
+    mission_id: str
+    business_id: str
+    scope: str
+    destination_ref: str | None
+    ready_for_review: bool
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+def resolve_learning_destination(
+    proposal: LearningProposal,
+    registry_path: Path | None = None,
+) -> LearningDestination:
+    """Resolve the narrowest registered BIBLIA destination through SANPEDRO."""
+    if not proposal.reusable or proposal.scope == "TEMPORARY":
+        return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                                   None, False, "TEMPORARY_NOT_CANONICAL")
+    try:
+        context=sanpedro_resolve(proposal.business_id, registry_path)
+    except SanPedroError as exc:
+        return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                                   None, False, str(exc))
+    filename=SCOPE_DESTINATION_NAMES.get(proposal.scope)
+    if filename is None:
+        return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                                   None, False, "DESTINATION_SCOPE_UNSUPPORTED")
+    matches=tuple(ref for ref in context.context_refs if ref.endswith("/"+filename) or ref.endswith(filename))
+    if not matches:
+        return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                                   None, False, "DESTINATION_NOT_REGISTERED")
+    return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
+                               matches[0], True, "DESTINATION_RESOLVED")
