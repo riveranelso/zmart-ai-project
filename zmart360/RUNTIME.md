@@ -42,6 +42,12 @@ Production storage is intentionally not selected by this composition.
 ## Learning and precedence
 HOLY GHOST classifies durable lessons to the narrowest valid scope. BIBLIA retrieval order is GLOBAL -> WORKFLOW -> BRAND -> PROJECT -> CAMPAIGN, so more specific active knowledge is presented later and prevails operationally. A narrow-scope override does not delete broader knowledge. Explicit same-scope replacement uses SUPERSEDE only with deterministic candidate mapping; unresolved ambiguity becomes CONFLICT and does not write.
 
+### Normal BIBLIA write boundary
+- HOLY GHOST resolves a learning destination through SANPEDRO; OMAR resolves that destination against the configured `biblia_root` before GRAPHO is allowed to write.
+- The resolved destination must remain inside `biblia_root`. Registry traversal and authorized-name symlinks that resolve outside the root fail closed with no BIBLIA mutation.
+- The ANGEL_RESPONSE remains valid historical evidence when a later BIBLIA destination check fails; no `BIBLIA_MUTATION` event is emitted for the rejected write.
+- GRAPHO is the deterministic file materializer, not the business registry or root authority; direct low-level use must be supplied an already-authorized target by its caller.
+
 ## Recovery boundary
 CRONICAS history is append-only operational evidence. `history()` and `mission_history()` are read-only recovery/observability operations. Reading history never replays dispatch, reruns learning or mutates BIBLIA.
 
