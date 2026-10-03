@@ -1,5 +1,5 @@
 import unittest
-from zion_core.router import MissionValidationError, route_mission
+from zion_core.router import MissionValidationError, validate_mission, route_mission
 
 class ZionRouterTests(unittest.TestCase):
     def mission(self,**changes):
