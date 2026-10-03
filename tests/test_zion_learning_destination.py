@@ -56,5 +56,20 @@ class LearningDestinationTests(unittest.TestCase):
             self.assertTrue(d.ready_for_review)
             self.assertEqual(d.destination_ref,"zmart360/BIBLIA/WORKFLOWS.md")
 
+    def test_duplicate_canonical_basenames_fail_closed_as_ambiguous(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["a/WORKFLOWS.md","b/WORKFLOWS.md"]
+            }}}),encoding="utf-8")
+            d=resolve_learning_destination(
+                self.proposal("WORKFLOW"),registry_path=registry
+            )
+            self.assertFalse(d.ready_for_review)
+            self.assertIsNone(d.destination_ref)
+            self.assertEqual(d.reason,"DESTINATION_AMBIGUOUS")
+
 if __name__=="__main__":
     unittest.main()
