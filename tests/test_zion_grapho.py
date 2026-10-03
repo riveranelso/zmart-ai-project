@@ -263,5 +263,13 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.content,original)
 
 
+    def test_render_rejects_malformed_proposed_rule_collection_without_partial_write(self):
+        decision=self.decision(action="ADD",proposed_rules=("Valid rule",123))
+        existing="## zmart-consumer-rights\n"
+        result=grapho_render(existing,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"INVALID_PROPOSED_RULES")
+        self.assertEqual(result.content,existing)
+
 if __name__=="__main__":
     unittest.main()
