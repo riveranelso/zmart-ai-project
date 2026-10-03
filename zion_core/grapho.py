@@ -69,6 +69,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     section_end=len(text) if next_section==-1 else next_section
     prefix=text[:section_start]
     section=text[section_start:section_end]
+    original_section=section
     suffix=text[section_end:]
     candidate_lines=tuple(_rule_line(old) for old in candidates)
     if not all(line in section for line in candidate_lines):
@@ -76,11 +77,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
                             "SUPERSESSION_CANDIDATE_NOT_FOUND" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND")
     for old,new in zip(candidates,rules):
         section=section.replace(_rule_line(old),_rule_line(new),1)
-    content=prefix+section+suffix
-    rendered=content if content.endswith("\n") else content+"\n"
-    if rendered==existing_text:
+    if section==original_section:
         return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
                             "RULES_ALREADY_PRESENT")
+    content=prefix+section+suffix
+    rendered=content if content.endswith("\n") else content+"\n"
     return GraphoResult(decision.action,decision.destination_ref,True,rendered,
                         "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
