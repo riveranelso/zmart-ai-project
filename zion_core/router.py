@@ -70,7 +70,9 @@ def validate_mission(mission:dict[str,Any])->None:
             value=mission[key]
             if not isinstance(value,str):
                 raise MissionValidationError("INVALID_STRING:"+key)
-            if not value.strip() or value != value.strip():
+            if not value.strip():
+                raise MissionValidationError("INVALID_STRING:"+key)
+            if key != "correlation_id" and value != value.strip():
                 raise MissionValidationError("INVALID_STRING:"+key)
 
 def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:Path|None=None,cronicas_sink:CronicasSink|None=None,security_context:SecurityContext|None=None)->DispatchDecision:
