@@ -174,6 +174,14 @@ def propose_biblia_promotion(
                                  destination.destination_ref, "NOT_READY", (), (),
                                  destination.reason, False)
     rules=tuple(x.strip() for x in proposal.correction_signals if isinstance(x,str) and x.strip())
+    # A single learning cycle must not carry duplicate semantic rules. GRAPHO
+    # writes exact lines, while promotion comparison is normalized; dedupe here
+    # keeps both layers on one deterministic cardinality.
+    seen=set()
+    rules=tuple(
+        rule for rule in rules
+        if not (_normalize_rule(rule) in seen or seen.add(_normalize_rule(rule)))
+    )
     if not rules:
         return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                                  destination.destination_ref, "NO_CHANGE", (), (),
