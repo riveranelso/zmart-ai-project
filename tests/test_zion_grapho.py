@@ -229,6 +229,28 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"INVALID_BUSINESS_ID")
         self.assertEqual(result.content,original)
 
+    def test_add_does_not_treat_prefixed_business_heading_as_target(self):
+        original="# BIBLIA\n\n## los-duros-extra\n- Existing other rule.\n"
+        decision=SimpleNamespace(
+            action="ADD",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("Own rule.",),matched_rules=(),
+        )
+        result=grapho_render(original,decision)
+        self.assertTrue(result.changed)
+        self.assertIn("## los-duros-extra\n- Existing other rule.",result.content)
+        self.assertIn("## los-duros\n- Own rule.",result.content)
+
+    def test_update_does_not_match_prefixed_business_heading(self):
+        original="# BIBLIA\n\n## los-duros-extra\n- Old rule.\n"
+        decision=SimpleNamespace(
+            action="UPDATE",destination_ref="BIBLIA.md",business_id="los-duros",
+            proposed_rules=("New rule.",),matched_rules=("Old rule.",),
+        )
+        result=grapho_render(original,decision)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"BUSINESS_SECTION_NOT_FOUND")
+        self.assertEqual(result.content,original)
+
 
 if __name__=="__main__":
     unittest.main()
