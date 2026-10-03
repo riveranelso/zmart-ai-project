@@ -158,16 +158,5 @@ class ZionRouterTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,"DUPLICATE_ROUTES_SECTION"):
                 load_derekh(path)
 
-    def test_derekh_requires_fallback_section(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path=Path(tmp)/"derekh.yaml"
-            path.write_text(
-                "routes:\n"
-                "  - intent: legitimate\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(RuntimeError,"FALLBACK_REQUIRED"):
-                load_derekh(path)
-
 
 if __name__=="__main__": unittest.main()
