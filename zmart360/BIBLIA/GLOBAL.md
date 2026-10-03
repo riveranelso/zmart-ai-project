@@ -28,6 +28,16 @@ Before creating a new canonical name:
 
 Existing generic ZION-owned names are nomenclature debt and should be migrated deliberately without breaking runtime compatibility.
 
+### Technical identifier law
+Canonical display names may preserve their correct human spelling, including accents when appropriate. Technical ZION identifiers MUST use ASCII only: no accents, spaces or decorative/special characters. Example: `CRÓNICAS` -> `CRONICAS`, `SAN MIGUEL` -> `SANMIGUEL`.
+
+### EXAPOSTELLO
+- Canonical technical name: `EXAPOSTELLO`.
+- Function: the SAN GABRIEL process that sends/dispatches an authorized mission toward its resolved command and HOST.
+- Source: Greek `ἐξαποστέλλω` (`exapostellō`), meaning to send forth/send away; lexically used for purposeful dispatch or sending on a mission.
+- Mapping rule: SAN GABRIEL is the messenger/dispatcher component; EXAPOSTELLO names the act/process of sending, not a celestial rank or being.
+- Compatibility: legacy `route_mission` may remain temporarily as an alias while callers migrate.
+
 ## Canonical functional names
 - ZION CORE — internal technological environment / core
 - HOLY GHOST — guidance and adaptive learning
