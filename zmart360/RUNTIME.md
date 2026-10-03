@@ -1,9 +1,9 @@
 # ZION CORE Runtime v0.1
 
-The first executable component is the deterministic SAN GABRIEL mission router in `zion_core/router.py`.
+The first executable dispatch process is EXAPOSTELLO in `zion_core/router.py`. EXAPOSTELLO is the SAN GABRIEL act of sending an authorized mission toward its resolved COMMAND/HOST. The legacy `route_mission()` name remains only as a compatibility alias during migration.
 
 ## Current boundary
-The router validates and routes. It does not execute external tools, deploy, send communications, modify production, grant permissions or mutate BIBLIA.
+EXAPOSTELLO validates and dispatches routing decisions. It does not execute external tools, deploy, send communications, modify production, grant permissions or mutate BIBLIA.
 
 ## Inputs
 A mission envelope compatible with `mission_envelope.schema.json`.
@@ -31,13 +31,16 @@ Decision:
 - host: SANMIGUEL.HOST-01
 - angel prefix: SANMIGUEL.HOST-01.ANGEL-
 
-## Next runtime increments
-Future increments can add:
-1. schema-library validation;
-2. SAN PEDRO context lookup;
-3. gate interfaces for SERAPHIM / CHERUBIM / THRONES / POWERS;
-4. ANGEL allocation;
-5. CRÓNICAS event emission;
-6. execution adapters.
+## Implemented runtime layers
+- SAN PEDRO context lookup
+- SERAPHIM / CHERUBIM / THRONES / POWERS admission gates
+- ANGEL allocation
+- CRONICAS event model (persistence/wiring remains a later increment)
+
+## Remaining increments
+- schema-library validation;
+- CRONICAS runtime event emission/persistence;
+- execution adapters;
+- deliberate migration of remaining generic ZION-owned names under the global naming law.
 
 These should be added incrementally and must not silently bypass human approval or production safeguards.
