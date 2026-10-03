@@ -222,8 +222,13 @@ def read_cronicas(
     source=Path(path)
     if not source.is_file():
         return ()
+    lock=LocalOperationLock(source.parent/(source.name+".append-locks"))
+    with lock.hold("CRONICAS","JSONL_APPEND",str(source.resolve())):
+        if not source.is_file():
+            return ()
+        snapshot=source.read_text(encoding="utf-8")
     events=[]
-    for line_number,line in enumerate(source.read_text(encoding="utf-8").splitlines(),start=1):
+    for line_number,line in enumerate(snapshot.splitlines(),start=1):
         if not line.strip():
             continue
         try:
