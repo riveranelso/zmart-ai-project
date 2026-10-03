@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ZION CORE Mission Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mission_id", "intent", "requested_by", "scope"],
+  "properties": {
+    "mission_id": {"type": "string", "minLength": 1},
+    "intent": {"type": "string", "minLength": 1},
+    "requested_by": {"type": "string", "minLength": 1},
+    "scope": {"type": "string", "minLength": 1},
+    "business_id": {"type": ["string", "null"]},
+    "project_id": {"type": ["string", "null"]},
+    "risk_level": {"enum": ["low", "medium", "high", "critical"]},
+    "human_approval_required": {"type": "boolean"},
+    "target_command": {"type": ["string", "null"]},
+    "target_host": {"type": ["string", "null"]},
+    "angel_count_max": {"type": "integer", "minimum": 1},
+    "payload_ref": {"type": ["string", "null"]},
+    "correlation_id": {"type": ["string", "null"]}
+  }
+}
