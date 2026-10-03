@@ -124,15 +124,19 @@ class LocalOperationLock:
                 if time.monotonic()>=deadline:
                     raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
                 time.sleep(self.poll_seconds)
-        entered=False
         try:
             pid=os.getpid()
             payload={"pid":pid,"process_start":self._process_start_identity(pid),
                      "business_id":business_id.strip(),"operation":operation.strip(),
                      "identity":identity.strip()}
-            os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
+            encoded=json.dumps(payload,sort_keys=True).encode("utf-8")
+            offset=0
+            while offset < len(encoded):
+                written=os.write(fd,encoded[offset:])
+                if not isinstance(written,int) or written <= 0:
+                    raise OSError("LOCK_OWNER_METADATA_SHORT_WRITE")
+                offset+=written
             os.fsync(fd)
-            entered=True
             yield
         finally:
             os.close(fd)
