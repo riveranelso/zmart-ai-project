@@ -194,7 +194,10 @@ def execution_contexts(dispatch: OmarMissionDispatch) -> tuple[AngelExecutionCon
     decision=dispatch.decision
     if getattr(decision,"action",None)!="DISPATCH":
         return ()
-    if getattr(decision,"human_review_required",False) is True:
+    review_state=getattr(decision,"human_review_required",None)
+    if not isinstance(review_state,bool):
+        raise ValueError("ANGEL_CONTEXT_HUMAN_REVIEW_STATE_INVALID")
+    if review_state:
         raise ValueError("ANGEL_CONTEXT_HUMAN_REVIEW_REQUIRED")
     if getattr(decision,"denied_by",None) is not None:
         raise ValueError("ANGEL_CONTEXT_GATE_DENIAL_CONFLICT")
