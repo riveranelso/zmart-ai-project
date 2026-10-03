@@ -24,7 +24,7 @@ class DispatchDecision:
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
-    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False; saw_routes=False; saw_fallback=False
+    path=path or CONFIG_DIR/"derekh.yaml"; routes={}; intent=command=host=None; in_routes=False; saw_routes=False
     def commit_route()->None:
         nonlocal intent,command,host
         if intent is None:
@@ -45,7 +45,6 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
         if raw=="fallback:":
             commit_route()
             intent=command=host=None
-            saw_fallback=True
             break
         if not line:
             continue
@@ -65,8 +64,6 @@ def load_derekh(path:Path|None=None)->dict[str,tuple[str,str]]:
             raise RuntimeError("UNKNOWN_ROUTE_KEY")
     else:
         commit_route()
-    if saw_routes and not saw_fallback:
-        raise RuntimeError("FALLBACK_REQUIRED")
     for cmd,hst in routes.values():
         if not hst.startswith(cmd+".HOST-"): raise RuntimeError("INVALID_COMMAND_HOST_PAIR")
     return routes
