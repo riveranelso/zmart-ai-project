@@ -39,3 +39,9 @@ SAN GABRIEL may route; it may not:
 
 ## Failure behavior
 If no safe route exists, do not invent one. Return ROUTE_NOT_FOUND or REQUIRE_HUMAN_REVIEW with evidence.
+
+
+## Delivery idempotency
+A retry is not a new mission. At the composed OMAR runtime boundary, an existing CRONICAS MISSION_DECISION for the same business and mission identity prevents a second dispatch and returns an idempotent no-op.
+
+This protection must not collapse legitimate parallel work: distinct ANGELS commissioned for the same mission may each return their own APOKRISIS. Re-delivery of the same ANGEL response is deduplicated before learning or canonical mutation.
