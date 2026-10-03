@@ -124,6 +124,7 @@ class LocalOperationLock:
                 if time.monotonic()>=deadline:
                     raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
                 time.sleep(self.poll_seconds)
+        entered=False
         try:
             pid=os.getpid()
             payload={"pid":pid,"process_start":self._process_start_identity(pid),
@@ -131,9 +132,13 @@ class LocalOperationLock:
                      "identity":identity.strip()}
             os.write(fd,json.dumps(payload,sort_keys=True).encode("utf-8"))
             os.fsync(fd)
+            entered=True
             yield
         finally:
             os.close(fd)
+            # If ownership publication failed before the protected section was
+            # entered, this process still owns the O_EXCL file and must remove
+            # it; otherwise malformed/empty metadata would fail closed forever.
             try:
                 path.unlink()
             except FileNotFoundError:
