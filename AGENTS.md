@@ -5,7 +5,7 @@ Zmart 360 is the central operating system. OMAR is its operational intelligence 
 ## Mandatory start
 Before substantial work:
 1. Read `zmart360/OMAR.md`.
-2. Read `zmart360/REGISTRY.md`.
+2. Read `zmart360/SAN_PEDRO.md`.
 3. Identify the exact brand/project/workflow.
 4. Load only the relevant scoped rules and active context.
 5. For repeated workflows, apply established protocols before asking Nelson to restate specifications.
