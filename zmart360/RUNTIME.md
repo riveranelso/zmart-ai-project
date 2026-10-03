@@ -34,8 +34,8 @@ Production storage is intentionally not selected by this composition.
 - Correction repetition memory separately serializes updates by business + correction fingerprint so distinct human correction events cannot lose increments.
 - Local crash recovery may reclaim a lock only when its recorded owner can be proven dead or its PID can be proven reused through process-start identity. Unknown ownership fails closed by timeout.
 - CRONICAS JSONL appends are serialized per physical file across cooperating local processes, flushed and fsynced before the append lock is released. Multiprocess spawn tests verify complete unique records under concurrent writers.
-- GRAPHO serializes mutation per physical BIBLIA file, fsyncs the temporary file before atomic replacement, then fsyncs the parent directory. A failed pre-replace write leaves canonical BIBLIA intact and a later retry overwrites stale temporary content.
-- Persistent correction memory uses the same fsync-before-replace and parent-directory fsync durability pattern; a failed pre-replace attempt does not advance the canonical correction count.
+- GRAPHO serializes mutation per physical BIBLIA file and fsyncs the temporary file before atomic replacement. A failed pre-replace write leaves canonical BIBLIA intact and a later retry overwrites stale temporary content. After replacement, parent-directory fsync is best-effort durability hardening and does not turn an already-committed mutation into a retryable failure.
+- Persistent correction memory uses the same mandatory fsync-before-replace boundary; a failed pre-replace attempt does not advance the canonical correction count, while post-replace directory-sync failure does not create a false retry.
 - These are local-filesystem concurrency guarantees. They are NOT a claim of distributed exactly-once execution.
 - A production persistence implementation MUST provide an equivalent atomic uniqueness/transaction boundary across all participating workers before this idempotency contract may be relied on in distributed production.
 
@@ -67,9 +67,10 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 ### BIBLIA mutation reconciliation
 - If BIBLIA was committed but its `BIBLIA_MUTATION` CRONICAS append failed, OMAR may run explicit reconciliation.
 - Reconciliation is verify-and-record only: it MUST NOT replay ANGEL work, owner correction intake, HOLY GHOST learning, or GRAPHO mutation.
-- The intended rules must already be proven inside the authorized business section of the target BIBLIA file; otherwise reconciliation fails closed.
+- The intended rules must already be proven inside the authorized business section of the target BIBLIA file; otherwise reconciliation fails closed. SANPEDRO must authorize the destination for that business, the destination must remain inside `biblia_root`, the HOLY GHOST scope must match its canonical destination, and only ADD / UPDATE / SUPERSEDE decisions are reconcilable.
 - Recovery is serialized by business + mission and is idempotent: an existing mutation event makes subsequent recovery a no-op.
-- Reconstructed history is marked `status=RECONCILED` and leaves BIBLIA byte-for-byte unchanged.
+- Reconstructed history is marked `status=RECONCILED` and leaves BIBLIA byte-for-byte unchanged. Reconciliation reads are serialized against GRAPHO writers using the same physical BIBLIA-file lock.
+- Direct GRAPHO ADD is idempotent inside the target business section: exact retry does not duplicate a rule, partial retry appends only missing rules, and identical text in another business does not suppress the target business rule.
 
 - Local CRONICAS recovery/history reads serialize snapshot capture against active append using the same physical-file lock; parsing occurs after release, preventing partial active records from being treated as corruption in the cooperating local runtime.
 
@@ -79,3 +80,8 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - Parent-directory fsync is attempted after replacement as local durability hardening, but an `OSError` at that post-commit step does not convert the already-applied logical commit into a retryable failure.
 - This prevents duplicate correction counts or duplicate BIBLIA mutation attempts caused solely by a post-commit metadata-sync error.
 - The distinction is local-filesystem behavior and does not claim distributed transaction or power-loss exactly-once semantics.
+
+### Local lock commit boundary
+- A local operation lock remains fail-closed while ownership is live, unknown, malformed, or not safely comparable.
+- Once a normal release or proven-dead-owner recovery successfully unlinks the lock, that logical unlock is complete; a later directory metadata-sync `OSError` is best-effort durability hardening and does not convert completed protected work into failure.
+- Lock unlink failures other than an already-absent file remain significant and are not silently treated as success.
