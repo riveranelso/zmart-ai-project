@@ -10,9 +10,10 @@ class MultiBusinessMemoryIsolationTests(unittest.TestCase):
     def test_learned_rule_never_leaks_to_another_business(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            zmart=root/"zmart360"/"BIBLIA"/"ZMART_WORKFLOWS.md"
-            scan=root/"zmart360"/"BIBLIA"/"SCAN_WORKFLOWS.md"
+            zmart=root/"zmart360"/"BIBLIA"/"zmart"/"WORKFLOWS.md"
+            scan=root/"zmart360"/"BIBLIA"/"scan"/"WORKFLOWS.md"
             zmart.parent.mkdir(parents=True)
+            scan.parent.mkdir(parents=True)
             zmart.write_text("# Zmart Workflows\n",encoding="utf-8")
             scan.write_text("# SCAN Workflows\n",encoding="utf-8")
             registry=root/"registry.json"
@@ -21,12 +22,12 @@ class MultiBusinessMemoryIsolationTests(unittest.TestCase):
                     "zmart-consumer-rights":{
                         "enabled":True,
                         "isolation_key":"zmart-consumer-rights",
-                        "context_refs":["zmart360/BIBLIA/ZMART_WORKFLOWS.md"]
+                        "context_refs":["zmart360/BIBLIA/zmart/WORKFLOWS.md"]
                     },
                     "scan-water-intelligence":{
                         "enabled":True,
                         "isolation_key":"scan-water-intelligence",
-                        "context_refs":["zmart360/BIBLIA/SCAN_WORKFLOWS.md"]
+                        "context_refs":["zmart360/BIBLIA/scan/WORKFLOWS.md"]
                     }
                 }
             }),encoding="utf-8")
