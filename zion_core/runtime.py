@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .router import DispatchDecision
 from .omar import (
     LearningIntent,
     dispatch_mission,
@@ -33,6 +34,31 @@ class OmarRuntime:
         return PersistentCorrectionMemory(self.correction_memory_path)
 
     def dispatch(self, mission: dict[str, Any], *, security_context: Any = None):
+        if not isinstance(mission,dict):
+            raise ValueError("MISSION_OBJECT_REQUIRED")
+        mission_id=mission.get("mission_id")
+        business_id=mission.get("business_id")
+        if isinstance(mission_id,str) and mission_id.strip() and isinstance(business_id,str) and business_id.strip():
+            prior=self.history(
+                business_id=business_id.strip(),
+                event_type="MISSION_DECISION",
+                mission_id=mission_id.strip(),
+            )
+            if prior:
+                from .omar import prepare_mission, OmarMissionDispatch
+                context=prepare_mission(
+                    business_id.strip(),
+                    biblia_root=self.biblia_root,
+                    registry_path=self.registry_path,
+                )
+                event=prior[-1]
+                decision=DispatchDecision(
+                    mission_id=event.mission_id,
+                    action="IDEMPOTENT_NOOP",
+                    reason="MISSION_ALREADY_DECIDED",
+                    business_id=event.business_id,
+                )
+                return OmarMissionDispatch(context=context,decision=decision)
         return dispatch_mission(
             mission,
             biblia_root=self.biblia_root,
