@@ -40,8 +40,6 @@ def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessCont
         raise SanPedroError("BUSINESS_CONTEXT_MISSING")
     if len(set(refs)) != len(refs):
         raise SanPedroError("BUSINESS_CONTEXT_DUPLICATE")
-    if any(Path(ref).is_absolute() or ".." in Path(ref).parts for ref in refs):
-        raise SanPedroError("BUSINESS_CONTEXT_INVALID_REF")
     isolation_key = entry.get("isolation_key")
     if (not isinstance(isolation_key,str) or not isolation_key.strip()
             or isolation_key != isolation_key.strip()):
