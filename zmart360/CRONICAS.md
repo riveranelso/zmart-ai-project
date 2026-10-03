@@ -40,7 +40,7 @@ Local JSONL append integrity is protected by a short-lived per-file filesystem l
 This is a local-filesystem persistence guarantee only. It does not provide distributed exactly-once semantics across hosts or independent storage systems.
 
 ### Reconciled BIBLIA mutation evidence
-- `BIBLIA_MUTATION` may use `status=RECONCILED` only when recovery proves the intended rules are already present in the authorized business section but the original mutation event is missing.
+- `BIBLIA_MUTATION` may use `status=RECONCILED` only when recovery proves the intended rules are already present in the authorized business section but the original mutation event is missing. The target must also be SANPEDRO-authorized, contained under BIBLIA, consistent with the decision scope, and associated with a mutating ADD / UPDATE / SUPERSEDE action.
 - RECONCILED is historical repair, not a new mutation and not a replay of the ANGEL or owner correction.
 - Reconciliation is idempotent and serialized by business + mission; concurrent attempts produce at most one recovered mutation event in the local runtime.
 
@@ -51,3 +51,7 @@ This is a local-filesystem persistence guarantee only. It does not provide distr
 - Lock timeout remains fail-closed; this is a local-filesystem guarantee, not distributed snapshot isolation.
 
 - For local atomic replacements used by BIBLIA/correction state, pre-replace file fsync remains mandatory; post-replace directory fsync is durability hardening and does not redefine an already-visible logical commit as failed. CRONICAS recovery must continue to distinguish historical evidence from canonical state.
+
+### GRAPHO retry evidence
+- An idempotent ADD retry that finds every proposed rule already present in the target business section does not mutate BIBLIA and is historical `status=UNCHANGED`, not `CHANGED`.
+- Partial ADD retry writes only missing rules in that business section; identical rule text in another business is not treated as evidence for the target business.
