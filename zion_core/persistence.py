@@ -163,8 +163,16 @@ class PersistentCorrectionMemory:
     def _save(self,data: dict[str,int])->None:
         self.path.parent.mkdir(parents=True,exist_ok=True)
         temp=self.path.with_suffix(self.path.suffix+".tmp")
-        temp.write_text(json.dumps(data,sort_keys=True),encoding="utf-8")
+        with temp.open("w",encoding="utf-8") as handle:
+            handle.write(json.dumps(data,sort_keys=True))
+            handle.flush()
+            os.fsync(handle.fileno())
         temp.replace(self.path)
+        dir_fd=os.open(self.path.parent,os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
 
     @staticmethod
     def _key(business_id: str,correction: str)->str:
