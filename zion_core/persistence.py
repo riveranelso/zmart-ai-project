@@ -290,6 +290,13 @@ def read_cronicas(
                 ):
                     raise TypeError
                 raw[key]=tuple(value)
+            if raw.get("event_type")=="MISSION_DECISION" and raw.get("action")=="DISPATCH":
+                import re
+                if not raw["angel_ids"] or not all(
+                    re.fullmatch(r"[A-Z][A-Z0-9]*\\.HOST-[0-9]{2}\\.ANGEL-[0-9]{3}",item)
+                    for item in raw["angel_ids"]
+                ):
+                    raise TypeError
             for key in ("uncertainty_count","correction_count"):
                 value=raw.get(key,0)
                 if not isinstance(value,int) or isinstance(value,bool) or value < 0:
