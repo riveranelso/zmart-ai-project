@@ -7,6 +7,8 @@ from dataclasses import asdict
 import hashlib
 import json
 import os
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +60,41 @@ class AtomicClaimStore:
         finally:
             os.close(fd)
         return True
+
+
+class LocalOperationLock:
+    """Short-lived local lock for an idempotency critical section.
+
+    The lock is not business evidence and is removed after success or failure.
+    CRONICAS remains the durable record.
+    """
+    def __init__(self,root: Path,*,poll_seconds: float=0.01,timeout_seconds: float=5.0):
+        self.root=Path(root)
+        self.poll_seconds=poll_seconds
+        self.timeout_seconds=timeout_seconds
+
+    @contextmanager
+    def hold(self,business_id: str,operation: str,identity: str):
+        digest=AtomicClaimStore._digest(business_id,operation,identity)
+        self.root.mkdir(parents=True,exist_ok=True)
+        path=self.root/(digest+".lock")
+        deadline=time.monotonic()+self.timeout_seconds
+        fd=None
+        while fd is None:
+            try:
+                fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+            except FileExistsError:
+                if time.monotonic()>=deadline:
+                    raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
+                time.sleep(self.poll_seconds)
+        try:
+            yield
+        finally:
+            os.close(fd)
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 class PersistentCorrectionMemory:
