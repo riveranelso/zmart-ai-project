@@ -18,6 +18,10 @@ class CronicaEvent:
     denied_by:str|None=None
     angel_ids:tuple[str,...]=()
     correlation_id:str|None=None
+    status:str|None=None
+    evidence_refs:tuple[str,...]=()
+    uncertainty_count:int=0
+    correction_count:int=0
     def to_dict(self)->dict[str,Any]: return asdict(self)
 
 CronicasSink = Callable[[CronicaEvent], None]
@@ -60,3 +64,27 @@ class CronicasMemorySink:
     @property
     def events(self)->tuple[CronicaEvent,...]:
         return tuple(self._events)
+
+def build_apokrisis_event(response:Any)->CronicaEvent:
+    """Convert an APOKRISIS into privacy-bounded historical metadata."""
+    return CronicaEvent(
+        event_id=str(uuid4()),
+        occurred_at=datetime.now(timezone.utc).isoformat(),
+        event_type="ANGEL_RESPONSE",
+        mission_id=str(response.mission_id),
+        action="APOKRISIS",
+        reason=str(response.error_code or response.status),
+        business_id=str(response.business_id),
+        angel_ids=(str(response.angel_id),),
+        correlation_id=response.correlation_id,
+        status=str(response.status),
+        evidence_refs=tuple(response.evidence_refs),
+        uncertainty_count=len(response.uncertainty),
+        correction_count=len(response.correction_signals),
+    )
+
+def cronicas_emit_apokrisis(response:Any,sink:CronicasSink|None=None)->CronicaEvent:
+    event=build_apokrisis_event(response)
+    if sink is not None:
+        sink(event)
+    return event
