@@ -17,7 +17,7 @@ class PromotionTests(unittest.TestCase):
         self.assertEqual(d.action,"NO_CHANGE")
 
     def test_candidate_rule_is_update(self):
-        d=propose_biblia_promotion(self.proposal(),self.destination(),"old rule",existing_rule_candidates=("Old logo rule",))
+        d=propose_biblia_promotion(self.proposal(),self.destination(),"Rules: Old logo rule.",existing_rule_candidates=("Old logo rule",))
         self.assertEqual(d.action,"UPDATE")
 
     def test_explicit_conflict_stops_promotion(self):
