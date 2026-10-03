@@ -64,6 +64,68 @@ class OwnerCorrectionIdempotencyTests(unittest.TestCase):
             self.assertEqual(runtime.correction_memory.count("zmart-consumer-rights",rule),2)
             self.assertIn(rule,(root/"WORKFLOWS.md").read_text(encoding="utf-8"))
 
+    def test_durable_owner_retry_recovers_learning_without_fake_repetition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp)
+            root=base/"biblia"
+            root.mkdir()
+            outside=base/"GLOBAL.md"
+            outside.write_text("# Outside\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["../GLOBAL.md"]
+            }}}),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,registry_path=registry,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            rule="From now on preserve this durable owner rule."
+            with self.assertRaisesRegex(ValueError,"BIBLIA_DESTINATION_OUTSIDE_ROOT"):
+                runtime.owner_correction(
+                    rule,business_id="zmart-consumer-rights",
+                    correction_id="owner-recovery-1",
+                )
+            self.assertEqual(
+                runtime.correction_memory.count("zmart-consumer-rights",rule),1
+            )
+            self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
+            self.assertEqual(runtime.history(event_type="BIBLIA_MUTATION"),())
+
+            target=root/"GLOBAL.md"
+            target.write_text("# Global\n",encoding="utf-8")
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{
+                "enabled":True,"isolation_key":"zmart-consumer-rights",
+                "context_refs":["GLOBAL.md"]
+            }}}),encoding="utf-8")
+
+            recovered=runtime.owner_correction(
+                rule,business_id="zmart-consumer-rights",
+                correction_id="owner-recovery-1",
+            )
+            self.assertTrue(recovered.processed)
+            self.assertEqual(
+                recovered.reason,"OWNER_CORRECTION_LEARNING_RECOVERED"
+            )
+            self.assertIsNone(recovered.event)
+            self.assertEqual(
+                runtime.correction_memory.count("zmart-consumer-rights",rule),1
+            )
+            self.assertEqual(len(runtime.history(event_type="ANGEL_RESPONSE")),1)
+            self.assertEqual(len(runtime.history(event_type="BIBLIA_MUTATION")),1)
+            self.assertIn(rule,target.read_text(encoding="utf-8"))
+
+            retry=runtime.owner_correction(
+                rule,business_id="zmart-consumer-rights",
+                correction_id="owner-recovery-1",
+            )
+            self.assertFalse(retry.processed)
+            self.assertEqual(retry.reason,"OWNER_CORRECTION_ALREADY_PROCESSED")
+            self.assertEqual(
+                runtime.correction_memory.count("zmart-consumer-rights",rule),1
+            )
+
 
 if __name__=="__main__":
     unittest.main()
