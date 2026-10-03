@@ -45,3 +45,18 @@ def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None
     if sink is not None:
         sink(event)
     return event
+
+
+class CronicasMemorySink:
+    """Append-only in-memory sink for tests and non-persistent runtime use."""
+    def __init__(self)->None:
+        self._events:list[CronicaEvent]=[]
+
+    def __call__(self,event:CronicaEvent)->None:
+        if not isinstance(event,CronicaEvent):
+            raise TypeError("CRONICAS_EVENT_REQUIRED")
+        self._events.append(event)
+
+    @property
+    def events(self)->tuple[CronicaEvent,...]:
+        return tuple(self._events)
