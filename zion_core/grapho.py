@@ -32,7 +32,7 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if not rules:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "NO_RULES_TO_WRITE")
-    text=existing_text.rstrip()
+    text=existing_text.rstrip() if decision.action=="ADD" else existing_text
     header=_section_header(decision.business_id)
     if decision.action=="ADD":
         if header in text:
