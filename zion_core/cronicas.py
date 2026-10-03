@@ -53,7 +53,7 @@ def build_dispatch_fingerprint(mission:dict[str,Any],security_context:Any=None)-
         security_identity={
             "authenticated":getattr(security_context,"authenticated",None),
             "principal_id":getattr(security_context,"principal_id",None),
-            "allowed_business_ids":sorted(getattr(security_context,"allowed_business_ids",()) or ()),
+            "allowed_business_ids":sorted(set(getattr(security_context,"allowed_business_ids",()) or ())),
             "human_approval_granted":getattr(security_context,"human_approval_granted",None),
             "production_write_allowed":getattr(security_context,"production_write_allowed",None),
         }
