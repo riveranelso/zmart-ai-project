@@ -160,6 +160,27 @@ class ZionRouterTests(unittest.TestCase):
 
 
 
+
+    def test_derekh_rejects_second_routes_section_after_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"derekh.yaml"
+            path.write_text(
+                "routes:\n"
+                "  - intent: legitimate\n"
+                "    command: SANGABRIEL\n"
+                "    host: SANGABRIEL.HOST-01\n"
+                "fallback:\n"
+                "  action: REQUIRE_HUMAN_REVIEW\n"
+                "routes:\n"
+                "  - intent: injected\n"
+                "    command: SANMIGUEL\n"
+                "    host: SANMIGUEL.HOST-01\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError,"DUPLICATE_ROUTES_SECTION"):
+                load_derekh(path)
+
+
     def test_derekh_rejects_empty_route_identity_values(self):
         cases=(
             ("intent","  - intent: \n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n"),
