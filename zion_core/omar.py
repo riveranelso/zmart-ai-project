@@ -53,6 +53,7 @@ def receive_apokrisis(
     registry_path: Path | None = None,
     cronicas_sink: Any = None,
     learning: LearningIntent | None = None,
+    record_response_event: bool = True,
 ):
     """Stable OMAR port for closing ANGEL work and running the learning cycle."""
     intent=learning or LearningIntent()
@@ -71,6 +72,7 @@ def receive_apokrisis(
         conflict=intent.conflict,
         supersede=intent.supersede,
         auto_write=intent.auto_write,
+        record_response_event=record_response_event,
     )
 
 
