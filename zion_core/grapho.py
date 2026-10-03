@@ -172,6 +172,28 @@ def grapho_reconcile_committed_mutation(path: Path, decision: Any, cronicas_sink
     """
     if cronicas_sink is None:
         raise ValueError("CRONICAS_SINK_REQUIRED")
+    if getattr(decision,"action",None) not in {"ADD","UPDATE","SUPERSEDE"}:
+        return GraphoResult(
+            getattr(decision,"action","UNKNOWN"),getattr(decision,"destination_ref",None),
+            False,Path(path).read_text(encoding="utf-8"),
+            "RECONCILIATION_ACTION_NOT_WRITABLE",
+        )
+    business_id=getattr(decision,"business_id",None)
+    if (not isinstance(business_id,str) or not business_id.strip()
+            or business_id!=business_id.strip() or "\n" in business_id or "\r" in business_id):
+        return GraphoResult(
+            decision.action,getattr(decision,"destination_ref",None),False,
+            Path(path).read_text(encoding="utf-8"),"RECONCILIATION_INVALID_BUSINESS_ID",
+        )
+    proposed=getattr(decision,"proposed_rules",())
+    if not isinstance(proposed,tuple) or any(
+        not isinstance(rule,str) or not rule.strip() or "\n" in rule or "\r" in rule
+        for rule in proposed
+    ):
+        return GraphoResult(
+            decision.action,getattr(decision,"destination_ref",None),False,
+            Path(path).read_text(encoding="utf-8"),"RECONCILIATION_INVALID_RULES",
+        )
     target=Path(path)
     lock=LocalOperationLock(target.parent/".zion-biblia-locks")
     identity=str(target.resolve())
