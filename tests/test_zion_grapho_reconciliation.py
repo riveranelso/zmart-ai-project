@@ -56,6 +56,41 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(target.read_text(encoding="utf-8"),original)
             self.assertFalse(cronicas.exists())
 
+    def test_reconciliation_does_not_accept_prefixed_business_heading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            rule="Persist this exact durable rule."
+            original="# Workflows\n\n## zmart-consumer-rights-extra\n- "+rule+"\n"
+            target.write_text(original,encoding="utf-8")
+            cronicas=root/"cronicas.jsonl"
+
+            result=grapho_reconcile_committed_mutation(
+                target,self.decision(rule),CronicasJsonlSink(cronicas),
+            )
+
+            self.assertFalse(result.changed)
+            self.assertEqual(result.reason,"RECONCILIATION_BUSINESS_SECTION_NOT_FOUND")
+            self.assertEqual(target.read_text(encoding="utf-8"),original)
+            self.assertFalse(cronicas.exists())
+
+    def test_reconciliation_requires_complete_rule_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            original="# Workflows\n\n## zmart-consumer-rights\n- Persist this exact durable rule. extended\n"
+            target.write_text(original,encoding="utf-8")
+            cronicas=root/"cronicas.jsonl"
+
+            result=grapho_reconcile_committed_mutation(
+                target,self.decision("Persist this exact durable rule."),CronicasJsonlSink(cronicas),
+            )
+
+            self.assertFalse(result.changed)
+            self.assertEqual(result.reason,"RECONCILIATION_RULES_NOT_PROVEN")
+            self.assertEqual(target.read_text(encoding="utf-8"),original)
+            self.assertFalse(cronicas.exists())
+
     def test_reconciliation_waits_for_active_biblia_writer_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
