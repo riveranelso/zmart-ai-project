@@ -21,3 +21,16 @@ CRÓNICAS must not store passwords, API keys, tokens, customer PII, private lead
 
 ## Technical ID
 CRONICAS
+
+
+## Runtime persistence and recovery
+The current local runtime adapter persists privacy-bounded events as JSON Lines. CRONICAS can be queried by business, event type or mission while preserving append order.
+
+History reads are observational only. They do not replay a mission, re-run an ANGEL, re-run HOLY GHOST, or mutate BIBLIA.
+
+CRONICAS also provides durable evidence for runtime idempotency:
+- an existing MISSION_DECISION prevents duplicate dispatch of the same business/mission identity;
+- an existing ANGEL_RESPONSE prevents duplicate processing of the same business/mission/ANGEL response;
+- an existing OMAR.OWNER-INPUT response for a correction ID prevents a technical retry from being counted as a second human correction.
+
+Corrupt persisted history fails closed with the affected line number rather than silently skipping evidence.
