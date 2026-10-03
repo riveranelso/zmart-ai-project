@@ -28,6 +28,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
     if decision.action not in {"ADD", "UPDATE", "SUPERSEDE"}:
         return GraphoResult(decision.action, decision.destination_ref, False, existing_text,
                             "PROMOTION_ACTION_NOT_WRITABLE")
+    business_id=getattr(decision,"business_id",None)
+    if (not isinstance(business_id,str) or not business_id.strip()
+            or "\n" in business_id or "\r" in business_id):
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "INVALID_BUSINESS_ID")
     raw_rules=tuple(
         x for x in decision.proposed_rules if isinstance(x,str) and x.strip()
     )
