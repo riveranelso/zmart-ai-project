@@ -81,6 +81,7 @@ def receive_owner_correction(
     cronicas_sink: Any = None,
     learning: LearningIntent | None = None,
     correction_id: str = "owner-correction",
+    correction_memory: Any = None,
 ):
     """Receive a direct owner correction and pass it through the canonical learning loop."""
     if not isinstance(correction,str) or not correction.strip():
@@ -97,8 +98,14 @@ def receive_owner_correction(
     intent=learning or LearningIntent()
     if learning is None:
         from .durability import assess_durability
-        assessment=assess_durability(correction)
-        intent=LearningIntent(explicit_durable_instruction=assessment.durable)
+        repeated=False
+        if correction_memory is not None:
+            repeated=correction_memory.observe(business_id,correction) >= 2
+        assessment=assess_durability(correction,repeated_correction=repeated)
+        intent=LearningIntent(
+            explicit_durable_instruction=assessment.reason=="EXPLICIT_DURABLE_LANGUAGE",
+            repeated_correction=repeated,
+        )
     return receive_apokrisis(
         response,
         biblia_root=biblia_root,
