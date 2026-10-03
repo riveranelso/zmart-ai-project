@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,11 +35,26 @@ class ReconciliationAuthorizationTests(unittest.TestCase):
 
     def test_unregistered_in_root_destination_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp); target=root/"UNAUTHORIZED.md"
-            target.write_text("# Other\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n",encoding="utf-8")
-            runtime=self.runtime(root)
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            target.write_text("# Workflows\n\n## zmart-consumer-rights\n- AUTHORIZED_RULE\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({
+                "businesses":{
+                    "zmart-consumer-rights":{
+                        "display_name":"Zmart Consumer Rights",
+                        "enabled":True,
+                        "context_refs":["zmart360/BIBLIA/GLOBAL.md"],
+                        "isolation_key":"zmart-consumer-rights",
+                    }
+                }
+            }),encoding="utf-8")
+            runtime=OmarRuntime(
+                biblia_root=root,cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",registry_path=registry,
+            )
             with self.assertRaisesRegex(ValueError,"RECONCILIATION_DESTINATION_NOT_AUTHORIZED"):
-                runtime.reconcile_biblia_mutation(self.decision("UNAUTHORIZED.md"))
+                runtime.reconcile_biblia_mutation(self.decision("WORKFLOWS.md"))
             self.assertEqual(runtime.history(),())
 
     def test_registered_short_ref_remains_compatible(self):
