@@ -34,3 +34,7 @@ CRONICAS also provides durable evidence for runtime idempotency:
 - an existing OMAR.OWNER-INPUT response for a correction ID prevents a technical retry from being counted as a second human correction.
 
 Corrupt persisted history fails closed with the affected line number rather than silently skipping evidence.
+
+Local JSONL append integrity is protected by a short-lived per-file filesystem lock. Each completed append is flushed and fsynced before the lock is released. Thread and spawned-process concurrency tests verify that cooperating local writers produce complete, parseable, unique records.
+
+This is a local-filesystem persistence guarantee only. It does not provide distributed exactly-once semantics across hosts or independent storage systems.
