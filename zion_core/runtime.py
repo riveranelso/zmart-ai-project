@@ -224,17 +224,18 @@ class OmarRuntime:
                 recovery_learning=learning
                 if recovery_learning is None:
                     from .durability import assess_durability
+                    repeated=self.correction_memory.count(
+                        business_id,correction
+                    ) >= 2
                     assessment=assess_durability(
                         correction,
-                        repeated_correction=self.correction_memory.count(
-                            business_id,correction
-                        ) >= 2,
+                        repeated_correction=repeated,
                     )
                     recovery_learning=LearningIntent(
                         explicit_durable_instruction=(
                             assessment.reason=="EXPLICIT_DURABLE_LANGUAGE"
                         ),
-                        repeated_correction=assessment.repeated_correction,
+                        repeated_correction=repeated,
                     )
                 event,cycle=receive_owner_correction(
                     correction,
