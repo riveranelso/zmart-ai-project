@@ -128,7 +128,7 @@ def resolve_learning_destination(
     return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                matches[0], True, "DESTINATION_RESOLVED")
 
-PROMOTION_ACTIONS=("ADD","UPDATE","NO_CHANGE","CONFLICT","NOT_READY")
+PROMOTION_ACTIONS=("ADD","UPDATE","SUPERSEDE","NO_CHANGE","CONFLICT","NOT_READY")
 
 @dataclass(frozen=True)
 class PromotionDecision:
@@ -177,6 +177,18 @@ def propose_biblia_promotion(
                                  destination.destination_ref, "NO_CHANGE", rules, exact,
                                  "RULE_ALREADY_PRESENT", False)
     candidates=tuple(x.strip() for x in existing_rule_candidates if isinstance(x,str) and x.strip())
+    if supersede:
+        if not candidates:
+            return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                     destination.destination_ref, "CONFLICT", rules, (),
+                                     "SUPERSESSION_CANDIDATE_REQUIRED", True)
+        if len(candidates)!=len(rules):
+            return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                     destination.destination_ref, "CONFLICT", rules, candidates,
+                                     "SUPERSESSION_RULE_COUNT_MISMATCH", True)
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "SUPERSEDE", rules, candidates,
+                                 "EXPLICIT_SUPERSESSION", True)
     if candidates:
         return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                                  destination.destination_ref, "UPDATE", rules, candidates,
@@ -207,6 +219,7 @@ def prepare_learning_cycle(
     active_campaign: bool = False,
     existing_rule_candidates: tuple[str, ...] = (),
     conflict: bool = False,
+    supersede: bool = False,
 ) -> LearningCycle:
     """Prepare the complete learning decision before persistence."""
     signal=holy_ghost_receive(response)
@@ -235,7 +248,7 @@ def persist_learning_cycle(
     cronicas_sink: Any = None,
 ) -> LearningCycle:
     """Persist an eligible prepared cycle through GRAPHO."""
-    if cycle.promotion.action not in {"ADD","UPDATE"}:
+    if cycle.promotion.action not in {"ADD","UPDATE","SUPERSEDE"}:
         return cycle
     from .grapho import grapho_write
     result=grapho_write(path,cycle.promotion,cronicas_sink)
