@@ -272,5 +272,18 @@ class GraphoTests(unittest.TestCase):
         self.assertEqual(result.reason,"INVALID_PROPOSED_RULES")
         self.assertEqual(result.content,existing)
 
+    def test_write_rejects_destination_ref_that_does_not_match_physical_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            target=root/"WORKFLOWS.md"
+            original="# Workflows\n\n## zmart-consumer-rights\n"
+            target.write_text(original,encoding="utf-8")
+            decision=self.decision("ADD")
+            decision.destination_ref="BRANDS.md"
+            result=grapho_write(target,decision)
+            self.assertFalse(result.changed)
+            self.assertEqual(result.reason,"DESTINATION_MISMATCH")
+            self.assertEqual(target.read_text(encoding="utf-8"),original)
+
 if __name__=="__main__":
     unittest.main()
