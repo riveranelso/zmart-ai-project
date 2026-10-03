@@ -88,10 +88,20 @@ class BibliaPrecedenceTests(unittest.TestCase):
                 encoding="utf-8",
             )
             registry=root/"registry.json"
-            registry.write_text(json.dumps({"businesses":{"los-duros":{
-                "enabled":True,"isolation_key":"los-duros",
-                "context_refs":["WORKFLOWS.md"]
-            }}}),encoding="utf-8")
+            registry.write_text(json.dumps({"businesses":{
+                "los-duros":{
+                    "enabled":True,"isolation_key":"los-duros",
+                    "context_refs":["WORKFLOWS.md"]
+                },
+                "los-duros-extra":{
+                    "enabled":True,"isolation_key":"los-duros-extra",
+                    "context_refs":["WORKFLOWS.md"]
+                },
+                "scan-water-intelligence":{
+                    "enabled":True,"isolation_key":"scan-water-intelligence",
+                    "context_refs":["WORKFLOWS.md"]
+                }
+            }}),encoding="utf-8")
             context=retrieve_biblia("los-duros",root=root,registry_path=registry)
             self.assertIn("## los-duros\n- RIGHT",context.text)
             self.assertNotIn("WRONG",context.text)
