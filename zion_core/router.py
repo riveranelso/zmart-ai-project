@@ -66,11 +66,16 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","ROUTE_NOT_FOUND",human_review_required=True,**base)
         cronicas_emit(mission,decision,cronicas_sink); return decision
     command,host=route
-    if mission.get("target_command") not in (None,command): return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_COMMAND_CONFLICT",human_review_required=True,**base)
-    if mission.get("target_host") not in (None,host): return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_HOST_CONFLICT",human_review_required=True,**base)
+    if mission.get("target_command") not in (None,command):
+        decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_COMMAND_CONFLICT",human_review_required=True,**base)
+        cronicas_emit(mission,decision,cronicas_sink); return decision
+    if mission.get("target_host") not in (None,host):
+        decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW","TARGET_HOST_CONFLICT",human_review_required=True,**base)
+        cronicas_emit(mission,decision,cronicas_sink); return decision
     for gate in evaluate_gates(mission,ctx.isolation_key,ctx.context_refs):
         if not gate.allowed:
-            return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
+            decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
+            cronicas_emit(mission,decision,cronicas_sink); return decision
     angels=diatasso(mission=mission,command=command,host=host,business_id=ctx.business_id,
                            isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     decision=DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
