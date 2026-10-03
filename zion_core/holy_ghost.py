@@ -127,3 +127,60 @@ def resolve_learning_destination(
                                    None, False, "DESTINATION_NOT_REGISTERED")
     return LearningDestination(proposal.mission_id, proposal.business_id, proposal.scope,
                                matches[0], True, "DESTINATION_RESOLVED")
+
+PROMOTION_ACTIONS=("ADD","UPDATE","NO_CHANGE","CONFLICT","NOT_READY")
+
+@dataclass(frozen=True)
+class PromotionDecision:
+    mission_id: str
+    business_id: str
+    scope: str
+    destination_ref: str | None
+    action: str
+    proposed_rules: tuple[str, ...]
+    matched_rules: tuple[str, ...]
+    reason: str
+    requires_review: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+def _normalize_rule(value: str) -> str:
+    return " ".join(value.strip().lower().split())
+
+def propose_biblia_promotion(
+    proposal: LearningProposal,
+    destination: LearningDestination,
+    existing_text: str,
+    *,
+    existing_rule_candidates: tuple[str, ...] = (),
+    conflict: bool = False,
+) -> PromotionDecision:
+    """Produce a deterministic BIBLIA promotion decision without writing files."""
+    if not destination.ready_for_review or not destination.destination_ref:
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "NOT_READY", (), (),
+                                 destination.reason, False)
+    rules=tuple(x.strip() for x in proposal.correction_signals if isinstance(x,str) and x.strip())
+    if not rules:
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "NO_CHANGE", (), (),
+                                 "NO_CORRECTION_RULES", False)
+    if conflict:
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "CONFLICT", rules,
+                                 tuple(existing_rule_candidates), "EXPLICIT_CONFLICT", True)
+    normalized_text=_normalize_rule(existing_text)
+    exact=tuple(rule for rule in rules if _normalize_rule(rule) in normalized_text)
+    if len(exact)==len(rules):
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "NO_CHANGE", rules, exact,
+                                 "RULE_ALREADY_PRESENT", False)
+    candidates=tuple(x.strip() for x in existing_rule_candidates if isinstance(x,str) and x.strip())
+    if candidates:
+        return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                                 destination.destination_ref, "UPDATE", rules, candidates,
+                                 "EXISTING_RULE_CANDIDATE", True)
+    return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
+                             destination.destination_ref, "ADD", rules, (),
+                             "NEW_RULE", True)
