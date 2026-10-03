@@ -151,6 +151,14 @@ class PromotionDecision:
 def _normalize_rule(value: str) -> str:
     return " ".join(value.strip().lower().split())
 
+def _canonical_rule_lines(existing_text: str) -> tuple[str, ...]:
+    """Return normalized complete BIBLIA rule lines, excluding prose/substrings."""
+    return tuple(
+        _normalize_rule(line[2:])
+        for line in existing_text.splitlines()
+        if line.startswith("- ") and line[2:].strip()
+    )
+
 def propose_biblia_promotion(
     proposal: LearningProposal,
     destination: LearningDestination,
@@ -174,14 +182,14 @@ def propose_biblia_promotion(
         return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                                  destination.destination_ref, "CONFLICT", rules,
                                  tuple(existing_rule_candidates), "EXPLICIT_CONFLICT", True)
-    normalized_text=_normalize_rule(existing_text)
-    exact=tuple(rule for rule in rules if _normalize_rule(rule) in normalized_text)
+    canonical_rules=_canonical_rule_lines(existing_text)
+    exact=tuple(rule for rule in rules if _normalize_rule(rule) in canonical_rules)
     if len(exact)==len(rules):
         return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                                  destination.destination_ref, "NO_CHANGE", rules, exact,
                                  "RULE_ALREADY_PRESENT", False)
     candidates=tuple(x.strip() for x in existing_rule_candidates if isinstance(x,str) and x.strip())
-    missing_candidates=tuple(x for x in candidates if _normalize_rule(x) not in normalized_text)
+    missing_candidates=tuple(x for x in candidates if _normalize_rule(x) not in canonical_rules)
     if missing_candidates:
         return PromotionDecision(proposal.mission_id, proposal.business_id, proposal.scope,
                                  destination.destination_ref, "CONFLICT", rules, candidates,
