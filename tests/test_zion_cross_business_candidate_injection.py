@@ -72,6 +72,10 @@ class CrossBusinessCandidateInjectionTests(unittest.TestCase):
                 "zmart-consumer-rights":{
                     "enabled":True,"isolation_key":"zmart-consumer-rights",
                     "context_refs":["WORKFLOWS.md"]
+                },
+                "scan-water-intelligence":{
+                    "enabled":True,"isolation_key":"scan-water-intelligence",
+                    "context_refs":["WORKFLOWS.md"]
                 }
             }}),encoding="utf-8")
             runtime=OmarRuntime(
