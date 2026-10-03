@@ -33,7 +33,7 @@ class GraphoReconciliationTests(unittest.TestCase):
             self.assertEqual(target.read_text(encoding="utf-8"),original)
             events=read_cronicas(cronicas,event_type="BIBLIA_MUTATION",mission_id="gap-001")
             self.assertEqual(len(events),1)
-            self.assertEqual(events[0].status,"UNCHANGED")
+            self.assertEqual(events[0].status,"RECONCILED")
             self.assertEqual(events[0].reason,"RECONCILED_ALREADY_COMMITTED")
 
     def test_refuses_to_record_mutation_when_rule_is_not_proven(self):
