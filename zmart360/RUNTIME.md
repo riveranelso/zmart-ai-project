@@ -70,3 +70,5 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - The intended rules must already be proven inside the authorized business section of the target BIBLIA file; otherwise reconciliation fails closed.
 - Recovery is serialized by business + mission and is idempotent: an existing mutation event makes subsequent recovery a no-op.
 - Reconstructed history is marked `status=RECONCILED` and leaves BIBLIA byte-for-byte unchanged.
+
+- Local CRONICAS recovery/history reads serialize snapshot capture against active append using the same physical-file lock; parsing occurs after release, preventing partial active records from being treated as corruption in the cooperating local runtime.
