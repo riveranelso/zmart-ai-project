@@ -47,11 +47,11 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
         return GraphoResult("ADD",decision.destination_ref,content!=existing_text,content,"RULES_APPENDED")
     candidates=tuple(x.strip() for x in decision.matched_rules if isinstance(x,str) and x.strip())
     if not candidates:
-        return GraphoResult("UPDATE",decision.destination_ref,False,existing_text,
-                            "UPDATE_CANDIDATE_REQUIRED")
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "SUPERSESSION_CANDIDATE_REQUIRED" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_REQUIRED")
     if len(candidates) != len(rules):
-        return GraphoResult("UPDATE",decision.destination_ref,False,existing_text,
-                            "UPDATE_RULE_COUNT_MISMATCH")
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "SUPERSESSION_RULE_COUNT_MISMATCH" if decision.action=="SUPERSEDE" else "UPDATE_RULE_COUNT_MISMATCH")
     content=text
     replaced=0
     for old,new in zip(candidates,rules):
@@ -61,9 +61,10 @@ def grapho_render(existing_text: str, decision: Any) -> GraphoResult:
             content=content.replace(old_line,new_line,1)
             replaced+=1
     if replaced==0:
-        return GraphoResult("UPDATE",decision.destination_ref,False,existing_text,
-                            "UPDATE_CANDIDATE_NOT_FOUND")
-    return GraphoResult("UPDATE",decision.destination_ref,True,content+"\n","RULES_UPDATED")
+        return GraphoResult(decision.action,decision.destination_ref,False,existing_text,
+                            "SUPERSESSION_CANDIDATE_NOT_FOUND" if decision.action=="SUPERSEDE" else "UPDATE_CANDIDATE_NOT_FOUND")
+    return GraphoResult(decision.action,decision.destination_ref,True,content+"\n",
+                        "RULES_SUPERSEDED" if decision.action=="SUPERSEDE" else "RULES_UPDATED")
 
 def grapho_write(path: Path, decision: Any, cronicas_sink: Any = None) -> GraphoResult:
     """Persist a rendered BIBLIA mutation to an explicitly supplied local path."""
