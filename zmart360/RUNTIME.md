@@ -101,3 +101,8 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - Recovery uses the existing APOKRISIS supplied on retry and stores no raw correction text in CRONICAS.
 - A durable recovery that deterministically resolves to `NO_CHANGE`, `CONFLICT`, or `NOT_READY` has no mutation event by design and may be re-evaluated on another technical retry; this is side-effect-safe but is not modeled as a separate durable terminal learning state.
 - New normal GRAPHO mutation events carry the originating ANGEL in `angel_ids`. Recovery may treat a mutation as terminal evidence only when that exact ANGEL is attributed; a sibling ANGEL's mutation and historical/reconciled mutation evidence without origin attribution do not suppress recovery.
+### GRAPHO canonical-entry integrity
+- Canonical BIBLIA rules written by GRAPHO are single-line entries; proposed or matched rules containing CR/LF are rejected rather than sanitized.
+- UPDATE/SUPERSEDE match complete rule lines with exact multiplicity inside the authorized business section; prefixes/substrings are not candidates.
+- Identical replacements are byte-preserving no-ops, and real replacements preserve existing line endings/final-newline state outside the replaced rule.
+- GRAPHO rejects empty, multiline, or whitespace-padded business IDs so a low-level decision cannot synthesize additional BIBLIA section headings.
