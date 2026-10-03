@@ -1,6 +1,6 @@
 # Zmart 360 — Agent Entry Point
 
-Zmart 360 is the central operating system. OMAR is its operational intelligence layer.
+Zmart 360 is the central operating system. OMAR is its operational intelligence and routing layer. HOLY GHOST is its observing/adaptive learning layer.
 
 ## Mandatory start
 Before substantial work:
@@ -10,8 +10,8 @@ Before substantial work:
 4. Load only the relevant scoped rules and active context.
 5. For repeated workflows, apply established protocols before asking Nelson to restate specifications.
 
-## Learning
-Read `zmart360/LEARNING_PROTOCOL.md` when a task produces a correction, new durable preference, repeated workflow, or reusable decision.
+## Adaptive learning
+Read `zmart360/HOLY_GHOST.md` when a task produces a correction, new durable preference, repeated workflow, reusable decision, or evidence that OMAR failed to retrieve an existing rule.
 
 Do not treat every statement as permanent. Classify scope and preserve brand/project isolation.
 
