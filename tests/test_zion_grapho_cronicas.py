@@ -16,6 +16,21 @@ class GraphoCronicasTests(unittest.TestCase):
         self.assertEqual(event.status,"CHANGED")
         self.assertEqual(event.correction_count,1)
         self.assertNotIn("private rule text",str(event.to_dict()))
+    def test_idempotent_add_retry_is_recorded_as_unchanged_not_changed(self):
+        decision=SimpleNamespace(
+            mission_id="m-retry",business_id="los-duros",
+            action="ADD",destination_ref="zmart360/BIBLIA/BRANDS.md",
+            proposed_rules=("Use approved logo only.",),matched_rules=(),
+        )
+        existing="# BIBLIA\n\n## los-duros\n- Use approved logo only.\n"
+        result=grapho_render(existing,decision)
+        sink=CronicasMemorySink()
+        event=cronicas_emit_grapho(decision,result,sink)
+        self.assertFalse(result.changed)
+        self.assertEqual(result.reason,"RULES_ALREADY_PRESENT")
+        self.assertEqual(event.status,"UNCHANGED")
+        self.assertEqual(event.reason,"RULES_ALREADY_PRESENT")
+
 
 if __name__=="__main__":
     unittest.main()
