@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
 from typing import Any
-from .allocator import AngelAssignment, allocate_angels
+from .allocator import DiatassoCommission, diatasso
 from .gates import evaluate_gates
 from .registry import SanPedroError, sanpedro_resolve
 
@@ -16,7 +16,7 @@ class MissionValidationError(ValueError): pass
 class DispatchDecision:
     mission_id:str; action:str; reason:str
     command:str|None=None; host:str|None=None; angel_prefix:str|None=None
-    angels:tuple[AngelAssignment,...]=()
+    angels:tuple[DiatassoCommission,...]=()
     business_id:str|None=None; isolation_key:str|None=None; context_refs:tuple[str,...]=()
     denied_by:str|None=None; human_review_required:bool=False
     def to_dict(self)->dict[str,Any]: return asdict(self)
@@ -67,7 +67,7 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     for gate in evaluate_gates(mission,ctx.isolation_key,ctx.context_refs):
         if not gate.allowed:
             return DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",gate.reason,command=command,host=host,denied_by=gate.gate,human_review_required=True,**base)
-    angels=allocate_angels(mission=mission,command=command,host=host,business_id=ctx.business_id,
+    angels=diatasso(mission=mission,command=command,host=host,business_id=ctx.business_id,
                            isolation_key=ctx.isolation_key,context_refs=ctx.context_refs)
     return DispatchDecision(mid,"DISPATCH","ANGELS_ALLOCATED",command=command,host=host,
                             angel_prefix=host+".ANGEL-",angels=angels,**base)
