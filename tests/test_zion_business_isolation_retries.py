@@ -78,8 +78,10 @@ class BusinessIsolationRetryTests(unittest.TestCase):
             routes.write_text("routes:\\n  - intent: internal_dispatch\\n    command: SANGABRIEL\\n    host: SANGABRIEL.HOST-01\\n",encoding="utf-8")
             runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
             base={"mission_id":"shared-close","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW"}
-            runtime.dispatch({**base,"business_id":"zmart-consumer-rights"})
-            runtime.dispatch({**base,"business_id":"scan-water-intelligence"})
+            zdispatch=runtime.dispatch({**base,"business_id":"zmart-consumer-rights"})
+            sdispatch=runtime.dispatch({**base,"business_id":"scan-water-intelligence"})
+            self.assertEqual(zdispatch.decision.action,"DISPATCH")
+            self.assertEqual(sdispatch.decision.action,"DISPATCH")
             for business in ("zmart-consumer-rights","scan-water-intelligence"):
                 response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="shared-close",status="SUCCESS",summary=business,business_id=business)
                 self.assertTrue(runtime.close(response,learning=LearningIntent()).processed)
