@@ -65,6 +65,9 @@ class LearningRecoveryTests(unittest.TestCase):
             mutations=runtime.history(event_type="BIBLIA_MUTATION")
             self.assertEqual(len(mutations),1)
             self.assertEqual(mutations[0].status,"CHANGED")
+            self.assertEqual(
+                mutations[0].angel_ids,("SANGABRIEL.HOST-01.ANGEL-001",)
+            )
 
             retry=runtime.close(response,learning=intent)
             self.assertFalse(retry.processed)
@@ -124,9 +127,14 @@ class LearningRecoveryTests(unittest.TestCase):
                 len(runtime.history(event_type="ANGEL_RESPONSE",
                                     mission_id="shared-recovery-mission")),2
             )
+            mutations=runtime.history(
+                event_type="BIBLIA_MUTATION",mission_id="shared-recovery-mission"
+            )
+            self.assertEqual(len(mutations),2)
             self.assertEqual(
-                len(runtime.history(event_type="BIBLIA_MUTATION",
-                                    mission_id="shared-recovery-mission")),2
+                tuple(event.angel_ids for event in mutations),
+                (("SANGABRIEL.HOST-01.ANGEL-001",),
+                 ("SANGABRIEL.HOST-01.ANGEL-002",)),
             )
 
 
