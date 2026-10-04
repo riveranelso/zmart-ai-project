@@ -118,10 +118,10 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             object.__setattr__(response,"angel_id","  SANGABRIEL.HOST-01.ANGEL-001  ")
             object.__setattr__(response,"mission_id","  m-whitespace-response  ")
             object.__setattr__(response,"business_id","  zmart-consumer-rights  ")
-            runtime.close(response,learning=LearningIntent())
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_IDENTITY_NONCANONICAL"):
+                runtime.close(response,learning=LearningIntent())
             events=runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-whitespace-response")
-            self.assertEqual(len(events),1)
-            self.assertEqual(events[0].angel_ids,("SANGABRIEL.HOST-01.ANGEL-001",))
+            self.assertEqual(events,())
 
 
     def test_dispatched_mission_rejects_blank_response_angel_identity(self):
