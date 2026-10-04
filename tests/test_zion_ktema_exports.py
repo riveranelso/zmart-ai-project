@@ -2,10 +2,10 @@
 
 Verifies every KTEMA symbol listed for export is importable from
 ``zion_core`` and that nothing private leaves the module through the
-package surface.
+package surface. Pure unittest: CI has no pytest.
 """
 
-import pytest
+import unittest
 
 EXPECTED_SYMBOLS = [
     "KtemaError",
@@ -39,45 +39,43 @@ EXPECTED_SYMBOLS = [
 ]
 
 
-@pytest.mark.parametrize("name", EXPECTED_SYMBOLS)
-def test_ktema_symbols_importable_from_zion_core(name):
-    import zion_core
-
-    assert name in zion_core.__all__, f"{name} missing from zion_core.__all__"
-    assert callable(getattr(zion_core, name, None)) or getattr(
-        zion_core, name, None
-    ) is not None, f"{name} not accessible on zion_core"
-
-
-def test_ktema_symbols_match_module_symbols():
-    import zion_core
-    from zion_core import ktema
-
-    for name in EXPECTED_SYMBOLS:
-        assert getattr(zion_core, name, None) is getattr(
-            ktema, name, None
-        ), f"{name} does not resolve to ktema.{name}"
-
-
-def test_no_private_ktema_symbols_exported():
-    import zion_core
-
-    for name in zion_core.__all__:
-        if name.startswith("_"):
-            raise AssertionError(f"private symbol exported: {name}")
-    assert not hasattr(zion_core, "_make_resolution")
-    assert not hasattr(zion_core, "_parse_iso")
-
-
-def test_ktema_all_consistency_when_defined():
-    from zion_core import ktema
-
-    if hasattr(ktema, "__all__"):
-        assert set(ktema.__all__) == set(EXPECTED_SYMBOLS), (
-            "ktema.__all__ does not match the published KTEMA exports"
-        )
-    else:
+class KtemaExportsTests(unittest.TestCase):
+    def test_ktema_symbols_importable_from_zion_core(self):
         import zion_core
 
         for name in EXPECTED_SYMBOLS:
-            assert hasattr(zion_core, name), f"{name} not importable from zion_core"
+            with self.subTest(name=name):
+                self.assertIn(name, zion_core.__all__,
+                              f"{name} missing from zion_core.__all__")
+                self.assertIsNotNone(getattr(zion_core, name, None),
+                                     f"{name} not accessible on zion_core")
+
+    def test_ktema_symbols_match_module_symbols(self):
+        import zion_core
+        from zion_core import ktema
+
+        for name in EXPECTED_SYMBOLS:
+            with self.subTest(name=name):
+                self.assertIs(getattr(zion_core, name, None),
+                              getattr(ktema, name, None),
+                              f"{name} does not resolve to ktema.{name}")
+
+    def test_no_private_ktema_symbols_exported(self):
+        import zion_core
+
+        for name in zion_core.__all__:
+            self.assertFalse(name.startswith("_"),
+                             f"private symbol exported: {name}")
+        self.assertFalse(hasattr(zion_core, "_make_resolution"))
+        self.assertFalse(hasattr(zion_core, "_parse_iso"))
+
+    def test_ktema_all_consistency_when_defined(self):
+        from zion_core import ktema
+
+        if hasattr(ktema, "__all__"):
+            self.assertEqual(set(ktema.__all__), set(EXPECTED_SYMBOLS),
+                             "ktema.__all__ does not match the published KTEMA exports")
+
+
+if __name__ == "__main__":
+    unittest.main()
