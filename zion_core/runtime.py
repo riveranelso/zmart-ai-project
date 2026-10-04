@@ -146,6 +146,15 @@ class OmarRuntime:
                 )
                 matching=[event for event in prior if aid in event.angel_ids]
                 if matching:
+                    response_fingerprints={event.response_fingerprint for event in matching}
+                    if len(response_fingerprints)>1:
+                        raise ValueError("APOKRISIS_CONFLICTING_RESPONSE_HISTORY")
+                    response_shapes={(
+                        event.status,event.reason,event.correlation_id,event.evidence_refs,
+                        event.uncertainty_count,event.correction_count,
+                    ) for event in matching}
+                    if len(response_shapes)>1:
+                        raise ValueError("APOKRISIS_CONFLICTING_RESPONSE_HISTORY")
                     recorded=matching[-1]
                     if (recorded.response_fingerprint is not None
                             and recorded.response_fingerprint != build_apokrisis_fingerprint(response)):
