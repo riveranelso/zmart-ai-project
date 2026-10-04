@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zion_core.batch import PatternObservation, assess_pattern_reuse, pending_items, plan_batch
+from zion_core.batch import PatternObservation, assess_pattern_reuse, dispatch_pending, pending_items, plan_batch
 from zion_core.runtime import OmarRuntime
 
 
@@ -38,6 +38,30 @@ class BatchMissionTests(unittest.TestCase):
             remaining=pending_items(plan,runtime)
             self.assertEqual(tuple(item.item_key for item in remaining),("32807",))
 
+
+
+    def test_dispatch_pending_is_bounded_and_resumable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["GLOBAL.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            plan=plan_batch(batch_id="scan-zip-run",business_id="scan-water-intelligence",intent="unknown_batch_intent",requested_by="OMAR",scope="WORKFLOW",item_keys=("32744","32807","32822"))
+            first=dispatch_pending(plan,runtime,limit=2)
+            self.assertEqual(first.attempted,("32744","32807"))
+            self.assertEqual(first.remaining,("32822",))
+            second=dispatch_pending(plan,runtime,limit=2)
+            self.assertEqual(second.attempted,("32822",))
+            self.assertEqual(second.remaining,())
+            self.assertEqual(len(runtime.history(business_id="scan-water-intelligence",event_type="MISSION_DECISION")),3)
+
+    def test_dispatch_pending_rejects_invalid_limit(self):
+        plan=plan_batch(batch_id="scan-zip-run",business_id="scan-water-intelligence",intent="resolve_zip",requested_by="OMAR",scope="WORKFLOW",item_keys=("32744",))
+        with self.assertRaisesRegex(ValueError,"BATCH_LIMIT_INVALID"):
+            dispatch_pending(plan,object(),limit=0)
 
     def test_pattern_reuse_requires_repeated_same_tenant_evidence(self):
         candidate=assess_pattern_reuse((
