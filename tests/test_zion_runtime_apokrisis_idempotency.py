@@ -118,7 +118,7 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             object.__setattr__(response,"angel_id","   ")
             with self.assertRaises(ValueError):
                 runtime.close(response,learning=LearningIntent())
-            self.assertEqual(runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-blank-response-angel"),[])
+            self.assertEqual(runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-blank-response-angel"),())
 
 
     def test_prior_response_record_with_empty_angel_identity_does_not_authorize_retry(self):
