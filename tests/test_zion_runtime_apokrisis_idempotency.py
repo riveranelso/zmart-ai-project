@@ -280,6 +280,24 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent())
 
 
+    def test_single_dispatch_record_with_duplicate_commission_ids_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            aid="SANGABRIEL.HOST-01.ANGEL-001"
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="single-duplicate-commission",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="m-single-duplicate-commission",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",command="SANGABRIEL",host="SANGABRIEL.HOST-01",angel_ids=(aid,aid)))
+            response=apokrisis(angel_id=aid,mission_id="m-single-duplicate-commission",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_INVALID_COMMISSION_HISTORY"):
+                runtime.close(response,learning=LearningIntent())
+
+
     def test_dispatch_history_with_duplicate_commission_ids_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
