@@ -34,6 +34,7 @@ Production storage is intentionally not selected by this composition.
 - Multiple durable `DISPATCH` records for the same business and mission must agree on the exact commissioned ANGEL set; conflicting commission sets are an integrity conflict and fail closed.
 - Each durable `DISPATCH` commission list must contain unique ANGEL identities; duplicate commission IDs are intrinsically invalid evidence and fail closed even without a second conflicting record.
 - A durable commission list is an ordered deterministic HOST sequence (`HOST.ANGEL-001`, `HOST.ANGEL-002`, ...); reordered, skipped, foreign-prefix, or otherwise noncanonical identities are invalid commission evidence.
+- Mission retry/idempotency validates that same durable commission authority before returning `IDEMPOTENT_NOOP`; a single malformed historical `DISPATCH` cannot authorize a retry.
 - Those repeated `DISPATCH` records must also agree on the dispatch fingerprint; a changed or missing fingerprint alongside a recorded fingerprint is treated as degraded/contradictory authority and fails closed.
 - Repeated durable `DISPATCH` records must also agree on the exact command/host route; route disagreement is an integrity conflict and fails closed before accepting APOKRISIS.
 - Multiple durable `DISPATCH` records must also agree on the dispatch fingerprint; divergent fingerprints mean the mission authority changed and `close()` fails closed even when the ANGEL set is unchanged.
