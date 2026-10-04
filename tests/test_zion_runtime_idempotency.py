@@ -66,6 +66,24 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                 runtime.dispatch(dict(mission))
 
 
+    def test_retry_fails_closed_on_single_invalid_commission_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            mission={"mission_id":"retry-invalid-commission","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            from zion_core.cronicas import CronicaEvent, build_dispatch_fingerprint
+            from zion_core.persistence import CronicasJsonlSink
+            aid="SANGABRIEL.HOST-01.ANGEL-001"
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="invalid-single-decision",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-invalid-commission",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",command="SANGABRIEL",host="SANGABRIEL.HOST-01",angel_ids=(aid,aid),dispatch_fingerprint=build_dispatch_fingerprint(mission,None)))
+            with self.assertRaisesRegex(ValueError,"MISSION_INVALID_COMMISSION_HISTORY"):
+                runtime.dispatch(dict(mission))
+
+
     def test_retry_fails_closed_on_conflicting_durable_mission_decisions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
