@@ -145,6 +145,8 @@ class OmarRuntime:
                     business_id=bid,event_type="ANGEL_RESPONSE",mission_id=mid,
                 )
                 matching=[event for event in prior if aid in event.angel_ids]
+                if any(tuple(event.angel_ids)!=(aid,) for event in matching):
+                    raise ValueError("APOKRISIS_RESPONSE_IDENTITY_INVALID")
                 if matching:
                     response_fingerprints={event.response_fingerprint for event in matching}
                     if len(response_fingerprints)>1:
