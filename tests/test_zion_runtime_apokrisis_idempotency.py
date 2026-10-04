@@ -102,7 +102,7 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             runtime.close(good,learning=LearningIntent())
             from zion_core.cronicas import CronicaEvent
             from zion_core.persistence import CronicasJsonlSink
-            from zion_core.apokrisis import build_apokrisis_fingerprint
+            from zion_core.cronicas import build_apokrisis_fingerprint
             bad=apokrisis(angel_id=aid,mission_id="m-response-history",status="FAILED",summary="bad",business_id="zmart-consumer-rights",error_code="FORGED")
             CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="bad-response",occurred_at="2026-10-03T00:00:00+00:00",event_type="ANGEL_RESPONSE",mission_id="m-response-history",business_id="zmart-consumer-rights",action="APOKRISIS",reason="FORGED",angel_ids=(aid,),status="FAILED",response_fingerprint=build_apokrisis_fingerprint(bad)))
             with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_RESPONSE_HISTORY"):
