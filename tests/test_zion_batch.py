@@ -58,6 +58,44 @@ class BatchMissionTests(unittest.TestCase):
             self.assertEqual(second.remaining,())
             self.assertEqual(len(runtime.history(business_id="scan-water-intelligence",event_type="MISSION_DECISION")),3)
 
+
+    def test_dispatch_pending_isolates_one_item_failure_and_continues(self):
+        class Decision:
+            def __init__(self,key):
+                self.decision="ok:"+key
+        class Runtime:
+            def __init__(self):
+                self.done=set()
+            def history(self,*,business_id,event_type,mission_id=None):
+                if mission_id is None:
+                    return ()
+                return ("done",) if mission_id in self.done else ()
+            def dispatch(self,mission,*,security_context=None):
+                if mission["payload_ref"]=="bad":
+                    raise ValueError("ZIP_LOOKUP_FAILED")
+                self.done.add(mission["mission_id"])
+                return Decision(mission["payload_ref"])
+        runtime=Runtime()
+        plan=plan_batch(batch_id="scan-fault",business_id="scan-water-intelligence",intent="resolve_zip",requested_by="OMAR",scope="WORKFLOW",item_keys=("good-1","bad","good-2"))
+        result=dispatch_pending(plan,runtime,limit=3)
+        self.assertEqual(result.attempted,("good-1","bad","good-2"))
+        self.assertEqual(result.remaining,("bad",))
+        self.assertEqual(tuple(x.decision for x in result.decisions),("ok:good-1","ok:good-2"))
+        self.assertEqual(len(result.failures),1)
+        self.assertEqual(result.failures[0].item_key,"bad")
+        self.assertEqual(result.failures[0].error_code,"ZIP_LOOKUP_FAILED")
+
+    def test_dispatch_failure_does_not_copy_arbitrary_exception_text(self):
+        class Runtime:
+            def history(self,**kwargs):
+                return ()
+            def dispatch(self,mission,*,security_context=None):
+                raise RuntimeError("customer secret "+mission["payload_ref"],"extra")
+        plan=plan_batch(batch_id="scan-private",business_id="scan-water-intelligence",intent="resolve_zip",requested_by="OMAR",scope="WORKFLOW",item_keys=("32744",))
+        result=dispatch_pending(plan,Runtime())
+        self.assertEqual(result.failures[0].error_code,"RuntimeError")
+        self.assertNotIn("32744",result.failures[0].error_code)
+
     def test_dispatch_pending_rejects_invalid_limit(self):
         plan=plan_batch(batch_id="scan-zip-run",business_id="scan-water-intelligence",intent="resolve_zip",requested_by="OMAR",scope="WORKFLOW",item_keys=("32744",))
         with self.assertRaisesRegex(ValueError,"BATCH_LIMIT_INVALID"):
