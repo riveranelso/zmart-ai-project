@@ -72,6 +72,18 @@ class OmarRuntime:
                     commission_sets={tuple(event.angel_ids) for event in prior}
                     if len(commission_sets)>1:
                         raise ValueError("MISSION_CONFLICTING_HISTORY")
+                    for prior_event in prior:
+                        if prior_event.action=="DISPATCH":
+                            if not prior_event.angel_ids or len(prior_event.angel_ids)!=len(set(prior_event.angel_ids)):
+                                raise ValueError("MISSION_INVALID_COMMISSION_HISTORY")
+                            if not isinstance(prior_event.host,str) or not prior_event.host.strip():
+                                raise ValueError("MISSION_INVALID_COMMISSION_HISTORY")
+                            expected=tuple(
+                                f"{prior_event.host}.ANGEL-{index:03d}"
+                                for index in range(1,len(prior_event.angel_ids)+1)
+                            )
+                            if tuple(prior_event.angel_ids)!=expected:
+                                raise ValueError("MISSION_INVALID_COMMISSION_HISTORY")
                     event=prior[-1]
                     # Reusing a mission id with different routing identity is
                     # not an idempotent retry; fail closed instead of silently
