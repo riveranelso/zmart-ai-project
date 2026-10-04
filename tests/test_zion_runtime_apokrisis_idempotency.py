@@ -87,6 +87,27 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent())
 
 
+    def test_mixed_missing_response_fingerprint_history_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            dispatch=runtime.dispatch({"mission_id":"m-missing-response-fingerprint","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"})
+            aid=dispatch.decision.angels[0].angel_id
+            good=apokrisis(angel_id=aid,mission_id="m-missing-response-fingerprint",status="SUCCESS",summary="good",business_id="zmart-consumer-rights")
+            runtime.close(good,learning=LearningIntent())
+            recorded=runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-missing-response-fingerprint")[0]
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="missing-response-fingerprint",occurred_at="2026-10-03T00:00:00+00:00",event_type="ANGEL_RESPONSE",mission_id="m-missing-response-fingerprint",business_id="zmart-consumer-rights",action=recorded.action,reason=recorded.reason,angel_ids=(aid,),status=recorded.status,correlation_id=recorded.correlation_id,evidence_refs=recorded.evidence_refs,uncertainty_count=recorded.uncertainty_count,correction_count=recorded.correction_count,response_fingerprint=None))
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_RESPONSE_HISTORY"):
+                runtime.close(good,learning=LearningIntent())
+
+
     def test_conflicting_prior_response_history_fails_closed_even_when_latest_matches(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
