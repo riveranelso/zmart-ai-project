@@ -87,6 +87,26 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent())
 
 
+    def test_prior_response_record_for_multiple_angels_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            dispatch=runtime.dispatch({"mission_id":"m-multi-angel-response-record","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights","angel_count_max":2})
+            aid=dispatch.decision.angels[0].angel_id
+            other=dispatch.decision.angels[1].angel_id
+            good=apokrisis(angel_id=aid,mission_id="m-multi-angel-response-record",status="SUCCESS",summary="good",business_id="zmart-consumer-rights")
+            from zion_core.cronicas import CronicaEvent, build_apokrisis_fingerprint
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="multi-angel-response",occurred_at="2026-10-03T00:00:00+00:00",event_type="ANGEL_RESPONSE",mission_id="m-multi-angel-response-record",business_id="zmart-consumer-rights",action="APOKRISIS",reason="SUCCESS",angel_ids=(aid,other),status="SUCCESS",response_fingerprint=build_apokrisis_fingerprint(good)))
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_RESPONSE_IDENTITY_INVALID"):
+                runtime.close(good,learning=LearningIntent())
+
+
     def test_mixed_missing_response_fingerprint_history_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
