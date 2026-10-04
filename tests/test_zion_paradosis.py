@@ -33,6 +33,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_ROOT = REPO_ROOT
 
 
+def _oldest_available_sha() -> str | None:
+    """Oldest commit reachable locally, or None when there is no history
+    to diff against (e.g. CI's depth-1 shallow checkout)."""
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "rev-list", "--max-parents=0", "HEAD"],
+        capture_output=True, text=True,
+    )
+    if out.returncode != 0:
+        return None
+    lines = [l for l in out.stdout.splitlines() if l.strip()]
+    return lines[0] if lines else None
+
+
 def make_packet(**kw):
     args = dict(
         mission_id="test-mission-1",
@@ -166,10 +179,9 @@ class TestFreshness(unittest.TestCase):
         self.assertEqual(f.current_head, p.current_head)
 
     def test_stale_packet_reports_changed_files(self):  # P6
-        root_sha = subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "rev-list", "--max-parents=0", "HEAD"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip().splitlines()[0]
+        root_sha = _oldest_available_sha()
+        if root_sha is None or root_sha == repo_head(REPO_ROOT):
+            self.skipTest("no git history available for stale diff")
         old = MissionPacket(
             mission_id="m", repo="r", branch="b", current_head=root_sha,
             business_id="los-duros", brand_id="los-duros", objective="o",
