@@ -130,6 +130,15 @@ class OmarRuntime:
                 route_sets={(event.command,event.host) for event in dispatched_events}
                 if len(route_sets)>1:
                     raise ValueError("APOKRISIS_CONFLICTING_ROUTE_HISTORY")
+                commission_sets={tuple(event.angel_ids) for event in dispatched_events}
+                if len(commission_sets)>1:
+                    raise ValueError("APOKRISIS_CONFLICTING_COMMISSION_HISTORY")
+                commissioned={
+                    item for event in dispatched_events
+                    for item in event.angel_ids
+                }
+                if dispatched_events and not commissioned:
+                    raise ValueError("APOKRISIS_COMMISSION_EVIDENCE_MISSING")
                 if any(len(event.angel_ids)!=len(set(event.angel_ids)) for event in dispatched_events):
                     raise ValueError("APOKRISIS_INVALID_COMMISSION_HISTORY")
                 for event in dispatched_events:
@@ -141,15 +150,6 @@ class OmarRuntime:
                     )
                     if tuple(event.angel_ids)!=expected:
                         raise ValueError("APOKRISIS_INVALID_COMMISSION_HISTORY")
-                commission_sets={tuple(event.angel_ids) for event in dispatched_events}
-                if len(commission_sets)>1:
-                    raise ValueError("APOKRISIS_CONFLICTING_COMMISSION_HISTORY")
-                commissioned={
-                    item for event in dispatched_events
-                    for item in event.angel_ids
-                }
-                if dispatched_events and not commissioned:
-                    raise ValueError("APOKRISIS_COMMISSION_EVIDENCE_MISSING")
                 if commissioned and aid not in commissioned:
                     raise ValueError("APOKRISIS_ANGEL_NOT_COMMISSIONED")
                 prior=self.history(
