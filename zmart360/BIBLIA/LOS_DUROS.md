@@ -54,7 +54,7 @@ Purpose: prevent repeated instruction failures across content, comments, caption
 Use this when relevant to discussions about promotion, payola, Randy, Indio, or the underground era, while distinguishing Nelson's firsthand/contextual account from independently verified public facts:
 - Promotion has long been part of the genre.
 - In the earlier era, artists paid for exposure through radio, DJs, mixtapes and music websites when they could.
-- Nelson specifically identifies Coco 27, FlowHot.net and Sandungueo as examples of sites artists paid for promotion.
+- Nelson specifically identifies AKA 47, FlowHot.net and Sandungueo as examples of sites artists paid for promotion.
 - Nelson's context: when underground artists could afford radio/promotion they used it; lack of promotional money hurt many underground artists.
 - Randy is a legend, not a new artist trying to break.
 - Nelson's context: during the piracy era, Randy benefited from music being pirated/distributed widely, so some circulation happened without him having to pay those pages in the same way.
