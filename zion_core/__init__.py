@@ -130,3 +130,7 @@ __all__ += [
     "repo_head",
     "repo_branch",
 ]
+
+from .batch import BatchItem, BatchPlan, plan_batch, pending_items
+
+__all__ += ["BatchItem", "BatchPlan", "plan_batch", "pending_items"]
