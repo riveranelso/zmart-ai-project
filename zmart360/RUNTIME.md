@@ -129,3 +129,11 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - UPDATE/SUPERSEDE match complete rule lines with exact multiplicity inside the authorized business section; prefixes/substrings are not candidates.
 - Identical replacements are byte-preserving no-ops, and real replacements preserve existing line endings/final-newline state outside the replaced rule.
 - GRAPHO rejects empty, multiline, or whitespace-padded business IDs so a low-level decision cannot synthesize additional BIBLIA section headings.
+
+
+## Batch missions
+- Batch work is a thin planning layer over the existing OMAR runtime, not a second scheduler or trust system.
+- A batch binds one business_id and produces deterministic per-item mission IDs and payload_ref values, so retry/idempotency and tenant isolation remain owned by the normal runtime.
+- Batch item keys must be unique and mission identity fields cannot be overridden through defaults.
+- Checkpoint/resume is derived from durable MISSION_DECISION history: items with an existing decision are skipped by pending_items; unresolved items remain pending.
+- Batch planning does not promote retrieved patterns or external results into BIBLIA. Pattern reuse must still pass the normal HOLY GHOST / GRAPHO learning boundary.
