@@ -45,14 +45,22 @@ def norm(s):
 
 
 def corroborate(phone, enr, town):
+    """Devuelve (veredicto, razones, notas).
+
+    razones: senales que cambian el veredicto.
+    notas: contexto informativo (no cambian el veredicto). La ubicacion de la
+    API es donde se registro el numero, NO prueba de residencia: un lead puede
+    vivir en San Juan con un numero registrado en Toa Baja sin ser dudoso.
+    """
     reasons = []
+    notes = []
     valid = str(enr.get("valid", "")).lower() == "true"
     line_type = norm(enr.get("line_type", ""))
     carrier = norm(enr.get("carrier", ""))
     location = norm(enr.get("location", ""))
 
     if not valid:
-        return "descartable", ["numero invalido segun NumVerify"]
+        return "descartable", ["numero invalido segun NumVerify"], []
 
     if line_type in WEAK_LINE_TYPES:
         if line_type in ("landline",):
@@ -67,11 +75,11 @@ def corroborate(phone, enr, town):
     if not carrier:
         reasons.append("sin informacion de compania")
     elif carrier not in PR_CARRIERS:
-        reasons.append(f"compania fuera de PR o desconocida: {enr.get('carrier')}")
+        reasons.append(f"compania no registrada en PR: {enr.get('carrier')}")
 
     if town and location:
         if norm(town) != location and norm(town) not in location and location not in norm(town):
-            reasons.append(f"ubicacion del numero ({enr.get('location')}) no coincide con pueblo del lead ({town})")
+            notes.append(f"numero registrado en {enr.get('location')} (lead indica {town})")
 
     if not valid:
         verdict = "descartable"
@@ -80,7 +88,7 @@ def corroborate(phone, enr, town):
     else:
         verdict = "consistente"
         reasons.append("movil valido, compania de PR")
-    return verdict, reasons
+    return verdict, reasons, notes
 
 
 def sql_lit(v):
@@ -111,9 +119,10 @@ def main():
     results = []
     for phone, enr in enriched.items():
         c = contacts.get(phone, {})
-        verdict, reasons = corroborate(phone, enr, c.get("town", ""))
+        verdict, reasons, notes = corroborate(phone, enr, c.get("town", ""))
+        all_reasons = reasons + [f"nota: {n}" for n in notes]
         results.append({"phone": phone, "full_name": c.get("name", ""),
-                        "verdict": verdict, "reasons": " | ".join(reasons),
+                        "verdict": verdict, "reasons": " | ".join(all_reasons),
                         "carrier": enr.get("carrier", ""), "line_type": enr.get("line_type", ""),
                         "location": enr.get("location", "")})
 
