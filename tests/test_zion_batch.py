@@ -80,7 +80,7 @@ class BatchMissionTests(unittest.TestCase):
         result=dispatch_pending(plan,runtime,limit=3)
         self.assertEqual(result.attempted,("good-1","bad","good-2"))
         self.assertEqual(result.remaining,("bad",))
-        self.assertEqual(tuple(x.decision for x in result.decisions),("ok:good-1","ok:good-2"))
+        self.assertEqual(result.decisions,("ok:good-1","ok:good-2"))
         self.assertEqual(len(result.failures),1)
         self.assertEqual(result.failures[0].item_key,"bad")
         self.assertEqual(result.failures[0].error_code,"ZIP_LOOKUP_FAILED")
