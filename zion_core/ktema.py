@@ -93,6 +93,33 @@ FetchIntent, and KtemaBatchPlan.
   - plan_ktema_batch requires an explicit consumer business_id, re-validated
     through SAN PEDRO (spoofed/unknown IDs fail closed), and shares nothing
     with SCAN: no SCAN_* names, no SCAN-adapter import.
+
+Increment 4: KtemaCache -- tenant-isolated in-memory cache.
+  - KtemaCache is an explicitly injected instance: NEVER a module-global
+    singleton and NEVER module-level state. Two instances share nothing.
+  - The cache key embeds the isolation_key ("v1|isolation_key|source_id|
+    query_fingerprint|source_record_id" sha256); the isolation_key is part
+    of the key, never ambient. query_fingerprint already binds business_id
+    (it comes from the FetchIntent query), so a key is unique per
+    tenant x source x query x record.
+  - get re-validates the requesting tenant against the entry's isolation
+    key: a known key presented by the wrong tenant raises
+    KTEMA_CACHE_TENANT_MISMATCH -- fail closed, never served.
+  - Negative (NOT_FOUND) entries are TTL-bounded: put requires a configured
+    validity for the source, otherwise KTEMA_CACHE_TTL_REQUIRED. A
+    permanent negative would be an eternal NOT_FOUND -- forbidden.
+  - Expired entries are misses (None), for positives and negatives alike;
+    expired entries are lazily evicted on read.
+  - rebind_profile_for_tenant re-validates the tenant binding of a
+    (possibly deserialized) profile at consumption time: a profile whose
+    isolation_key disagrees with the requesting tenant raises
+    KTEMA_PROFILE_TENANT_MISMATCH. Tenant binding is re-checked on every
+    consumption, never inherited from the stored object.
+  - The cache performs no network I/O and builds no URLs; it stores
+    already-validated PropertyProfile objects. Owner PII profiles are
+    stored only when already authorized upstream (put re-validates the
+    profile structurally with the owner gate treated as pre-authorized:
+    the authorization decision happens at intake/normalize, never here).
 """
 from __future__ import annotations
 
@@ -101,7 +128,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -1097,3 +1124,260 @@ def plan_ktema_batch(
         isolation_key=context.isolation_key,
         items=tuple(normalized),
     )
+
+
+# ---------------------------------------------------------------------------
+# Increment 4: tenant-isolated cache (KtemaCache)
+# ---------------------------------------------------------------------------
+#
+# In-memory cache for PropertyProfile objects with TOTAL multi-tenant
+# isolation. Explicit instance injection only: KtemaCache is constructed by
+# the caller and passed where needed; there is deliberately NO module-level
+# singleton and NO module-level entry store, so two instances can never
+# observe each other's entries.
+
+#: Cache-key material version. Bumped only if the key composition changes;
+#: old keys never collide with new ones across versions.
+KTEMA_CACHE_KEY_VERSION = "v1"
+
+#: Default source validity (days) for cached entries. Only the fixture
+#: source is published, so only it gets a default.
+DEFAULT_CACHE_VALIDITY_DAYS = {FIXTURE_SOURCE_ID: 7}
+
+
+def _require_isolation_key(value: object) -> str:
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise KtemaError("KTEMA_BUSINESS_REQUIRED")
+    return value
+
+
+def _require_source_id(value: object) -> str:
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise KtemaError("KTEMA_CACHE_SOURCE_INVALID")
+    return value
+
+
+def _require_cache_key(value: object) -> str:
+    if not isinstance(value, str) or not _FINGERPRINT_RE.fullmatch(value):
+        raise KtemaError("KTEMA_CACHE_KEY_INVALID")
+    return value
+
+
+def _require_fingerprint(value: object) -> str:
+    if not isinstance(value, str) or not _FINGERPRINT_RE.fullmatch(value):
+        raise KtemaError("KTEMA_FINGERPRINT_INVALID")
+    return value
+
+
+def build_ktema_cache_key(
+    isolation_key: str,
+    source_id: str,
+    query_fingerprint: str,
+    source_record_id: str,
+) -> str:
+    """Build the tenant-isolated cache key for one profile lookup.
+
+    key = sha256("v1|"+isolation_key+"|"+source_id+"|"+query_fingerprint
+    +"|"+source_record_id) in hex. The isolation_key is PART of the key,
+    never ambient: two tenants querying the same parcel through the same
+    source get different keys even if one tenant learns the other's key
+    material. query_fingerprint already binds business_id (it is produced
+    by query_fingerprint()/FetchIntent from the normalized query).
+    """
+    for value in (isolation_key, source_id, source_record_id):
+        if not isinstance(value, str) or not value.strip() or value != value.strip():
+            raise KtemaError("KTEMA_CACHE_KEY_INPUT_INVALID")
+    _require_fingerprint(query_fingerprint)
+    material = "|".join(
+        (KTEMA_CACHE_KEY_VERSION, isolation_key, source_id, query_fingerprint, source_record_id)
+    )
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class _KtemaCacheEntry:
+    """One stored cache entry. Private: never leaves the cache except as
+    the profile it carries (via get), after tenant re-validation."""
+
+    profile: PropertyProfile
+    isolation_key: str
+    source_id: str
+    stored_at_iso: str
+    expires_at_iso: str | None
+
+
+class KtemaCache:
+    """In-memory, tenant-isolated cache for PropertyProfile objects.
+
+    Explicit instance: construct one and inject it; instances never share
+    entries. ``validity_days`` maps source_id -> days of validity for
+    cached entries (default: {"fixture": 7}); ``clock`` is a callable
+    returning ISO "now" (for deterministic tests; default: real UTC time).
+
+    No network, no URLs, no PII interpolation: the cache stores
+    already-validated profiles only.
+    """
+
+    def __init__(
+        self,
+        *,
+        validity_days: dict[str, int] | None = None,
+        clock=None,
+    ) -> None:
+        if validity_days is None:
+            validity_days = dict(DEFAULT_CACHE_VALIDITY_DAYS)
+        if not isinstance(validity_days, dict):
+            raise KtemaError("KTEMA_CACHE_VALIDITY_INVALID")
+        parsed: dict[str, float] = {}
+        for source_id, days in validity_days.items():
+            if (
+                not isinstance(source_id, str)
+                or not source_id.strip()
+                or source_id != source_id.strip()
+            ):
+                raise KtemaError("KTEMA_CACHE_VALIDITY_INVALID")
+            if (
+                isinstance(days, bool)
+                or not isinstance(days, (int, float))
+                or not days > 0
+            ):
+                raise KtemaError("KTEMA_CACHE_VALIDITY_INVALID")
+            parsed[source_id] = float(days)
+        self._validity_days = parsed
+        if clock is None:
+            clock = _now_iso
+        if not callable(clock):
+            raise KtemaError("KTEMA_CACHE_CLOCK_INVALID")
+        self._clock = clock
+        # Instance-level store only. No module/class-level state: two
+        # KtemaCache() instances never see each other's entries.
+        self._entries: dict[str, _KtemaCacheEntry] = {}
+
+    def _now(self, now_iso: str | None) -> datetime:
+        if now_iso is not None:
+            parsed = _parse_iso(now_iso)
+            if parsed is None:
+                raise KtemaError("KTEMA_CACHE_TIME_INVALID")
+        else:
+            parsed = _parse_iso(self._clock())
+            if parsed is None:
+                # A clock that does not return ISO time fails closed.
+                raise KtemaError("KTEMA_CACHE_TIME_INVALID")
+        if parsed.tzinfo is None:
+            # Same convention as is_fresh: naive ISO means UTC.
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
+
+    def put(
+        self,
+        *,
+        isolation_key: str,
+        source_id: str,
+        query_fingerprint: str,
+        source_record_id: str,
+        profile: PropertyProfile,
+        now_iso: str | None = None,
+    ) -> str:
+        """Store a profile under its tenant-isolated key. Returns the key.
+
+        The profile is structurally re-validated (owner gate treated as
+        pre-authorized: profiles carrying owner PII must have been
+        authorized upstream at intake/normalize -- the cache never makes
+        that authorization decision) and must already be bound to the same
+        isolation_key it is stored under (KTEMA_CACHE_PROFILE_TENANT_MISMATCH
+        otherwise -- binding bugs fail closed at store time).
+
+        Negative (NOT_FOUND) entries REQUIRE a configured validity for the
+        source: a permanent negative would be an eternal NOT_FOUND --
+        forbidden. Missing validity raises KTEMA_CACHE_TTL_REQUIRED.
+        Positive entries use the configured validity when present; without
+        one they carry no expiry and live until invalidated.
+        """
+        isolation_key = _require_isolation_key(isolation_key)
+        source_id = _require_source_id(source_id)
+        _require_fingerprint(query_fingerprint)
+        if not isinstance(profile, PropertyProfile):
+            raise KtemaError("KTEMA_PROFILE_INVALID")
+        # Structural re-validation; the owner-authorization decision lives
+        # upstream (intake/normalize), never in the cache.
+        profile = validate_property_profile(profile, owner_authorized=True)
+        if profile.isolation_key != isolation_key:
+            raise KtemaError("KTEMA_CACHE_PROFILE_TENANT_MISMATCH")
+        key = build_ktema_cache_key(
+            isolation_key, source_id, query_fingerprint, source_record_id
+        )
+        now = self._now(now_iso)
+        ttl_days = self._validity_days.get(source_id)
+        if profile.verification_status == NOT_FOUND and ttl_days is None:
+            raise KtemaError(f"KTEMA_CACHE_TTL_REQUIRED:source_id={source_id}")
+        expires_at_iso: str | None = None
+        if ttl_days is not None:
+            # now is always tz-aware UTC (see _now).
+            expires_at_iso = (now + timedelta(days=ttl_days)).isoformat()
+        self._entries[key] = _KtemaCacheEntry(
+            profile=profile,
+            isolation_key=isolation_key,
+            source_id=source_id,
+            # Derived from the single parsed "now" above: one clock read,
+            # no drift between expiry arithmetic and the stored timestamp.
+            stored_at_iso=now.isoformat(),
+            expires_at_iso=expires_at_iso,
+        )
+        return key
+
+    def get(
+        self,
+        key: str,
+        *,
+        requesting_isolation_key: str,
+        now_iso: str | None = None,
+    ) -> PropertyProfile | None:
+        """Return the cached profile for key, or None on a miss.
+
+        Fail closed on tenant mismatch: if the requesting tenant differs
+        from the entry's isolation_key, KTEMA_CACHE_TENANT_MISMATCH is
+        raised even when the requester knows the exact key.
+        Expired entries are misses (None) -- for positives and negatives
+        alike -- and are lazily evicted on read. A missing key is a miss.
+        """
+        _require_cache_key(key)
+        requesting_isolation_key = _require_isolation_key(requesting_isolation_key)
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        if entry.isolation_key != requesting_isolation_key:
+            raise KtemaError("KTEMA_CACHE_TENANT_MISMATCH")
+        if entry.expires_at_iso is not None:
+            expires_at = _parse_iso(entry.expires_at_iso)
+            if expires_at is None:
+                # Stored by put(); an unparseable stored expiry is an
+                # internal inconsistency -- fail closed, never serve.
+                raise KtemaError("KTEMA_CACHE_TIME_INVALID")
+            if self._now(now_iso) >= expires_at:
+                del self._entries[key]
+                return None
+        return entry.profile
+
+    def invalidate(self, key: str) -> bool:
+        """Explicitly drop a cached entry. True if one was removed."""
+        _require_cache_key(key)
+        return self._entries.pop(key, None) is not None
+
+
+def rebind_profile_for_tenant(
+    profile: PropertyProfile, requesting_isolation_key: str
+) -> PropertyProfile:
+    """Re-validate a (possibly deserialized) profile's tenant binding.
+
+    Returns the profile unchanged when its isolation_key matches the
+    requesting tenant; raises KTEMA_PROFILE_TENANT_MISMATCH otherwise.
+    Tenant binding is a property of the consumption context: it is
+    re-checked on EVERY consumption and never inherited from the object
+    that arrived (cache hit, queue message, deserialized payload).
+    """
+    if not isinstance(profile, PropertyProfile):
+        raise KtemaError("KTEMA_PROFILE_INVALID")
+    requesting_isolation_key = _require_isolation_key(requesting_isolation_key)
+    if profile.isolation_key != requesting_isolation_key:
+        raise KtemaError("KTEMA_PROFILE_TENANT_MISMATCH")
+    return profile
