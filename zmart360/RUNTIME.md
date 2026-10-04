@@ -141,3 +141,10 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - batch_status reports total, durable decided count, pending count, and counts by decision action. It intentionally excludes mission payload contents so operational progress can be inspected without exposing batch data.
 - Batch planning does not promote retrieved patterns or external results into BIBLIA. Pattern reuse must still pass the normal HOLY GHOST / GRAPHO learning boundary.
 - Repeated batch observations may be aggregated into a PatternCandidate only within one business and one pattern key. Conflicting outcomes remain non-reusable, and even repeated consistent evidence stays review-required rather than becoming authority automatically.
+
+### SCAN ZIP adapter
+- SCAN ZIP batches are fixed to business scan-water-intelligence and intent resolve_water_system_zip.
+- Each item key is a canonical five-digit ZIP. Invalid ZIPs fail before dispatch.
+- Resolver outputs use RESOLVED, NEEDS_MORE_LOCATION, NO_ACTIVE_CWS, or REVIEW_REQUIRED.
+- RESOLVED requires a canonical state-prefixed PWSID plus evidence. Non-resolved states cannot carry a PWSID, preventing an ambiguous ZIP from being persisted as a guessed system.
+- Confidence is bounded from 0 to 1 and evidence references are deduplicated. External evidence remains evidence, not authority.
