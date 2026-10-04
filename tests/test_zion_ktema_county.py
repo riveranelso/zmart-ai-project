@@ -324,3 +324,65 @@ class KtemaCountyResolutionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KtemaBrandAndTypoTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.fixture_table = _write_table(
+            {SINGLE_ZIP: ["Orange"], MULTI_ZIP: ["Orange", "Seminole"]},
+            self.tmp.name,
+        )
+
+    """P2-4: brand IDs are not business IDs; typos inherit nothing.
+
+    sanpedro_resolve is an exact dict lookup: "SCAN"/"scan" are not
+    registered businesses and a typo near a canonical ID gets its own
+    lookup -- never a canonical isolation_key.
+    """
+
+    def test_brand_ids_fail_closed(self):
+        for brand in ("SCAN", "scan"):
+            with self.subTest(brand=brand):
+                with self.assertRaisesRegex(ValueError, "KTEMA_BUSINESS_INVALID"):
+                    resolve_county(
+                        _query(business_id=brand, zip=SINGLE_ZIP),
+                        table_path=self.fixture_table,
+                    )
+
+    def test_typo_business_does_not_inherit_canonical(self):
+        with self.assertRaisesRegex(ValueError, "KTEMA_BUSINESS_INVALID"):
+            resolve_county(
+                _query(business_id="scan-water-inteligence", zip=SINGLE_ZIP),
+                table_path=self.fixture_table,
+            )
+
+
+class KtemaOutOfStateCoordinatesTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.fixture_table = _write_table(
+            {SINGLE_ZIP: ["Orange"], MULTI_ZIP: ["Orange", "Seminole"]},
+            self.tmp.name,
+        )
+
+    """P2-4: coordinates outside FL resolve INCONCLUSIVE with no lookup.
+
+    Increment 1 embeds no bounding-box geometry: any coordinate pair --
+    inside or outside FL -- resolves INCONCLUSIVE, so an out-of-state
+    point can never be guessed into a county.
+    """
+
+    def test_coordinates_outside_fl_are_inconclusive(self):
+        # Georgia (north of FL) and the Gulf (west of FL).
+        for latitude, longitude in ((31.5, -84.0), (28.0, -84.5)):
+            with self.subTest(latitude=latitude, longitude=longitude):
+                result = resolve_county(
+                    _query(latitude=latitude, longitude=longitude),
+                    table_path=self.fixture_table,
+                )
+                self.assertEqual(result.status, INCONCLUSIVE)
+                self.assertIsNone(result.county)
+                self.assertEqual(result.reason, "KTEMA_COORDS_GEOMETRY_NOT_EMBEDDED")

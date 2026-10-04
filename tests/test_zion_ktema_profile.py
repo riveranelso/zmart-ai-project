@@ -272,3 +272,75 @@ class KtemaContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KtemaScanPlaceholderTests(unittest.TestCase):
+    """P1-3: the future SCAN water fields are None placeholders only.
+
+    SCAN is NOT implemented in ktema: any value in these fields is
+    contraband and fails closed with KTEMA_SCAN_FIELD_UNIMPLEMENTED.
+    """
+
+    def test_scan_fields_with_values_fail_closed(self):
+        cases = {
+            "water_source": "ground",
+            "pwsid": "FL1234567",
+            "utility": "Orlando Utilities Commission (fixture)",
+            "service_area": "SA-1 (fixture)",
+            "well_probability": 0.7,
+            "permit_intelligence": "none-yet (fixture)",
+        }
+        for field, value in cases.items():
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(
+                    ValueError, r"^KTEMA_SCAN_FIELD_UNIMPLEMENTED"
+                ):
+                    validate_property_profile(_base_profile(**{field: value}))
+
+    def test_scan_fields_none_still_allowed(self):
+        result = validate_property_profile(_base_profile())
+        for field in (
+            "water_source",
+            "pwsid",
+            "utility",
+            "service_area",
+            "well_probability",
+            "permit_intelligence",
+        ):
+            self.assertIsNone(getattr(result, field))
+
+
+class KtemaTimeInversionMixedOffsetTests(unittest.TestCase):
+    """P1-2: time-inversion compares instants, not strings.
+
+    "2026-10-04T08:00:00+00:00" sorts AFTER "2026-10-04T03:30:00-05:00"
+    lexicographically, but 08:00 UTC is EARLIER than 08:30 UTC. The gate
+    must parse both timestamps to aware datetimes. Unparseable timestamps
+    fail closed with KTEMA_PROVENANCE_TIME_INVALID, never a raw TypeError.
+    """
+
+    def test_mixed_offset_inversion_detected(self):
+        profile = _base_profile(
+            source_updated_at="2026-10-04T03:30:00-05:00",  # 08:30 UTC
+            retrieved_at="2026-10-04T08:00:00+00:00",  # 08:00 UTC, earlier
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"^KTEMA_PROVENANCE_TIME_INVERSION"
+        ):
+            validate_property_profile(profile)
+
+    def test_mixed_offset_valid_order_passes(self):
+        profile = _base_profile(
+            source_updated_at="2026-10-04T03:30:00-05:00",  # 08:30 UTC
+            retrieved_at="2026-10-04T09:00:00+00:00",  # 09:00 UTC, later
+        )
+        result = validate_property_profile(profile)
+        self.assertEqual(result.retrieved_at, "2026-10-04T09:00:00+00:00")
+
+    def test_unparseable_timestamps_fail_closed_without_raw_typeerror(self):
+        profile = _base_profile(
+            source_updated_at="not-a-timestamp",
+            retrieved_at="2026-10-04T08:00:00+00:00",
+        )
+        with self.assertRaisesRegex(ValueError, r"^KTEMA_PROVENANCE_TIME_INVALID"):
+            validate_property_profile(profile)

@@ -234,7 +234,9 @@ class FixtureNormalizeTests(unittest.TestCase):
         self.assertEqual(profile.source_record_id, PARCEL_ID)
         self.assertEqual(profile.source_updated_at, SOURCE_UPDATED_AT)
         self.assertEqual(profile.retrieved_at, RETRIEVED_AT)
-        self.assertTrue(profile.raw_reference.startswith("fixture://fixture/"))
+        self.assertTrue(profile.raw_reference.startswith("fixture://ref-"))
+        # The record id never appears in clear in the generated pointer.
+        self.assertNotIn(PARCEL_ID, profile.raw_reference)
         self.assertEqual(profile.isolation_key, ISOLATION_KEY)
         self.assertEqual(profile.attempted_sources, (FIXTURE_SOURCE_ID,))
         self.assertTrue(profile.property_exists)
@@ -352,3 +354,111 @@ class BatchPlanTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FixtureNormalizeBoundaryTests(unittest.TestCase):
+    """P1-1 / P1-4: normalize boundary validation and opaque pointers."""
+
+    def setUp(self):
+        self.source = FixturePropertySource({PARCEL_ID: _good_record()})
+        self.query = _query()
+
+    def test_retrieved_at_int_is_malformed(self):
+        # P1-1: a non-string retrieved_at (e.g. a raw int) used to escape
+        # as a raw TypeError from the lexicographic time comparison.
+        record = dict(_good_record(), retrieved_at=12345)
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_ADAPTER_RESPONSE_MALFORMED"
+        ):
+            self.source.normalize(record, self.query, ISOLATION_KEY)
+
+    def test_retrieved_at_non_iso_string_is_malformed(self):
+        record = dict(_good_record(), retrieved_at="yesterday-ish")
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_ADAPTER_RESPONSE_MALFORMED"
+        ):
+            self.source.normalize(record, self.query, ISOLATION_KEY)
+
+    def test_missing_retrieved_at_defaults_to_now(self):
+        record = {k: v for k, v in _good_record().items() if k != "retrieved_at"}
+        profile = self.source.normalize(record, self.query, ISOLATION_KEY)
+        self.assertIsNotNone(ktema._parse_iso(profile.retrieved_at))
+
+    def test_supplied_raw_reference_used_verbatim(self):
+        # P1-4: a source-provided pointer is opaque to the adapter and is
+        # used exactly as given -- never rebuilt or interpolated.
+        opaque = "source://opaque-fixture-pointer-xyz"
+        record = dict(_good_record(), raw_reference=opaque)
+        profile = self.source.normalize(record, self.query, ISOLATION_KEY)
+        self.assertEqual(profile.raw_reference, opaque)
+
+    def test_generated_raw_reference_never_carries_record_id(self):
+        # P1-4: with no source-provided pointer, the surrogate is a
+        # sha256-derived digest -- the record id NEVER appears in clear.
+        pii_id = "PA-12345-OWNER-Jane-Doe-Fixture"
+        record = dict(_good_record(), source_record_id=pii_id)
+        profile = self.source.normalize(record, self.query, ISOLATION_KEY)
+        self.assertEqual(profile.source_record_id, pii_id)
+        self.assertTrue(profile.raw_reference.startswith("fixture://ref-"))
+        self.assertNotIn(pii_id, profile.raw_reference)
+        self.assertNotIn("Jane-Doe-Fixture", profile.raw_reference)
+
+
+class FetchIntentGateTests(unittest.TestCase):
+    """P2-1 / P2-3: the descriptor gate lives on the dataclass itself.
+
+    __post_init__ validates the descriptor scheme, so direct construction
+    cannot bypass the gate; and scheme validation (not substring matching)
+    means a parcel_id that happens to contain "http" still produces a
+    valid intent.
+    """
+
+    def _intent(self, **overrides):
+        params = dict(
+            source_id=FIXTURE_SOURCE_ID,
+            operation=OPERATION_PARCEL_LOOKUP,
+            target_descriptor=f"fixture://{FIXTURE_SOURCE_ID}/PA-1",
+            query_fingerprint="0" * 64,
+            requested_at_iso="2026-10-04T10:00:00+00:00",
+        )
+        params.update(overrides)
+        return FetchIntent(**params)
+
+    def test_direct_construction_rejects_url_descriptor(self):
+        for bad in ("https://evil.example/payload", "http://evil.example/", "gopher://x"):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(
+                    KtemaError, r"^KTEMA_INTENT_DESCRIPTOR_FORBIDDEN"
+                ):
+                    self._intent(target_descriptor=bad)
+
+    def test_parcel_id_containing_http_still_builds_intent(self):
+        source = FixturePropertySource({})
+        intent = source.fetch_intent(_query(parcel_id="ABCHTTP-1"))
+        self.assertTrue(intent.target_descriptor.startswith("fixture://"))
+
+    def test_descriptor_from_undeclared_scheme_rejected(self):
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_INTENT_DESCRIPTOR_FORBIDDEN"
+        ):
+            self._intent(source_id="fixture", target_descriptor="other://fixture/x")
+
+
+class BatchPlanCoordinateTests(unittest.TestCase):
+    """P2-2: batch planning validates coordinates before fingerprinting."""
+
+    def test_batch_rejects_non_numeric_coordinates(self):
+        # The fingerprint path calls float(): a non-numeric coordinate
+        # must fail closed with KTEMA_* instead of a raw ValueError.
+        items = [
+            PropertyQuery(business_id="los-duros", latitude="abc", longitude=-81.0)
+        ]
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_QUERY_SIGNAL_INVALID"):
+            plan_ktema_batch(items, "batch-1", "los-duros")
+
+    def test_batch_accepts_numeric_coordinates(self):
+        items = [
+            PropertyQuery(business_id="los-duros", latitude=28.5383, longitude=-81.3792)
+        ]
+        plan = plan_ktema_batch(items, "batch-1", "los-duros")
+        self.assertEqual(plan.items[0].query.latitude, 28.5383)

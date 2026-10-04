@@ -116,10 +116,11 @@ Increment 4: KtemaCache -- tenant-isolated in-memory cache.
     KTEMA_PROFILE_TENANT_MISMATCH. Tenant binding is re-checked on every
     consumption, never inherited from the stored object.
   - The cache performs no network I/O and builds no URLs; it stores
-    already-validated PropertyProfile objects. Owner PII profiles are
-    stored only when already authorized upstream (put re-validates the
-    profile structurally with the owner gate treated as pre-authorized:
-    the authorization decision happens at intake/normalize, never here).
+    already-validated PropertyProfile objects. The owner gate is never
+    dispensed at store time: put() fails closed by default and only a
+    caller holding a REAL upstream authorization passes
+    owner_authorized=True explicitly (the authorization decision happens
+    at intake/normalize, never in the cache).
 """
 from __future__ import annotations
 
@@ -519,7 +520,14 @@ def validate_property_profile(
     - VERIFIED without complete provenance (source, source_record_id)
       -> KTEMA_PROVENANCE_SOURCE_REQUIRED.
     - retrieved_at earlier than source_updated_at
-      -> KTEMA_PROVENANCE_TIME_INVERSION (compared when both present).
+      -> KTEMA_PROVENANCE_TIME_INVERSION (both parsed to aware datetimes
+      and compared as instants, never as strings -- mixed offsets compare
+      by absolute time). Unparseable timestamps fail closed with
+      KTEMA_PROVENANCE_TIME_INVALID, never a raw TypeError.
+    - Any future SCAN water field (water_source, pwsid, utility,
+      service_area, well_probability, permit_intelligence) carrying a
+      value -> KTEMA_SCAN_FIELD_UNIMPLEMENTED. They exist as None
+      placeholders only; SCAN is NOT implemented here.
     - owner present without owner_authorized=True
       -> KTEMA_OWNER_UNAUTHORIZED (fail closed, never silently dropped).
       With owner_authorized=True the owner value is preserved.
@@ -528,6 +536,19 @@ def validate_property_profile(
     """
     if not isinstance(profile, PropertyProfile):
         raise KtemaError("KTEMA_PROFILE_INVALID")
+
+    for field_name in (
+        "water_source",
+        "pwsid",
+        "utility",
+        "service_area",
+        "well_probability",
+        "permit_intelligence",
+    ):
+        if getattr(profile, field_name) is not None:
+            # SCAN is NOT implemented here: these fields are None
+            # placeholders only, so any value is contraband -- fail closed.
+            raise KtemaError(f"KTEMA_SCAN_FIELD_UNIMPLEMENTED:{field_name}")
 
     status = profile.verification_status
     if status is None or (isinstance(status, str) and not status.strip()):
@@ -545,9 +566,19 @@ def validate_property_profile(
             raise KtemaError("KTEMA_PROVENANCE_SOURCE_REQUIRED")
 
     if _present(profile.source_updated_at) and _present(profile.retrieved_at):
-        # ISO 8601 strings compare lexicographically under a single ISO
-        # profile; both timestamps must come from the same source clock.
-        if profile.retrieved_at < profile.source_updated_at:
+        # Compare as instants, not strings: mixed ISO offsets (e.g.
+        # "-05:00" vs "+00:00") break lexicographic ordering.
+        updated_at = _parse_iso(profile.source_updated_at)
+        retrieved_at = _parse_iso(profile.retrieved_at)
+        if updated_at is None or retrieved_at is None:
+            # Fail closed on format, never a raw TypeError from mixed
+            # naive/aware or non-ISO values.
+            raise KtemaError("KTEMA_PROVENANCE_TIME_INVALID")
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        if retrieved_at.tzinfo is None:
+            retrieved_at = retrieved_at.replace(tzinfo=timezone.utc)
+        if retrieved_at < updated_at:
             raise KtemaError("KTEMA_PROVENANCE_TIME_INVERSION")
 
     if not isinstance(profile.isolation_key, str) or not profile.isolation_key.strip():
@@ -666,7 +697,12 @@ class FetchIntent:
 
     target_descriptor describes the lookup target WITHOUT building a URL
     (e.g. "fixture://fixture/<parcel_id>"); the module never constructs
-    URLs, so a descriptor containing "http" is rejected at construction.
+    URLs. The gate lives in __post_init__ (never in a factory) so direct
+    construction cannot bypass it: the descriptor MUST use an allowed
+    scheme -- the "fixture://" scheme or the declaring source's own
+    source_id as scheme. Scheme validation (not substring matching) means
+    a parcel_id that happens to contain "http" still produces a valid
+    intent while a real URL is rejected.
     query_fingerprint is the sha256 of the normalized query, for cache keys.
     """
 
@@ -675,6 +711,28 @@ class FetchIntent:
     target_descriptor: str
     query_fingerprint: str
     requested_at_iso: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.source_id, str) or not self.source_id.strip() or self.source_id != self.source_id.strip():
+            raise KtemaError("KTEMA_INTENT_SOURCE_REQUIRED")
+        if not isinstance(self.operation, str) or not self.operation.strip() or self.operation != self.operation.strip():
+            raise KtemaError("KTEMA_INTENT_OPERATION_REQUIRED")
+        if (
+            not isinstance(self.target_descriptor, str)
+            or not self.target_descriptor.strip()
+            or self.target_descriptor != self.target_descriptor.strip()
+        ):
+            raise KtemaError("KTEMA_INTENT_DESCRIPTOR_REQUIRED")
+        allowed_schemes = (f"{self.source_id}://", "fixture://")
+        if not self.target_descriptor.startswith(allowed_schemes):
+            # Intent only: KTEMA never builds URLs. A descriptor with any
+            # other scheme means a transport concern leaked into the
+            # adapter -- reject.
+            raise KtemaError("KTEMA_INTENT_DESCRIPTOR_FORBIDDEN")
+        if not isinstance(self.query_fingerprint, str) or not _FINGERPRINT_RE.fullmatch(self.query_fingerprint):
+            raise KtemaError("KTEMA_FINGERPRINT_INVALID")
+        if _parse_iso(self.requested_at_iso) is None:
+            raise KtemaError("KTEMA_INTENT_TIME_INVALID")
 
 
 def _now_iso() -> str:
@@ -689,24 +747,9 @@ def _make_fetch_intent(
     query_fingerprint: str,
     requested_at_iso: str,
 ) -> FetchIntent:
-    if not isinstance(source_id, str) or not source_id.strip() or source_id != source_id.strip():
-        raise KtemaError("KTEMA_INTENT_SOURCE_REQUIRED")
-    if not isinstance(operation, str) or not operation.strip() or operation != operation.strip():
-        raise KtemaError("KTEMA_INTENT_OPERATION_REQUIRED")
-    if (
-        not isinstance(target_descriptor, str)
-        or not target_descriptor.strip()
-        or target_descriptor != target_descriptor.strip()
-    ):
-        raise KtemaError("KTEMA_INTENT_DESCRIPTOR_REQUIRED")
-    if "http" in target_descriptor.lower():
-        # Intent only: KTEMA never builds URLs. A descriptor carrying one
-        # means a transport concern leaked into the adapter -- reject.
-        raise KtemaError("KTEMA_INTENT_DESCRIPTOR_FORBIDDEN")
-    if not isinstance(query_fingerprint, str) or not _FINGERPRINT_RE.fullmatch(query_fingerprint):
-        raise KtemaError("KTEMA_FINGERPRINT_INVALID")
-    if _parse_iso(requested_at_iso) is None:
-        raise KtemaError("KTEMA_INTENT_TIME_INVALID")
+    # Intent is a value object: all field validation (including the
+    # target_descriptor scheme gate) lives in FetchIntent.__post_init__,
+    # so constructing the dataclass directly can never bypass it.
     return FetchIntent(
         source_id=source_id,
         operation=operation,
@@ -990,9 +1033,39 @@ class FixturePropertySource:
         source_updated_at = record.get("source_updated_at")
         if source_updated_at is not None and _parse_iso(source_updated_at) is None:
             raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:source_updated_at-not-iso")
-        retrieved_at = record.get("retrieved_at") or _now_iso()
+        raw_retrieved_at = record.get("retrieved_at")
+        if not _present(raw_retrieved_at):
+            # Absent/blank retrieval timestamp: the transport handed the
+            # record to ZION now.
+            retrieved_at = _now_iso()
+        elif _parse_iso(raw_retrieved_at) is None:
+            # A non-ISO retrieved_at (e.g. a raw int) is a malformed
+            # adapter response -- rejected at the boundary, never a raw
+            # TypeError downstream.
+            raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:retrieved_at-not-iso")
+        else:
+            retrieved_at = (
+                raw_retrieved_at.strip()
+                if isinstance(raw_retrieved_at, str)
+                else raw_retrieved_at
+            )
 
         record_id = source_record_id.strip()
+        provided_reference = record.get("raw_reference")
+        if isinstance(provided_reference, str) and provided_reference.strip():
+            # Opaque retrieval pointer OWNED BY THE SOURCE: used verbatim,
+            # never rebuilt or interpolated.
+            raw_reference = provided_reference
+        else:
+            # Deterministic surrogate pointer: sha256(source_id |
+            # source_record_id), first 16 hex chars. The record id NEVER
+            # appears in clear -- the docstring contract ("NEVER
+            # constructed by interpolating PII") holds even when the
+            # source ships PII inside source_record_id.
+            digest = hashlib.sha256(
+                f"{FIXTURE_SOURCE_ID}|{record_id}".encode("utf-8")
+            ).hexdigest()[:16]
+            raw_reference = f"fixture://ref-{digest}"
         params = self._profile_base(query, isolation_key)
         params.update(
             county=str(record.get("county") or "").strip(),
@@ -1014,9 +1087,10 @@ class FixturePropertySource:
             confidence=1.0,
             verification_status=VERIFIED,
             # The fixture record always uses source_id "fixture", whatever
-            # the injected record claims; raw_reference is the opaque
-            # fixture pointer, never PII-interpolated.
-            raw_reference=f"fixture://{FIXTURE_SOURCE_ID}/{record_id}",
+            # the injected record claims. raw_reference is an opaque
+            # pointer: verbatim when the source provides one, otherwise a
+            # sha256-derived surrogate -- NEVER interpolated PII.
+            raw_reference=raw_reference,
             property_exists=True,
             reason="KTEMA_FIXTURE_MATCH",
         )
@@ -1072,6 +1146,18 @@ def _normalize_batch_query(query: PropertyQuery, default_business_id: str) -> Pr
         raise KtemaError(
             f"KTEMA_BATCH_BUSINESS_MISMATCH:item={business_id}:batch={default_business_id}"
         )
+    latitude = query.latitude
+    longitude = query.longitude
+    if latitude is not None or longitude is not None:
+        # Coordinates must be numeric BEFORE fingerprinting: the
+        # fingerprint path calls float(), which would otherwise leak a raw
+        # ValueError. (Pair completeness is resolve_county's job; here only
+        # the numeric type is enforced.)
+        for value in (latitude, longitude):
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise KtemaError("KTEMA_QUERY_SIGNAL_INVALID")
     return PropertyQuery(
         business_id=business_id,
         zip=_clean(query.zip),
@@ -1276,16 +1362,21 @@ class KtemaCache:
         query_fingerprint: str,
         source_record_id: str,
         profile: PropertyProfile,
+        owner_authorized: bool = False,
         now_iso: str | None = None,
     ) -> str:
         """Store a profile under its tenant-isolated key. Returns the key.
 
-        The profile is structurally re-validated (owner gate treated as
-        pre-authorized: profiles carrying owner PII must have been
-        authorized upstream at intake/normalize -- the cache never makes
-        that authorization decision) and must already be bound to the same
-        isolation_key it is stored under (KTEMA_CACHE_PROFILE_TENANT_MISMATCH
-        otherwise -- binding bugs fail closed at store time).
+        The profile is structurally re-validated. The owner gate is NEVER
+        dispensed here: ``owner_authorized`` defaults to False (fail
+        closed), and a profile carrying owner PII with the default raises
+        KTEMA_OWNER_UNAUTHORIZED. A caller that holds a REAL upstream
+        authorization (the decision lives at intake/normalize, never in
+        the cache) passes ``owner_authorized=True`` explicitly.
+
+        The profile must already be bound to the same isolation_key it is
+        stored under (KTEMA_CACHE_PROFILE_TENANT_MISMATCH otherwise --
+        binding bugs fail closed at store time).
 
         Negative (NOT_FOUND) entries REQUIRE a configured validity for the
         source: a permanent negative would be an eternal NOT_FOUND --
@@ -1298,9 +1389,12 @@ class KtemaCache:
         _require_fingerprint(query_fingerprint)
         if not isinstance(profile, PropertyProfile):
             raise KtemaError("KTEMA_PROFILE_INVALID")
+        if not isinstance(owner_authorized, bool):
+            raise KtemaError("KTEMA_CACHE_OWNER_AUTHORIZATION_INVALID")
         # Structural re-validation; the owner-authorization decision lives
-        # upstream (intake/normalize), never in the cache.
-        profile = validate_property_profile(profile, owner_authorized=True)
+        # upstream (intake/normalize), never in the cache -- the default
+        # fails closed and only an explicit True dispenses the gate.
+        profile = validate_property_profile(profile, owner_authorized=owner_authorized)
         if profile.isolation_key != isolation_key:
             raise KtemaError("KTEMA_CACHE_PROFILE_TENANT_MISMATCH")
         key = build_ktema_cache_key(
@@ -1330,6 +1424,7 @@ class KtemaCache:
         key: str,
         *,
         requesting_isolation_key: str,
+        max_source_age_days: int | float | None = None,
         now_iso: str | None = None,
     ) -> PropertyProfile | None:
         """Return the cached profile for key, or None on a miss.
@@ -1339,6 +1434,15 @@ class KtemaCache:
         raised even when the requester knows the exact key.
         Expired entries are misses (None) -- for positives and negatives
         alike -- and are lazily evicted on read. A missing key is a miss.
+
+        Source vintage: the TTL above only bounds how long ago the entry
+        was STORED, not how fresh the underlying record is. When
+        max_source_age_days is passed, the profile's source_updated_at is
+        parsed and the entry is a MISS (None) if the source record is
+        older than the window. Consumers that need freshness guarantees
+        must use max_source_age_days here or is_fresh() on the profile's
+        provenance; freshness is always judged from source_updated_at,
+        never from retrieved_at.
         """
         _require_cache_key(key)
         requesting_isolation_key = _require_isolation_key(requesting_isolation_key)
@@ -1355,6 +1459,25 @@ class KtemaCache:
                 raise KtemaError("KTEMA_CACHE_TIME_INVALID")
             if self._now(now_iso) >= expires_at:
                 del self._entries[key]
+                return None
+        if max_source_age_days is not None:
+            if (
+                isinstance(max_source_age_days, bool)
+                or not isinstance(max_source_age_days, (int, float))
+                or max_source_age_days < 0
+            ):
+                raise KtemaError("KTEMA_FRESHNESS_WINDOW_INVALID")
+            now = self._now(now_iso)
+            updated = _parse_iso(entry.profile.source_updated_at)
+            if updated is None:
+                # No usable source vintage: fail closed as a miss rather
+                # than serve an unverifiable record as current.
+                return None
+            if updated.tzinfo is None:
+                # Same convention as is_fresh: naive ISO means UTC.
+                updated = updated.replace(tzinfo=timezone.utc)
+            age_days = (now - updated).total_seconds() / 86400.0
+            if age_days > float(max_source_age_days):
                 return None
         return entry.profile
 

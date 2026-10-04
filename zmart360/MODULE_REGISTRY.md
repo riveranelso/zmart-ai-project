@@ -200,7 +200,7 @@ coordinates against `ktema_county_data.json`), official-source routing via
 consume it); `PARCEL_PATTERNS` ships empty by design; only the fixture
 source adapter is published.
 **MUST NOT:** call real endpoints; invent parcels or valuations; store PII.
-**Status:** Increments 1-4 complete; real source adapters pending schema/
+**Status:** Increments 1-5 complete; real source adapters pending schema/
 endpoint verification.
 **Files:** `zion_core/ktema.py`, `zion_core/ktema_county_data.json`,
 `tests/test_zion_ktema_*.py`.

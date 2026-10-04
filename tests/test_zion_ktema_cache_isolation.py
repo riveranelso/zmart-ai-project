@@ -120,6 +120,7 @@ def _put_verified(cache, **overrides):
         query_fingerprint=_parcel_fingerprint(),
         source_record_id=RECORD_ID,
         profile=_verified_profile(),
+        owner_authorized=True,
         now_iso=NOW_ISO,
     )
     params.update(overrides)
@@ -315,6 +316,7 @@ class KtemaCacheLifecycleTests(unittest.TestCase):
             query_fingerprint=fp,
             source_record_id=RECORD_ID,
             profile=profile,
+            owner_authorized=True,
         )
         self.assertEqual(key, build_ktema_cache_key(SCAN, FIXTURE_SOURCE_ID, fp, RECORD_ID))
         self.assertEqual(cache.get(key, requesting_isolation_key=SCAN), profile)
@@ -351,8 +353,155 @@ class KtemaCacheLifecycleTests(unittest.TestCase):
                 query_fingerprint=_parcel_fingerprint(),
                 source_record_id=RECORD_ID,
                 profile=_verified_profile(),
+                owner_authorized=True,
             )
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KtemaCacheOwnerGateTests(unittest.TestCase):
+    """P0-1: put() never dispenses the owner gate by default.
+
+    The authorization decision lives at intake/normalize, never in the
+    cache: put() fails closed with the default and only a caller holding
+    a REAL upstream authorization passes owner_authorized=True explicitly.
+    """
+
+    def _put(self, cache, profile, **kwargs):
+        return cache.put(
+            isolation_key=SCAN,
+            source_id=FIXTURE_SOURCE_ID,
+            query_fingerprint=_parcel_fingerprint(),
+            source_record_id=RECORD_ID,
+            profile=profile,
+            **kwargs,
+        )
+
+    def test_put_profile_with_owner_defaults_fail_closed(self):
+        # The adversarial PoC: a profile carrying owner PII stored with the
+        # default must raise KTEMA_OWNER_UNAUTHORIZED -- no PII enters the
+        # cache without an explicit authorization proof.
+        cache = _cache()
+        profile = _verified_profile()  # carries FIXTURE_OWNER
+        self.assertIsNotNone(profile.owner)
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_OWNER_UNAUTHORIZED"):
+            self._put(cache, profile)
+        # Nothing was stored: even a well-formed key is a miss.
+        key = build_ktema_cache_key(
+            SCAN, FIXTURE_SOURCE_ID, _parcel_fingerprint(), RECORD_ID
+        )
+        self.assertIsNone(
+            cache.get(key, requesting_isolation_key=SCAN, now_iso=NOW_ISO)
+        )
+
+    def test_put_profile_with_owner_and_explicit_authorization_ok(self):
+        cache = _cache()
+        profile = _verified_profile()
+        key = self._put(cache, profile, owner_authorized=True)
+        self.assertEqual(
+            cache.get(key, requesting_isolation_key=SCAN, now_iso=NOW_ISO),
+            profile,
+        )
+
+    def test_put_profile_without_owner_ok_without_flag(self):
+        cache = _cache()
+        profile = _not_found_profile()
+        self.assertIsNone(profile.owner)
+        key = self._put(cache, profile)
+        self.assertEqual(
+            cache.get(key, requesting_isolation_key=SCAN, now_iso=NOW_ISO),
+            profile,
+        )
+
+    def test_put_rejects_non_bool_owner_authorized(self):
+        cache = _cache()
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_CACHE_OWNER_AUTHORIZATION_INVALID"
+        ):
+            self._put(cache, _not_found_profile(), owner_authorized="yes")
+
+
+class KtemaCacheSourceVintageTests(unittest.TestCase):
+    """P1-5: get() can bound the vintage of the source record.
+
+    The TTL bounds how long ago the entry was STORED, not how fresh the
+    underlying record is. max_source_age_days bounds source_updated_at:
+    a record older than the window is a miss (None). Consumers that need
+    freshness guarantees must use max_source_age_days here or is_fresh()
+    on the profile's provenance.
+    """
+
+    def _put_vintage(self, cache, source_updated_at, **kwargs):
+        profile = _verified_profile(
+            source_updated_at=source_updated_at, retrieved_at=NOW_ISO
+        )
+        return _put_verified(cache, profile=profile, **kwargs)
+
+    def test_stale_source_vintage_is_a_miss(self):
+        cache = _cache()
+        key = self._put_vintage(
+            cache, "2020-05-01T00:00:00+00:00", owner_authorized=True
+        )
+        self.assertIsNone(
+            cache.get(
+                key,
+                requesting_isolation_key=SCAN,
+                max_source_age_days=30,
+                now_iso=NOW_ISO,
+            )
+        )
+
+    def test_fresh_source_vintage_is_served(self):
+        cache = _cache()
+        key = self._put_vintage(cache, SOURCE_UPDATED_AT, owner_authorized=True)
+        profile = cache.get(
+            key,
+            requesting_isolation_key=SCAN,
+            max_source_age_days=30,
+            now_iso=NOW_ISO,
+        )
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile.source_updated_at, SOURCE_UPDATED_AT)
+
+    def test_vintage_bound_is_optional(self):
+        # Default (no bound): backward-compatible -- the 2020 record is
+        # served while its TTL holds.
+        cache = _cache()
+        key = self._put_vintage(
+            cache, "2020-05-01T00:00:00+00:00", owner_authorized=True
+        )
+        self.assertIsNotNone(
+            cache.get(key, requesting_isolation_key=SCAN, now_iso=NOW_ISO)
+        )
+
+    def test_missing_source_vintage_is_a_miss(self):
+        # No usable source_updated_at: fail closed as a miss rather than
+        # serve an unverifiable record as current.
+        cache = _cache()
+        profile = _verified_profile(source_updated_at=None, retrieved_at=NOW_ISO)
+        key = _put_verified(cache, profile=profile, owner_authorized=True)
+        self.assertIsNone(
+            cache.get(
+                key,
+                requesting_isolation_key=SCAN,
+                max_source_age_days=30,
+                now_iso=NOW_ISO,
+            )
+        )
+
+    def test_invalid_vintage_window_fails_closed(self):
+        cache = _cache()
+        key = self._put_vintage(cache, SOURCE_UPDATED_AT, owner_authorized=True)
+        for bad in (-1, "30", True):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(
+                    KtemaError, r"^KTEMA_FRESHNESS_WINDOW_INVALID"
+                ):
+                    cache.get(
+                        key,
+                        requesting_isolation_key=SCAN,
+                        max_source_age_days=bad,
+                        now_iso=NOW_ISO,
+                    )
