@@ -139,6 +139,8 @@ class OmarRuntime:
             bid=business_id.strip()
             mid=mission_id.strip()
             aid=angel_id.strip()
+            if business_id != bid or mission_id != mid or angel_id != aid:
+                raise ValueError("APOKRISIS_IDENTITY_NONCANONICAL")
             identity=mid+"\x1f"+aid
             with self.operation_lock.hold(bid,"APOKRISIS",identity):
                 dispatch_events=self.history(
