@@ -85,6 +85,8 @@ class OmarRuntime:
                             if tuple(prior_event.angel_ids)!=expected:
                                 raise ValueError("MISSION_INVALID_COMMISSION_HISTORY")
                     event=prior[-1]
+                    if event.action=="DISPATCH" and event.dispatch_fingerprint is None:
+                        raise ValueError("MISSION_DISPATCH_FINGERPRINT_MISSING")
                     # Reusing a mission id with different routing identity is
                     # not an idempotent retry; fail closed instead of silently
                     # returning the earlier decision.
