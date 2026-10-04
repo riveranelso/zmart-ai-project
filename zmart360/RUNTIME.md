@@ -33,6 +33,7 @@ Production storage is intentionally not selected by this composition.
 - Multiple durable `DISPATCH` records for the same business and mission must agree on the exact commissioned ANGEL set; conflicting commission sets are an integrity conflict and fail closed.
 - Those repeated `DISPATCH` records must also agree on the dispatch fingerprint; a changed or missing fingerprint alongside a recorded fingerprint is treated as degraded/contradictory authority and fails closed.
 - Multiple durable `DISPATCH` records must also agree on the dispatch fingerprint; divergent fingerprints mean the mission authority changed and `close()` fails closed even when the ANGEL set is unchanged.
+- Durable `DISPATCH` records must agree on command and host as well; conflicting route identity fails closed before an ANGEL response is accepted.
 - Repeated durable `DISPATCH` records must also agree on the dispatch fingerprint; conflicting fingerprints indicate different dispatch-affecting mission/security identity and `close()` fails closed.
 - A repeated owner correction with the same `correction_id` is a technical retry, not a second human correction.
 - The same correction text under a new correction ID may count as a genuine repeated correction.
