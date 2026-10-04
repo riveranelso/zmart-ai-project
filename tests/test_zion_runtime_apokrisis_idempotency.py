@@ -99,7 +99,7 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             runtime.dispatch({"mission_id":"m-conflicting-commissions","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights","angel_count_max":1})
             from zion_core.cronicas import CronicaEvent
             from zion_core.persistence import CronicasJsonlSink
-            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflict-commission",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="m-conflicting-commissions",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",angel_ids=("SANGABRIEL.HOST-01.ANGEL-002",)))
+            original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="m-conflicting-commissions")[0]\n            from dataclasses import replace\n            CronicasJsonlSink(root/"cronicas.jsonl")(replace(original,event_id="conflict-commission",angel_ids=("SANGABRIEL.HOST-01.ANGEL-002",)))
             response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-conflicting-commissions",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
             with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_COMMISSION_HISTORY"):
                 runtime.close(response,learning=LearningIntent())
