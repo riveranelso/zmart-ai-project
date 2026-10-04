@@ -133,6 +133,8 @@ class OmarRuntime:
         business_id=getattr(response,"business_id",None)
         mission_id=getattr(response,"mission_id",None)
         angel_id=getattr(response,"angel_id",None)
+        if not all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
+            raise ValueError("APOKRISIS_IDENTITY_REQUIRED")
         if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
             bid=business_id.strip()
             mid=mission_id.strip()
