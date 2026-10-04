@@ -66,6 +66,25 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                 runtime.dispatch(dict(mission))
 
 
+    def test_retry_fails_closed_on_conflicting_durable_mission_decisions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            mission={"mission_id":"retry-conflicting-history","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            runtime.dispatch(mission)
+            original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="retry-conflicting-history")[0]
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflicting-decision",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-conflicting-history",business_id="zmart-consumer-rights",action="REQUIRE_HUMAN_REVIEW",reason="FORGED_CONFLICT",dispatch_fingerprint=original.dispatch_fingerprint))
+            with self.assertRaisesRegex(ValueError,"MISSION_CONFLICTING_DECISION_HISTORY"):
+                runtime.dispatch(dict(mission))
+
+
     def test_same_mission_id_cannot_change_from_routed_to_unknown_intent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
