@@ -104,6 +104,26 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             self.assertEqual(len(runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-other-angel-history")),2)
 
 
+    def test_close_canonicalizes_whitespace_identity_before_commission_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            runtime.dispatch({"mission_id":"m-whitespace-response","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"})
+            response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-whitespace-response",status="SUCCESS",summary="done",business_id="zmart-consumer-rights")
+            object.__setattr__(response,"angel_id","  SANGABRIEL.HOST-01.ANGEL-001  ")
+            object.__setattr__(response,"mission_id","  m-whitespace-response  ")
+            object.__setattr__(response,"business_id","  zmart-consumer-rights  ")
+            runtime.close(response,learning=LearningIntent())
+            events=runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-whitespace-response")
+            self.assertEqual(len(events),1)
+            self.assertEqual(events[0].angel_ids,("SANGABRIEL.HOST-01.ANGEL-001",))
+
+
     def test_dispatched_mission_rejects_blank_response_angel_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
