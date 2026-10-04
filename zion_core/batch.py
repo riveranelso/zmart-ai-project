@@ -164,3 +164,42 @@ def assess_pattern_reuse(
         business_id,pattern_key,unique_outcomes[0],len(values),tuple(evidence),
         True,True,"PATTERN_REPEATED_EVIDENCE",
     )
+
+
+@dataclass(frozen=True)
+class BatchDispatchResult:
+    batch_id: str
+    business_id: str
+    attempted: tuple[str, ...]
+    remaining: tuple[str, ...]
+    decisions: tuple[Any, ...]
+
+
+def dispatch_pending(
+    plan: BatchPlan,
+    runtime: Any,
+    *,
+    limit: int = 25,
+    security_context: Any = None,
+) -> BatchDispatchResult:
+    """Dispatch a bounded slice of pending items through OmarRuntime.
+
+    The runner owns no retry or tenant authority. It asks pending_items for the
+    durable checkpoint, then delegates every selected mission to OmarRuntime.
+    """
+    if not isinstance(limit,int) or isinstance(limit,bool) or limit < 1:
+        raise ValueError("BATCH_LIMIT_INVALID")
+    pending=pending_items(plan,runtime)
+    selected=pending[:limit]
+    decisions=[]
+    for item in selected:
+        result=runtime.dispatch(dict(item.mission),security_context=security_context)
+        decisions.append(result.decision)
+    remaining=pending_items(plan,runtime)
+    return BatchDispatchResult(
+        batch_id=plan.batch_id,
+        business_id=plan.business_id,
+        attempted=tuple(item.item_key for item in selected),
+        remaining=tuple(item.item_key for item in remaining),
+        decisions=tuple(decisions),
+    )
