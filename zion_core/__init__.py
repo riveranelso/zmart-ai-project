@@ -146,3 +146,6 @@ __all__ += [
     "RESOLVED", "NEEDS_MORE_LOCATION", "NO_ACTIVE_CWS", "REVIEW_REQUIRED",
     "normalize_zip", "plan_scan_zip_batch", "validate_scan_zip_result",
 ]
+
+from .scan_import import ScanImportSummary, select_scan_needs_more_location, plan_scan_import_batch
+__all__ += ["ScanImportSummary", "select_scan_needs_more_location", "plan_scan_import_batch"]
