@@ -100,8 +100,8 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             from zion_core.cronicas import CronicaEvent
             from zion_core.persistence import CronicasJsonlSink
             original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="m-conflicting-commissions")[0]
-                        from dataclasses import replace
-                        CronicasJsonlSink(root/"cronicas.jsonl")(replace(original,event_id="conflict-commission",angel_ids=("SANGABRIEL.HOST-01.ANGEL-002",)))
+            from dataclasses import replace
+            CronicasJsonlSink(root/"cronicas.jsonl")(replace(original,event_id="conflict-commission",angel_ids=("SANGABRIEL.HOST-01.ANGEL-002",)))
             response=apokrisis(angel_id="SANGABRIEL.HOST-01.ANGEL-001",mission_id="m-conflicting-commissions",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
             with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_COMMISSION_HISTORY"):
                 runtime.close(response,learning=LearningIntent())
