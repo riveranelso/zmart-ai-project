@@ -333,7 +333,7 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
             from zion_core.persistence import CronicasJsonlSink
             CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="duplicate-commission",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="m-duplicate-commission",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",command=original.command,host=original.host,angel_ids=(aid,aid),dispatch_fingerprint=original.dispatch_fingerprint))
             response=apokrisis(angel_id=aid,mission_id="m-duplicate-commission",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
-            with self.assertRaisesRegex(ValueError,"APOKRISIS_INVALID_COMMISSION_HISTORY"):
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_COMMISSION_HISTORY"):
                 runtime.close(response,learning=LearningIntent())
 
 
