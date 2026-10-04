@@ -60,6 +60,18 @@ class OmarRuntime:
                 prior=self.history(business_id=bid,event_type="MISSION_DECISION",mission_id=mid)
                 if prior:
                     from .omar import prepare_mission, OmarMissionDispatch
+                    actions={event.action for event in prior}
+                    if len(actions)>1:
+                        raise ValueError("MISSION_CONFLICTING_HISTORY")
+                    route_identities={(event.command,event.host) for event in prior}
+                    if len(route_identities)>1:
+                        raise ValueError("MISSION_CONFLICTING_HISTORY")
+                    fingerprints={event.dispatch_fingerprint for event in prior}
+                    if len(fingerprints)>1:
+                        raise ValueError("MISSION_CONFLICTING_HISTORY")
+                    commission_sets={tuple(event.angel_ids) for event in prior}
+                    if len(commission_sets)>1:
+                        raise ValueError("MISSION_CONFLICTING_HISTORY")
                     event=prior[-1]
                     # Reusing a mission id with different routing identity is
                     # not an idempotent retry; fail closed instead of silently
