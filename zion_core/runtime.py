@@ -124,9 +124,6 @@ class OmarRuntime:
                 dispatch_fingerprints={event.dispatch_fingerprint for event in dispatched_events}
                 if len(dispatch_fingerprints)>1:
                     raise ValueError("APOKRISIS_CONFLICTING_DISPATCH_FINGERPRINTS")
-                dispatch_fingerprints={event.dispatch_fingerprint for event in dispatched_events}
-                if len(dispatch_fingerprints)>1:
-                    raise ValueError("APOKRISIS_CONFLICTING_DISPATCH_FINGERPRINT")
                 commission_sets={tuple(event.angel_ids) for event in dispatched_events}
                 if len(commission_sets)>1:
                     raise ValueError("APOKRISIS_CONFLICTING_COMMISSION_HISTORY")
