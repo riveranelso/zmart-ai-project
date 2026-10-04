@@ -186,3 +186,21 @@ real HTTP currently; store secrets.
 MissionPacket, bind it to one tenant (fail closed), seal it against the
 repo HEAD, and detect stale context before Builder/commit steps.
 **MUST NOT:** call LLMs; perform writes; reach the network; override tenant identity.
+
+## KTEMA — `zion_core/ktema.py`
+
+**Responsibility:** FL property intelligence: county resolution (ZIP and
+coordinates against `ktema_county_data.json`), official-source routing via
+`PropertySourceRouter`, property-profile normalization, and
+`SourceProvenance` tracking — for consumption by authorized businesses.
+**Inputs:** PropertyQuery (address/ZIP/coordinates/parcel reference), business_id.
+**Outputs:** CountyResolution, PropertyProfile, `to_cronicas_event` dict.
+**Dependencies:** registry, cronicas.
+**Boundaries:** no HTTP; not SCAN-exclusive (authorized businesses may
+consume it); `PARCEL_PATTERNS` ships empty by design; only the fixture
+source adapter is published.
+**MUST NOT:** call real endpoints; invent parcels or valuations; store PII.
+**Status:** Increments 1-4 complete; real source adapters pending schema/
+endpoint verification.
+**Files:** `zion_core/ktema.py`, `zion_core/ktema_county_data.json`,
+`tests/test_zion_ktema_*.py`.
