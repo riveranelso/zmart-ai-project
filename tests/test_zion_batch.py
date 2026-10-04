@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zion_core.batch import pending_items, plan_batch
+from zion_core.batch import PatternObservation, assess_pattern_reuse, pending_items, plan_batch
 from zion_core.runtime import OmarRuntime
 
 
@@ -37,6 +37,32 @@ class BatchMissionTests(unittest.TestCase):
             runtime.dispatch(plan.items[0].mission)
             remaining=pending_items(plan,runtime)
             self.assertEqual(tuple(item.item_key for item in remaining),("32807",))
+
+
+    def test_pattern_reuse_requires_repeated_same_tenant_evidence(self):
+        candidate=assess_pattern_reuse((
+            PatternObservation("scan-water-intelligence","zip+county","PWSID-123",("epa:1",)),
+            PatternObservation("scan-water-intelligence","zip+county","PWSID-123",("epa:2",)),
+        ))
+        self.assertTrue(candidate.reusable)
+        self.assertTrue(candidate.requires_review)
+        self.assertEqual(candidate.reason,"PATTERN_REPEATED_EVIDENCE")
+
+    def test_pattern_conflict_never_becomes_reusable(self):
+        candidate=assess_pattern_reuse((
+            PatternObservation("scan-water-intelligence","zip+county","PWSID-123"),
+            PatternObservation("scan-water-intelligence","zip+county","PWSID-999"),
+        ))
+        self.assertFalse(candidate.reusable)
+        self.assertTrue(candidate.requires_review)
+        self.assertEqual(candidate.reason,"PATTERN_OUTCOME_CONFLICT")
+
+    def test_pattern_evidence_cannot_cross_businesses(self):
+        with self.assertRaisesRegex(ValueError,"PATTERN_CROSS_TENANT_CONFLICT"):
+            assess_pattern_reuse((
+                PatternObservation("scan-water-intelligence","zip+county","PWSID-123"),
+                PatternObservation("zmart-consumer-rights","zip+county","PWSID-123"),
+            ))
 
 
 if __name__=="__main__":
