@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zion_core.batch import PatternObservation, assess_pattern_reuse, dispatch_pending, pending_items, plan_batch
+from zion_core.batch import PatternObservation, assess_pattern_reuse, batch_status, dispatch_pending, pending_items, plan_batch
 from zion_core.runtime import OmarRuntime
 
 
@@ -58,6 +58,30 @@ class BatchMissionTests(unittest.TestCase):
             self.assertEqual(second.remaining,())
             self.assertEqual(len(runtime.history(business_id="scan-water-intelligence",event_type="MISSION_DECISION")),3)
 
+
+
+    def test_batch_status_counts_durable_actions_without_payloads(self):
+        class Event:
+            def __init__(self,action):
+                self.action=action
+        class Runtime:
+            def __init__(self,actions):
+                self.actions=actions
+            def history(self,*,business_id,event_type,mission_id=None):
+                action=self.actions.get(mission_id)
+                return (Event(action),) if action else ()
+        plan=plan_batch(batch_id="scan-status",business_id="scan-water-intelligence",intent="resolve_zip",requested_by="OMAR",scope="WORKFLOW",item_keys=("a","b","c","d"))
+        runtime=Runtime({
+            plan.items[0].mission_id:"DISPATCH",
+            plan.items[1].mission_id:"DISPATCH",
+            plan.items[2].mission_id:"REQUIRE_HUMAN_REVIEW",
+        })
+        status=batch_status(plan,runtime)
+        self.assertEqual(status.total,4)
+        self.assertEqual(status.decided,3)
+        self.assertEqual(status.pending,1)
+        self.assertEqual(status.decision_actions,(("DISPATCH",2),("REQUIRE_HUMAN_REVIEW",1)))
+        self.assertFalse(hasattr(status,"payloads"))
 
     def test_dispatch_pending_isolates_one_item_failure_and_continues(self):
         class Decision:
