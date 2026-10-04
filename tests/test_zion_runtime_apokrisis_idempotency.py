@@ -87,6 +87,25 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent())
 
 
+    def test_multiple_dispatch_records_with_different_routes_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            dispatch=runtime.dispatch({"mission_id":"m-conflicting-route","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"})
+            original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="m-conflicting-route")[0]
+            from zion_core.cronicas import CronicaEvent
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflict-route",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="m-conflicting-route",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",command="SANRAFAEL",host="SANRAFAEL.HOST-01",angel_ids=original.angel_ids,dispatch_fingerprint=original.dispatch_fingerprint))
+            response=apokrisis(angel_id=dispatch.decision.angels[0].angel_id,mission_id="m-conflicting-route",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_ROUTE_HISTORY"):
+                runtime.close(response,learning=LearningIntent())
+
+
     def test_multiple_dispatch_records_with_missing_fingerprint_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
