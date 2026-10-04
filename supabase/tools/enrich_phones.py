@@ -26,7 +26,7 @@ import time
 import urllib.parse
 import urllib.request
 
-API_URL = "http://apilayer.net/api/validate"
+API_URL = "https://apilayer.net/api/validate"
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".enrich_cache.json")
 RATE_LIMIT_S = 1.2  # pausa entre llamadas para no saturar el plan gratis
 
