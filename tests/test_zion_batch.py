@@ -30,7 +30,9 @@ class BatchMissionTests(unittest.TestCase):
             (root/"GLOBAL.md").write_text("# Global\n",encoding="utf-8")
             registry=root/"registry.json"
             registry.write_text(json.dumps({"businesses":{"scan-water-intelligence":{"enabled":True,"isolation_key":"scan-water-intelligence","context_refs":["GLOBAL.md"]}}}),encoding="utf-8")
-            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=root/"derekh.yaml",cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
             plan=plan_batch(batch_id="scan-zip",business_id="scan-water-intelligence",intent="unknown_batch_intent",requested_by="OMAR",scope="WORKFLOW",item_keys=("32744","32807"))
             runtime.dispatch(plan.items[0].mission)
             remaining=pending_items(plan,runtime)
