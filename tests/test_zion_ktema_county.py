@@ -1,8 +1,12 @@
 """Adversarial tests for zion_core.ktema (FL property county resolution).
 
-Test fixtures below are TEST-ONLY tables and are NOT shipped data: the
-shipped zion_core/ktema_county_data.json is intentionally empty in
-Increment 1 (see meta.blockers there). Real-world facts used in fixtures:
+Test fixtures below are TEST-ONLY tables and are NOT shipped data. The
+shipped zion_core/ktema_county_data.json was populated in Increment 1b
+(2026-10-04): 114 unique ZIPs across Orange (45), Seminole (17),
+Volusia (32) and Lake (29), verified by the coordinator against the 4
+official sources listed in meta.built_from. Shipped-table tests below
+resolve against the real table via the default path. Real-world facts
+used in fixtures:
 
 - 32801 is downtown Orlando, Orange County (county seat; the Orange County
   Property Appraiser sits at 200 S Orange Ave, Orlando, FL 32801).
@@ -116,13 +120,76 @@ class KtemaCountyResolutionTests(unittest.TestCase):
         self.assertEqual(result.confidence, 0.0)
         self.assertEqual(result.reason, "KTEMA_COUNTY_OUT_OF_COVERAGE")
 
-    def test_shipped_table_empty_everything_out_of_coverage(self):
-        # Increment-1 provenance state: no county data acquired, nothing invented.
+    # -- shipped table (Increment 1b: populated from 4 official sources) --
+
+    def _assert_shipped_resolved(self, zip_code, county):
+        result = resolve_county(_query(zip=zip_code))
+        self.assertEqual(result.status, RESOLVED)
+        self.assertEqual(result.county, county)
+        self.assertEqual(result.candidates, ())
+        self.assertEqual(result.confidence, 0.95)
+        self.assertEqual(result.reason, "KTEMA_ZIP_SINGLE_COUNTY")
+
+    def _assert_shipped_ambiguous(self, zip_code, expected_candidates):
+        with self.assertRaisesRegex(ValueError, "KTEMA_COUNTY_AMBIGUOUS") as ctx:
+            resolve_county(_query(zip=zip_code))
+        message = str(ctx.exception)
+        self.assertIn(zip_code, message)
+        found = message.split("candidates=")[1]
+        self.assertEqual(set(found.split(",")), set(expected_candidates))
+
+    def test_shipped_table_coverage_shape(self):
+        # Guard against table corruption: exact coverage the coordinator
+        # verified in Increment 1b.
         meta, zips = load_county_table()
-        self.assertEqual(zips, {})
-        self.assertIn("blockers", meta)
-        result = resolve_county(_query(zip=SINGLE_ZIP))
+        self.assertEqual(len(zips), 114)
+        self.assertEqual(len(meta["built_from"]), 4)
+        self.assertEqual(set(meta["coverage"]), {"Orange", "Seminole", "Volusia", "Lake"})
+        multi = sorted(z for z, counties in zips.items() if len(counties) > 1)
+        self.assertEqual(
+            multi,
+            ["32102", "32703", "32720", "32751", "32757", "32776", "32789", "32792", "34787"],
+        )
+
+    def test_shipped_32801_resolves_orange(self):
+        self._assert_shipped_resolved("32801", "Orange")
+
+    def test_shipped_32701_resolves_seminole(self):
+        self._assert_shipped_resolved("32701", "Seminole")
+
+    def test_shipped_32114_resolves_volusia(self):
+        self._assert_shipped_resolved("32114", "Volusia")
+
+    def test_shipped_32778_resolves_lake(self):
+        self._assert_shipped_resolved("32778", "Lake")
+
+    def test_shipped_32102_ambiguous_lake_volusia(self):
+        self._assert_shipped_ambiguous("32102", {"Lake", "Volusia"})
+
+    def test_shipped_32703_ambiguous_orange_seminole(self):
+        self._assert_shipped_ambiguous("32703", {"Orange", "Seminole"})
+
+    def test_shipped_32757_ambiguous_lake_orange(self):
+        self._assert_shipped_ambiguous("32757", {"Lake", "Orange"})
+
+    def test_shipped_34787_ambiguous_lake_orange(self):
+        self._assert_shipped_ambiguous("34787", {"Lake", "Orange"})
+
+    def test_shipped_90210_out_of_coverage_not_error(self):
+        # Outside the four-county coverage: OUT_OF_COVERAGE is a normal
+        # result, not an exception.
+        result = resolve_county(_query(zip="90210"))
         self.assertEqual(result.status, OUT_OF_COVERAGE)
+        self.assertIsNone(result.county)
+        self.assertEqual(result.confidence, 0.0)
+        self.assertEqual(result.reason, "KTEMA_COUNTY_OUT_OF_COVERAGE")
+
+    def test_shipped_absent_zip_out_of_coverage_fail_closed(self):
+        # 32207 is a real Jacksonville FL ZIP, outside coverage. Absence
+        # from the table never falls back to a default county.
+        result = resolve_county(_query(zip="32207"))
+        self.assertEqual(result.status, OUT_OF_COVERAGE)
+        self.assertIsNone(result.county)
 
     def test_address_plus_zip_corrobation_resolves_by_zip(self):
         result = resolve_county(

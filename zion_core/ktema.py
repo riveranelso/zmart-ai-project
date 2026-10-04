@@ -32,15 +32,18 @@ Design notes:
   - PARCEL_PATTERNS ships EMPTY: parcel-ID patterns enter only after
     verification against the official Property Appraiser source.
 
-Table provenance (2026-10-04, Increment 1):
-  No county ZIP data could be cleanly acquired from the coordinator-listed
-  official sources with the tools available in this environment; see
-  meta.blockers in ktema_county_data.json. The table ships EMPTY rather
-  than invented: every ZIP resolves KTEMA_COUNTY_OUT_OF_COVERAGE until
-  verified county data is embedded. Rebuilding the table is mechanical
-  (no module code changes) once the coordinator authorizes an acquisition
-  path. Recommended for coordinator review: HUD USPS ZIP Code Crosswalk
-  (federal, quarterly, USPS-derived) as interim verified source.
+Table provenance (2026-10-04, Increment 1b):
+  The coordinator populated the table against 4 official FL sources
+  (listed verbatim in meta.built_from): Orange County Parcels_BCC
+  (SITUS_ZIP), Seminole County Property Appraiser daily CAMA CSV
+  (PrimaryAddress, vintage 2026-10-03), Volusia County GIS Address Situs,
+  and Lake County GIS Address Locations. Coverage: 114 unique ZIPs --
+  Orange 45, Seminole 17, Volusia 32, Lake 29 -- including 9 genuinely
+  cross-county ZIPs verified on both sides. Caveats live in meta.notes
+  (e.g. Seminole parcels with empty PrimaryAddress contributed no ZIP,
+  fail-closed). A ZIP absent from the table resolves
+  KTEMA_COUNTY_OUT_OF_COVERAGE -- never invented. A ZIP present in 2+
+  counties raises KTEMA_COUNTY_AMBIGUOUS -- never guessed.
 
 Known real-world multi-county reference (coordinator-verified, documented
 here; outside Increment-1 county coverage so NOT in the shipped table):
