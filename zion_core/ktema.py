@@ -54,12 +54,31 @@ here; outside Increment-1 county coverage so NOT in the shipped table):
 Precedence: parcel_id -> zip+address -> zip -> address -> coordinates.
 Exactly one primary signal is required; address+zip is allowed as
 corroboration (resolution still by ZIP).
+
+Increment 2: PropertyProfile + SourceProvenance + VerificationStatus.
+  - VerificationStatus is a closed string set (VERIFIED, NOT_FOUND,
+    UNAVAILABLE, INCONCLUSIVE; case-sensitive). NOT_FOUND means "this
+    source produced no match" -- never an existence claim. NOT_FOUND
+    requires property_exists is None; any existence claim on NOT_FOUND
+    fails closed.
+  - SourceProvenance carries retrieval metadata only; raw_reference is an
+    opaque retrieval pointer and is NEVER constructed by interpolating PII.
+  - Owner (PII) only survives validation when owner_authorized=True;
+    otherwise KTEMA_OWNER_UNAUTHORIZED -- fail closed, never silently
+    dropped. owner="" normalizes to None.
+  - to_cronicas_event emits a redacted operational event: never owner,
+    raw_reference truncated to 64 chars.
+  - is_fresh judges freshness from source_updated_at, never retrieved_at.
+  - Future SCAN water fields exist as None placeholders only; SCAN is NOT
+    implemented here and ktema never imports the SCAN water adapter module.
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .registry import SanPedroError, sanpedro_resolve
@@ -354,3 +373,218 @@ def resolve_county(
         reason="KTEMA_COORDS_GEOMETRY_NOT_EMBEDDED",
         evidence_refs=(table_ref,),
     )
+
+
+# ---------------------------------------------------------------------------
+# Increment 2: PropertyProfile, SourceProvenance, VerificationStatus
+# ---------------------------------------------------------------------------
+#
+# Property-intelligence contracts. Deterministic and pure: no network, no
+# PII interpolation, no SCAN Water Intelligence imports. The future SCAN
+# water fields on PropertyProfile are None placeholders only.
+
+VERIFIED = "VERIFIED"
+NOT_FOUND = "NOT_FOUND"
+UNAVAILABLE = "UNAVAILABLE"
+# INCONCLUSIVE is defined above with the county statuses and reused here:
+# "the source could not decide" is the same semantic for both layers.
+VERIFICATION_STATUSES = (VERIFIED, NOT_FOUND, UNAVAILABLE, INCONCLUSIVE)
+
+# Redaction bound for the opaque retrieval pointer in operational events.
+RAW_REFERENCE_MAX_LEN = 64
+
+
+@dataclass(frozen=True)
+class SourceProvenance:
+    """Where a property fact came from. Retrieval metadata only.
+
+    raw_reference is an opaque retrieval pointer (e.g. a fixture URI or a
+    cache key). It is NEVER constructed by interpolating PII.
+    """
+
+    source: str | None = None
+    source_record_id: str | None = None
+    source_updated_at: str | None = None
+    retrieved_at: str | None = None
+    raw_reference: str | None = None
+
+
+@dataclass(frozen=True)
+class PropertyProfile:
+    """One property record as seen by a single source.
+
+    property_exists is tri-state: True / False / None (unknown). None is
+    the default: absence of evidence is never evidence.
+
+    The water_* / pwsid / utility / service_area / well_probability /
+    permit_intelligence fields are future SCAN placeholders, always None in
+    this increment. SCAN is NOT implemented here.
+    """
+
+    state: str
+    county: str
+    parcel_id: str
+    site_address: str
+    zip: str
+    property_type: str | None = None
+    land_use: str | None = None
+    year_built: int | None = None
+    living_sqft: float | None = None
+    lot_acres: float | None = None
+    owner: str | None = None
+    source: str | None = None
+    source_record_id: str | None = None
+    source_updated_at: str | None = None
+    retrieved_at: str | None = None
+    confidence: float = 0.0
+    verification_status: str | None = None
+    raw_reference: str | None = None
+    isolation_key: str | None = None
+    property_exists: bool | None = None
+    attempted_sources: tuple[str, ...] = ()
+    reason: str = ""
+    # --- future SCAN water fields: None placeholders only, NOT implemented.
+    water_source: str | None = None
+    pwsid: str | None = None
+    utility: str | None = None
+    service_area: str | None = None
+    well_probability: float | None = None
+    permit_intelligence: str | None = None
+
+
+def validate_property_profile(
+    profile: PropertyProfile, *, owner_authorized: bool = False
+) -> PropertyProfile:
+    """Constructor gate for PropertyProfile. Fail-closed; returns the
+    validated profile (owner normalized: blank -> None).
+
+    - verification_status missing/blank -> KTEMA_STATUS_REQUIRED; a string
+      outside the closed set -> KTEMA_STATUS_INVALID (case-sensitive:
+      "verified" != VERIFIED).
+    - NOT_FOUND with any existence claim (property_exists True or False)
+      -> KTEMA_NOTFOUND_EXISTENCE_CLAIM_FORBIDDEN. NOT_FOUND means "this
+      source produced no match", never an assertion about existence, so it
+      requires property_exists is None.
+    - VERIFIED without complete provenance (source, source_record_id)
+      -> KTEMA_PROVENANCE_SOURCE_REQUIRED.
+    - retrieved_at earlier than source_updated_at
+      -> KTEMA_PROVENANCE_TIME_INVERSION (compared when both present).
+    - owner present without owner_authorized=True
+      -> KTEMA_OWNER_UNAUTHORIZED (fail closed, never silently dropped).
+      With owner_authorized=True the owner value is preserved.
+    - isolation_key missing/blank -> KTEMA_BUSINESS_REQUIRED.
+    - confidence outside [0, 1] -> KTEMA_CONFIDENCE_INVALID.
+    """
+    if not isinstance(profile, PropertyProfile):
+        raise KtemaError("KTEMA_PROFILE_INVALID")
+
+    status = profile.verification_status
+    if status is None or (isinstance(status, str) and not status.strip()):
+        raise KtemaError("KTEMA_STATUS_REQUIRED")
+    if status not in VERIFICATION_STATUSES:
+        raise KtemaError("KTEMA_STATUS_INVALID")
+
+    if status == NOT_FOUND and profile.property_exists is not None:
+        # NOT_FOUND = "this source produced no match". It can never carry
+        # an existence claim in either direction.
+        raise KtemaError("KTEMA_NOTFOUND_EXISTENCE_CLAIM_FORBIDDEN")
+
+    if status == VERIFIED:
+        if not _present(profile.source) or not _present(profile.source_record_id):
+            raise KtemaError("KTEMA_PROVENANCE_SOURCE_REQUIRED")
+
+    if _present(profile.source_updated_at) and _present(profile.retrieved_at):
+        # ISO 8601 strings compare lexicographically under a single ISO
+        # profile; both timestamps must come from the same source clock.
+        if profile.retrieved_at < profile.source_updated_at:
+            raise KtemaError("KTEMA_PROVENANCE_TIME_INVERSION")
+
+    if not isinstance(profile.isolation_key, str) or not profile.isolation_key.strip():
+        raise KtemaError("KTEMA_BUSINESS_REQUIRED")
+
+    confidence = profile.confidence
+    if (
+        isinstance(confidence, bool)
+        or not isinstance(confidence, (int, float))
+        or not 0 <= confidence <= 1
+    ):
+        raise KtemaError("KTEMA_CONFIDENCE_INVALID")
+
+    owner = profile.owner
+    if isinstance(owner, str) and not owner.strip():
+        owner = None
+    if owner is not None and not owner_authorized:
+        raise KtemaError("KTEMA_OWNER_UNAUTHORIZED")
+
+    if owner != profile.owner:
+        profile = dataclasses.replace(profile, owner=owner)
+    return profile
+
+
+def to_cronicas_event(profile: PropertyProfile) -> dict:
+    """Redacted operational event for CRONICAS. NEVER carries owner (PII).
+
+    raw_reference is an opaque pointer: truncated to 64 chars, never
+    expanded. No PII is ever interpolated into this event.
+    """
+    if not isinstance(profile, PropertyProfile):
+        raise KtemaError("KTEMA_PROFILE_INVALID")
+    event: dict = {
+        "source": profile.source,
+        "source_record_id": profile.source_record_id,
+        "verification_status": profile.verification_status,
+        "county": profile.county,
+        "isolation_key": profile.isolation_key,
+        "retrieved_at": profile.retrieved_at,
+    }
+    raw = profile.raw_reference
+    if isinstance(raw, str) and raw.strip():
+        event["raw_reference"] = raw[:RAW_REFERENCE_MAX_LEN]
+    return event
+
+
+def _parse_iso(value: object) -> datetime | None:
+    """Parse an ISO 8601 timestamp; None on any failure (fail closed)."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text[-1] in ("Z", "z"):
+        text = text[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def is_fresh(
+    provenance: SourceProvenance,
+    max_age_days: int | float,
+    *,
+    now_iso: str | None = None,
+) -> bool:
+    """Freshness is judged from source_updated_at, NEVER retrieved_at.
+
+    now_iso pins "now" for deterministic tests; when omitted, current UTC
+    is used. Returns False (fail closed) when source_updated_at is absent
+    or unparseable, or when the freshness window itself is invalid.
+    """
+    if not isinstance(provenance, SourceProvenance):
+        raise KtemaError("KTEMA_PROVENANCE_INVALID")
+    if (
+        isinstance(max_age_days, bool)
+        or not isinstance(max_age_days, (int, float))
+        or max_age_days < 0
+    ):
+        raise KtemaError("KTEMA_FRESHNESS_WINDOW_INVALID")
+    updated = _parse_iso(provenance.source_updated_at)
+    if updated is None:
+        return False
+    now = _parse_iso(now_iso) if now_iso is not None else datetime.now(timezone.utc)
+    if now is None:
+        return False
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    age_days = (now - updated).total_seconds() / 86400.0
+    return age_days <= float(max_age_days)
