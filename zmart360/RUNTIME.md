@@ -26,6 +26,7 @@ Production storage is intentionally not selected by this composition.
 
 ## Idempotency
 - A repeated `business_id + mission_id` dispatch becomes `IDEMPOTENT_NOOP` and does not append a second MISSION_DECISION.
+- Retry idempotency validates the complete durable `MISSION_DECISION` history for that business and mission. Contradictory action, route, dispatch fingerprint, or commission history fails closed; the runtime must not trust only the latest record.
 - A repeated APOKRISIS from the same `business_id + mission_id + angel_id` is not processed twice.
 - If CRONICAS already contains a mission decision that never reached `DISPATCH`, APOKRISIS for that mission is rejected; a human-review or denied mission cannot acquire ANGEL authority through `close()`.
 - When durable `DISPATCH` evidence exists, `close()` also requires non-empty commission evidence and the responding ANGEL must be one of those recorded commissions; missing or mismatched commission authority fails closed.
