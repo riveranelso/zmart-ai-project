@@ -167,12 +167,21 @@ def assess_pattern_reuse(
 
 
 @dataclass(frozen=True)
+class BatchDispatchFailure:
+    item_key: str
+    mission_id: str
+    error_type: str
+    error_code: str
+
+
+@dataclass(frozen=True)
 class BatchDispatchResult:
     batch_id: str
     business_id: str
     attempted: tuple[str, ...]
     remaining: tuple[str, ...]
     decisions: tuple[Any, ...]
+    failures: tuple[BatchDispatchFailure, ...] = ()
 
 
 def dispatch_pending(
@@ -192,9 +201,20 @@ def dispatch_pending(
     pending=pending_items(plan,runtime)
     selected=pending[:limit]
     decisions=[]
+    failures=[]
     for item in selected:
-        result=runtime.dispatch(dict(item.mission),security_context=security_context)
-        decisions.append(result.decision)
+        try:
+            result=runtime.dispatch(dict(item.mission),security_context=security_context)
+            decisions.append(result.decision)
+        except Exception as exc:
+            # Keep the item pending. Store only exception class + stable code;
+            # never persist arbitrary exception text that may contain payload/PII.
+            code=getattr(exc,"code",None)
+            if not isinstance(code,str) or not code.strip():
+                code=exc.args[0] if len(exc.args)==1 and isinstance(exc.args[0],str) else type(exc).__name__
+            failures.append(BatchDispatchFailure(
+                item.item_key,item.mission_id,type(exc).__name__,str(code)[:128],
+            ))
     remaining=pending_items(plan,runtime)
     return BatchDispatchResult(
         batch_id=plan.batch_id,
@@ -202,4 +222,5 @@ def dispatch_pending(
         attempted=tuple(item.item_key for item in selected),
         remaining=tuple(item.item_key for item in remaining),
         decisions=tuple(decisions),
+        failures=tuple(failures),
     )
