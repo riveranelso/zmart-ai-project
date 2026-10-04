@@ -134,3 +134,15 @@ __all__ += [
 from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, BatchStatus, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, batch_status, assess_pattern_reuse
 
 __all__ += ["BatchItem", "BatchPlan", "BatchDispatchResult", "BatchDispatchFailure", "BatchStatus", "PatternObservation", "PatternCandidate", "plan_batch", "pending_items", "dispatch_pending", "batch_status", "assess_pattern_reuse"]
+
+from .scan_water import (
+    ScanZipResult, SCAN_BUSINESS_ID, SCAN_ZIP_INTENT, SCAN_ZIP_STATUSES,
+    RESOLVED, NEEDS_MORE_LOCATION, NO_ACTIVE_CWS, REVIEW_REQUIRED,
+    normalize_zip, plan_scan_zip_batch, validate_scan_zip_result,
+)
+
+__all__ += [
+    "ScanZipResult", "SCAN_BUSINESS_ID", "SCAN_ZIP_INTENT", "SCAN_ZIP_STATUSES",
+    "RESOLVED", "NEEDS_MORE_LOCATION", "NO_ACTIVE_CWS", "REVIEW_REQUIRED",
+    "normalize_zip", "plan_scan_zip_batch", "validate_scan_zip_result",
+]
