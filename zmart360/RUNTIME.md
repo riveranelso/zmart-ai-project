@@ -31,6 +31,7 @@ Production storage is intentionally not selected by this composition.
 - When durable `DISPATCH` evidence exists, `close()` also requires non-empty commission evidence and the responding ANGEL must be one of those recorded commissions; missing or mismatched commission authority fails closed.
 - Contradictory durable mission decisions for the same business and mission (for example `DISPATCH` plus a denial/human-review decision) are treated as an integrity conflict and `close()` fails closed.
 - Multiple durable `DISPATCH` records for the same business and mission must agree on the exact commissioned ANGEL set; conflicting commission sets are an integrity conflict and fail closed.
+- Repeated durable `DISPATCH` records must also agree on the dispatch fingerprint; conflicting fingerprints indicate different dispatch-affecting mission/security identity and `close()` fails closed.
 - A repeated owner correction with the same `correction_id` is a technical retry, not a second human correction.
 - The same correction text under a new correction ID may count as a genuine repeated correction.
 - These checks survive runtime restart because they use persisted CRONICAS/correction state.
