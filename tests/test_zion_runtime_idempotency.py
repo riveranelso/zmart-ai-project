@@ -59,7 +59,9 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="retry-conflict")[0]
             from zion_core.cronicas import CronicaEvent
             from zion_core.persistence import CronicasJsonlSink
-            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflicting-decision",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-conflict",business_id="zmart-consumer-rights",action="REQUIRE_HUMAN_REVIEW",reason="FORGED",dispatch_fingerprint=original.dispatch_fingerprint))
+            sink=CronicasJsonlSink(root/"cronicas.jsonl")
+            sink(CronicaEvent(event_id="conflicting-decision",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-conflict",business_id="zmart-consumer-rights",action="REQUIRE_HUMAN_REVIEW",reason="FORGED",dispatch_fingerprint=original.dispatch_fingerprint))
+            sink(CronicaEvent(event_id="valid-looking-last",occurred_at="2026-10-03T00:00:01+00:00",event_type="MISSION_DECISION",mission_id="retry-conflict",business_id="zmart-consumer-rights",action="DISPATCH",reason=original.reason,command=original.command,host=original.host,angel_ids=original.angel_ids,dispatch_fingerprint=original.dispatch_fingerprint))
             with self.assertRaisesRegex(ValueError,"MISSION_CONFLICTING_HISTORY"):
                 runtime.dispatch(dict(mission))
 
