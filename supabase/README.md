@@ -38,6 +38,30 @@ supabase/
      where lead_quality = 'duplicate';                            -- 3 filas, cada una apunta a su original
    ```
 
+## Enriquecimiento de teléfonos (NumVerify)
+
+El script `supabase/tools/enrich_phones.py` valida los teléfonos de los leads
+y guarda compañía, tipo de línea y ubicación en `public.phone_enrichment`.
+
+```bash
+# 1. API key gratis (100/mes) desde numverify.com — nunca hardcodear ni commitear
+export NUMVERIFY_API_KEY=tu_key
+
+# 2. Correr (usa caché local .enrich_cache.json para no gastar cuota)
+python3 supabase/tools/enrich_phones.py \
+  --input highlevel_contacts_clean.csv \
+  --out /tmp/enriched.csv \
+  --sql /tmp/enrich.sql
+
+# 3. Aplicar migración de la tabla (una vez por proyecto)
+#    SQL Editor -> supabase/migrations/20261004073000_create_phone_enrichment.sql -> Run
+
+# 4. Cargar resultados
+#    SQL Editor -> /tmp/enrich.sql -> Run   (NO commitear: contiene teléfonos reales)
+```
+
+La vista `public.phones_whatsapp_ok` lista los móviles válidos con su contacto.
+
 ## Reglas
 
 - Nunca versionar: password de la base de datos, `service_role` key, `anon` key ni ningún secreto.
