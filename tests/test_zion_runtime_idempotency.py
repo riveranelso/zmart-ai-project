@@ -66,6 +66,24 @@ class RuntimeIdempotencyTests(unittest.TestCase):
                 runtime.dispatch(dict(mission))
 
 
+    def test_retry_fails_closed_on_dispatch_history_missing_route_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"GLOBAL.md").write_text("# Global\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["GLOBAL.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            mission={"mission_id":"retry-missing-route","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"}
+            from zion_core.cronicas import CronicaEvent, build_dispatch_fingerprint
+            from zion_core.persistence import CronicasJsonlSink
+            aid="SANGABRIEL.HOST-01.ANGEL-001"
+            CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="missing-route",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-missing-route",business_id="zmart-consumer-rights",action="DISPATCH",reason="AUTHORIZED",command=None,host=None,angel_ids=(aid,),dispatch_fingerprint=build_dispatch_fingerprint(mission,None)))
+            with self.assertRaisesRegex(ValueError,"MISSION_INVALID_COMMISSION_HISTORY|MISSION_ID_REUSE_CONFLICT"):
+                runtime.dispatch(dict(mission))
+
+
     def test_retry_fails_closed_on_dispatch_history_missing_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
