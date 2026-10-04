@@ -132,6 +132,15 @@ class OmarRuntime:
                     raise ValueError("APOKRISIS_CONFLICTING_ROUTE_HISTORY")
                 if any(len(event.angel_ids)!=len(set(event.angel_ids)) for event in dispatched_events):
                     raise ValueError("APOKRISIS_INVALID_COMMISSION_HISTORY")
+                for event in dispatched_events:
+                    if not isinstance(event.host,str) or not event.host.strip():
+                        raise ValueError("APOKRISIS_INVALID_COMMISSION_HISTORY")
+                    expected=tuple(
+                        f"{event.host}.ANGEL-{index:03d}"
+                        for index in range(1,len(event.angel_ids)+1)
+                    )
+                    if tuple(event.angel_ids)!=expected:
+                        raise ValueError("APOKRISIS_INVALID_COMMISSION_HISTORY")
                 commission_sets={tuple(event.angel_ids) for event in dispatched_events}
                 if len(commission_sets)>1:
                     raise ValueError("APOKRISIS_CONFLICTING_COMMISSION_HISTORY")
