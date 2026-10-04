@@ -148,3 +148,5 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - Resolver outputs use RESOLVED, NEEDS_MORE_LOCATION, NO_ACTIVE_CWS, or REVIEW_REQUIRED.
 - RESOLVED requires a canonical state-prefixed PWSID plus evidence. Non-resolved states cannot carry a PWSID, preventing an ambiguous ZIP from being persisted as a guessed system.
 - Confidence is bounded from 0 to 1 and evidence references are deduplicated. External evidence remains evidence, not authority.
+
+- Existing SCAN datasets may be imported through scan_import. Only NEEDS_MORE_LOCATION rows are selected for new ZIP-resolution batches; RESOLVED and other terminal rows are preserved rather than replayed. Duplicate ZIPs with conflicting statuses fail closed for reconciliation instead of choosing one silently.
