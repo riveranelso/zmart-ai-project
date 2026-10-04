@@ -62,6 +62,27 @@ python3 supabase/tools/enrich_phones.py \
 
 La vista `public.phones_whatsapp_ok` lista los móviles válidos con su contacto.
 
+## Agente de corroboración
+
+El script `supabase/tools/corroborate_leads.py` cruza los datos de NumVerify
+y emite un veredicto por lead (determinístico, sin LLM):
+
+- **consistente**: móvil válido, compañía de PR
+- **dudoso**: línea fija/VoIP, sin compañía, o ubicación del número que no
+  coincide con el pueblo del lead (si el CSV trae columna `town`/`municipality`)
+- **descartable**: número inválido
+
+```bash
+python3 supabase/tools/corroborate_leads.py \
+  --enriched /tmp/enriched.csv \
+  --contacts highlevel_contacts_clean.csv \
+  --out /tmp/verificacion.csv \
+  --sql /tmp/verificacion.sql
+# SQL Editor -> /tmp/verificacion.sql -> Run   (NO commitear: contiene teléfonos)
+```
+
+La vista `public.leads_verificados` une veredicto + contacto + datos del teléfono.
+
 ## Reglas
 
 - Nunca versionar: password de la base de datos, `service_role` key, `anon` key ni ningún secreto.
