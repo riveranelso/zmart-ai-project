@@ -87,6 +87,23 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(response,learning=LearningIntent())
 
 
+    def test_response_history_for_other_angel_does_not_block_valid_close(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            dispatch=runtime.dispatch({"mission_id":"m-other-angel-history","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights","angel_count_max":2})
+            first,second=(item.angel_id for item in dispatch.decision.angels)
+            runtime.close(apokrisis(angel_id=first,mission_id="m-other-angel-history",status="SUCCESS",summary="first",business_id="zmart-consumer-rights"),learning=LearningIntent())
+            result=runtime.close(apokrisis(angel_id=second,mission_id="m-other-angel-history",status="SUCCESS",summary="second",business_id="zmart-consumer-rights"),learning=LearningIntent())
+            self.assertTrue(result.processed)
+            self.assertEqual(len(runtime.history(business_id="zmart-consumer-rights",event_type="ANGEL_RESPONSE",mission_id="m-other-angel-history")),2)
+
+
     def test_prior_response_record_with_empty_angel_identity_does_not_authorize_retry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
