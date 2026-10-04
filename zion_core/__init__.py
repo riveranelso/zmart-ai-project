@@ -96,3 +96,37 @@ from .glossolalia import (
     route_meta_action,
     process_meta_event,
 )
+
+from .paradosis import (
+    ParadosisError,
+    TenantBindingError,
+    MissionPacket,
+    ModuleRecord,
+    PacketFreshness,
+    MODULE_REGISTRY,
+    CORE_MODULES,
+    build_mission_packet,
+    bind_tenant,
+    check_packet_freshness,
+    refresh_packet,
+    packet_summary,
+    repo_head,
+    repo_branch,
+)
+
+__all__ += [
+    "ParadosisError",
+    "TenantBindingError",
+    "MissionPacket",
+    "ModuleRecord",
+    "PacketFreshness",
+    "MODULE_REGISTRY",
+    "CORE_MODULES",
+    "build_mission_packet",
+    "bind_tenant",
+    "check_packet_freshness",
+    "refresh_packet",
+    "packet_summary",
+    "repo_head",
+    "repo_branch",
+]
