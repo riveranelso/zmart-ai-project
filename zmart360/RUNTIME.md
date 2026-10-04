@@ -31,6 +31,7 @@ Production storage is intentionally not selected by this composition.
 - When durable `DISPATCH` evidence exists, `close()` also requires non-empty commission evidence and the responding ANGEL must be one of those recorded commissions; missing or mismatched commission authority fails closed.
 - Contradictory durable mission decisions for the same business and mission (for example `DISPATCH` plus a denial/human-review decision) are treated as an integrity conflict and `close()` fails closed.
 - Multiple durable `DISPATCH` records for the same business and mission must agree on the exact commissioned ANGEL set; conflicting commission sets are an integrity conflict and fail closed.
+- Each durable `DISPATCH` commission list must contain unique ANGEL identities; duplicate commission IDs are intrinsically invalid evidence and fail closed even without a second conflicting record.
 - Those repeated `DISPATCH` records must also agree on the dispatch fingerprint; a changed or missing fingerprint alongside a recorded fingerprint is treated as degraded/contradictory authority and fails closed.
 - Repeated durable `DISPATCH` records must also agree on the exact command/host route; route disagreement is an integrity conflict and fails closed before accepting APOKRISIS.
 - Multiple durable `DISPATCH` records must also agree on the dispatch fingerprint; divergent fingerprints mean the mission authority changed and `close()` fails closed even when the ANGEL set is unchanged.
