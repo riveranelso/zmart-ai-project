@@ -224,3 +224,40 @@ def dispatch_pending(
         decisions=tuple(decisions),
         failures=tuple(failures),
     )
+
+
+@dataclass(frozen=True)
+class BatchStatus:
+    batch_id: str
+    business_id: str
+    total: int
+    decided: int
+    pending: int
+    decision_actions: tuple[tuple[str, int], ...]
+
+
+def batch_status(plan: BatchPlan, runtime: Any) -> BatchStatus:
+    """Summarize durable batch progress without reading payload contents."""
+    counts={}
+    decided=0
+    for item in plan.items:
+        history=runtime.history(
+            business_id=plan.business_id,
+            event_type="MISSION_DECISION",
+            mission_id=item.mission_id,
+        )
+        if not history:
+            continue
+        decided+=1
+        action=getattr(history[-1],"action",None)
+        action=action if isinstance(action,str) and action.strip() else "UNKNOWN"
+        counts[action]=counts.get(action,0)+1
+    total=len(plan.items)
+    return BatchStatus(
+        batch_id=plan.batch_id,
+        business_id=plan.business_id,
+        total=total,
+        decided=decided,
+        pending=total-decided,
+        decision_actions=tuple(sorted(counts.items())),
+    )
