@@ -136,5 +136,6 @@ This branch is architecture/runtime work only. No production backend, n8n, Fly d
 - A batch binds one business_id and produces deterministic per-item mission IDs and payload_ref values, so retry/idempotency and tenant isolation remain owned by the normal runtime.
 - Batch item keys must be unique and mission identity fields cannot be overridden through defaults.
 - Checkpoint/resume is derived from durable MISSION_DECISION history: items with an existing decision are skipped by pending_items; unresolved items remain pending.
+- dispatch_pending executes only a bounded slice of currently pending items (default 25) through OmarRuntime, then recomputes the durable checkpoint. A later run resumes from the remaining items instead of replaying the batch.
 - Batch planning does not promote retrieved patterns or external results into BIBLIA. Pattern reuse must still pass the normal HOLY GHOST / GRAPHO learning boundary.
 - Repeated batch observations may be aggregated into a PatternCandidate only within one business and one pattern key. Conflicting outcomes remain non-reusable, and even repeated consistent evidence stays review-required rather than becoming authority automatically.
