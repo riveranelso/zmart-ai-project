@@ -68,6 +68,25 @@ class RuntimeApokrisisIdempotencyTests(unittest.TestCase):
                 runtime.close(forged,learning=LearningIntent())
 
 
+    def test_multiple_dispatch_records_with_different_fingerprints_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/"WORKFLOWS.md").write_text("# Workflows\\n\\n## zmart-consumer-rights\\n",encoding="utf-8")
+            registry=root/"registry.json"
+            registry.write_text(json.dumps({"businesses":{"zmart-consumer-rights":{"enabled":True,"isolation_key":"zmart-consumer-rights","context_refs":["WORKFLOWS.md"]}}}),encoding="utf-8")
+            routes=root/"derekh.yaml"
+            routes.write_text("routes:\n  - intent: internal_dispatch\n    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",encoding="utf-8")
+            runtime=OmarRuntime(biblia_root=root,registry_path=registry,routes_path=routes,cronicas_path=root/"cronicas.jsonl",correction_memory_path=root/"corrections.json")
+            runtime.dispatch({"mission_id":"m-fingerprint-history","intent":"internal_dispatch","requested_by":"OMAR","scope":"WORKFLOW","business_id":"zmart-consumer-rights"})
+            original=runtime.history(business_id="zmart-consumer-rights",event_type="MISSION_DECISION",mission_id="m-fingerprint-history")[0]
+            from dataclasses import replace
+            from zion_core.persistence import CronicasJsonlSink
+            CronicasJsonlSink(root/"cronicas.jsonl")(replace(original,event_id="conflicting-fingerprint",dispatch_fingerprint="0"*64))
+            response=apokrisis(angel_id=original.angel_ids[0],mission_id="m-fingerprint-history",status="SUCCESS",summary="must fail closed",business_id="zmart-consumer-rights")
+            with self.assertRaisesRegex(ValueError,"APOKRISIS_CONFLICTING_DISPATCH_FINGERPRINTS"):
+                runtime.close(response,learning=LearningIntent())
+
+
     def test_multiple_dispatch_records_with_different_commissions_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
