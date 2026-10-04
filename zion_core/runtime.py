@@ -121,6 +121,9 @@ class OmarRuntime:
                     raise ValueError("APOKRISIS_CONFLICTING_MISSION_HISTORY")
                 if dispatch_events and not dispatched_events:
                     raise ValueError("APOKRISIS_MISSION_NOT_DISPATCHED")
+                route_identities={(event.command,event.host) for event in dispatched_events}
+                if len(route_identities)>1:
+                    raise ValueError("APOKRISIS_CONFLICTING_ROUTE_HISTORY")
                 dispatch_fingerprints={event.dispatch_fingerprint for event in dispatched_events}
                 if len(dispatch_fingerprints)>1:
                     raise ValueError("APOKRISIS_CONFLICTING_DISPATCH_FINGERPRINTS")
