@@ -1,0 +1,354 @@
+"""Adversarial tests for zion_core.ktema Increment 3 (source protocol).
+
+PropertySource protocol + registry + router + FixturePropertySource +
+FetchIntent + plan_ktema_batch.
+
+All fixtures are in-memory and synthetic: parcel IDs, addresses and source
+URIs below are TEST-ONLY values with no real-world referent. Timestamps are
+fixed ISO strings; no live services are ever touched. The module under test
+performs no network I/O (intent only, no transport) and never builds URLs.
+"""
+import ast
+import re
+import unittest
+from pathlib import Path
+
+from zion_core import ktema
+from zion_core.ktema import (
+    FIXTURE_SOURCE_ID,
+    NOT_FOUND,
+    OPERATION_PARCEL_LOOKUP,
+    RESOLVED,
+    UNAVAILABLE,
+    VERIFIED,
+    CountyResolution,
+    FetchIntent,
+    FixturePropertySource,
+    KtemaBatchItem,
+    KtemaBatchPlan,
+    KtemaError,
+    PropertyQuery,
+    PropertySource,
+    PropertySourceRegistry,
+    PropertySourceRouter,
+    fixture_registry,
+    plan_ktema_batch,
+    query_fingerprint,
+    resolve_county,
+)
+
+BUSINESS = "los-duros"
+ISOLATION_KEY = "los-duros"
+SOURCE_UPDATED_AT = "2026-10-03T12:00:00+00:00"
+RETRIEVED_AT = "2026-10-04T09:00:00+00:00"
+PARCEL_ID = "12-34-56-78-90-1234"
+# Real-world fact (downtown Orlando -> Orange County), exercised against the
+# shipped Increment-1 table via the default path.
+ORLANDO_ZIP = "32801"
+
+
+def _good_record(parcel_id=PARCEL_ID):
+    """Well-formed synthetic fixture record (no real-world referent)."""
+    return {
+        "source_record_id": parcel_id,
+        "parcel_id": parcel_id,
+        "state": "FL",
+        "county": "Orange",
+        "site_address": "200 S Orange Ave, Orlando, FL",
+        "zip": ORLANDO_ZIP,
+        "property_type": "Single Family",
+        "land_use": "Residential",
+        "year_built": 1985,
+        "living_sqft": 1800.0,
+        "lot_acres": 0.25,
+        "source_updated_at": SOURCE_UPDATED_AT,
+        "retrieved_at": RETRIEVED_AT,
+    }
+
+
+def _query(**kwargs):
+    params = {"business_id": BUSINESS, "parcel_id": PARCEL_ID, "zip": ORLANDO_ZIP}
+    params.update(kwargs)
+    return PropertyQuery(**params)
+
+
+def _resolved_orange():
+    return CountyResolution(
+        status=RESOLVED,
+        county="Orange",
+        candidates=(),
+        confidence=0.95,
+        reason="KTEMA_ZIP_SINGLE_COUNTY",
+        evidence_refs=("ktema:table:test-fixture",),
+    )
+
+
+class _StubSource:
+    """Minimal protocol-conformant source with a caller-chosen source_id."""
+
+    def __init__(self, source_id):
+        self._source_id = source_id
+
+    @property
+    def source_id(self):
+        return self._source_id
+
+    def fetch_intent(self, query):
+        raise AssertionError("stub never used for fetch")
+
+    def normalize(self, record, query, isolation_key):
+        raise AssertionError("stub never used for normalize")
+
+
+class RegistryTests(unittest.TestCase):
+    def test_source_unknown_id_fails_closed(self):
+        registry = PropertySourceRegistry()
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_SOURCE_UNKNOWN"):
+            registry.get("no-such-source")
+
+    def test_register_get_roundtrip(self):
+        registry = PropertySourceRegistry()
+        source = FixturePropertySource({})
+        registry.register(source)
+        self.assertIs(registry.get(FIXTURE_SOURCE_ID), source)
+
+    def test_duplicate_registration_fails_closed(self):
+        registry = PropertySourceRegistry()
+        registry.register(FixturePropertySource({}))
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_SOURCE_DUPLICATE"):
+            registry.register(FixturePropertySource({}))
+
+    def test_protocol_membership(self):
+        self.assertIsInstance(FixturePropertySource({}), PropertySource)
+
+
+class RouterTests(unittest.TestCase):
+    def test_county_without_registered_source_fails_closed(self):
+        # Empty registry: the mapped source_id ("fixture") is not published.
+        registry = PropertySourceRegistry()
+        router = PropertySourceRouter()
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_COUNTY_SOURCE_UNREGISTERED"
+        ):
+            router.route(_resolved_orange(), registry)
+
+    def test_router_never_falls_back_to_neighbor_source(self):
+        # Seminole has a registered source; Orange's mapped source does not
+        # exist. Routing Orange must fail closed, never borrow Seminole's.
+        registry = PropertySourceRegistry()
+        registry.register(_StubSource("seminole-pa"))
+        router = PropertySourceRouter(
+            {"Orange": "orange-pa", "Seminole": "seminole-pa"}
+        )
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_COUNTY_SOURCE_UNREGISTERED"
+        ):
+            router.route(_resolved_orange(), registry)
+        # ...while Seminole itself still routes to its own source.
+        seminole = CountyResolution(
+            status=RESOLVED,
+            county="Seminole",
+            candidates=(),
+            confidence=0.95,
+            reason="KTEMA_ZIP_SINGLE_COUNTY",
+            evidence_refs=("ktema:table:test-fixture",),
+        )
+        self.assertEqual(router.route(seminole, registry).source_id, "seminole-pa")
+
+    def test_unresolved_county_cannot_route(self):
+        registry = fixture_registry({})
+        router = PropertySourceRouter()
+        inconclusive = CountyResolution(
+            status="INCONCLUSIVE",
+            county=None,
+            candidates=(),
+            confidence=0.0,
+            reason="KTEMA_ADDRESS_NEEDS_ZIP",
+            evidence_refs=("ktema:table:test-fixture",),
+        )
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_COUNTY_UNRESOLVED"):
+            router.route(inconclusive, registry)
+
+    def test_resolve_then_route_integration(self):
+        # Increment 1 -> 3: a real table resolution flows into the router and
+        # fails closed when the county's source is not registered.
+        resolution = resolve_county(_query(zip=ORLANDO_ZIP, parcel_id=None))
+        self.assertEqual(resolution.status, RESOLVED)
+        self.assertEqual(resolution.county, "Orange")
+        router = PropertySourceRouter()
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_COUNTY_SOURCE_UNREGISTERED"
+        ):
+            router.route(resolution, PropertySourceRegistry())
+
+
+class FetchIntentTests(unittest.TestCase):
+    def setUp(self):
+        self.source = FixturePropertySource({PARCEL_ID: _good_record()})
+        self.query = _query()
+
+    def test_fetch_intent_is_opaque_no_urls(self):
+        intent = self.source.fetch_intent(self.query)
+        self.assertIsInstance(intent, FetchIntent)
+        self.assertEqual(intent.source_id, FIXTURE_SOURCE_ID)
+        self.assertEqual(intent.operation, OPERATION_PARCEL_LOOKUP)
+        self.assertNotIn("http", intent.target_descriptor)
+        self.assertTrue(intent.target_descriptor.startswith("fixture://"))
+        self.assertRegex(intent.query_fingerprint, r"^[0-9a-f]{64}$")
+        # Deterministic: same normalized query -> same fingerprint.
+        again = self.source.fetch_intent(_query())
+        self.assertEqual(intent.query_fingerprint, again.query_fingerprint)
+        # Isolation: the business is part of the fingerprint.
+        other = self.source.fetch_intent(_query(business_id="zmart-consumer-rights"))
+        self.assertNotEqual(intent.query_fingerprint, other.query_fingerprint)
+
+    def test_fetch_intent_without_parcel_stays_opaque(self):
+        intent = self.source.fetch_intent(_query(parcel_id=None))
+        self.assertNotIn("http", intent.target_descriptor)
+        self.assertTrue(intent.target_descriptor.startswith("fixture://fixture/q-"))
+
+    def test_module_imports_no_network_libraries(self):
+        tree = ast.parse(Path(ktema.__file__).read_text(encoding="utf-8"))
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(a.name.split(".")[0] for a in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported.add(node.module.split(".")[0])
+        self.assertFalse({"urllib", "requests", "http"} & imported)
+
+
+class FixtureNormalizeTests(unittest.TestCase):
+    def setUp(self):
+        self.records = {PARCEL_ID: _good_record()}
+        self.source = FixturePropertySource(self.records)
+        self.query = _query()
+
+    def test_verified_fixture_roundtrip(self):
+        profile = self.source.normalize(_good_record(), self.query, ISOLATION_KEY)
+        self.assertEqual(profile.verification_status, VERIFIED)
+        self.assertEqual(profile.confidence, 1.0)
+        # Complete provenance.
+        self.assertEqual(profile.source, FIXTURE_SOURCE_ID)
+        self.assertEqual(profile.source_record_id, PARCEL_ID)
+        self.assertEqual(profile.source_updated_at, SOURCE_UPDATED_AT)
+        self.assertEqual(profile.retrieved_at, RETRIEVED_AT)
+        self.assertTrue(profile.raw_reference.startswith("fixture://fixture/"))
+        self.assertEqual(profile.isolation_key, ISOLATION_KEY)
+        self.assertEqual(profile.attempted_sources, (FIXTURE_SOURCE_ID,))
+        self.assertTrue(profile.property_exists)
+
+    def test_not_found_profile_has_attempted_sources(self):
+        # Integration: the fixture holds nothing for this parcel.
+        record = self.source.lookup("99-99-99-99-99-9999")
+        self.assertIsNone(record)
+        profile = self.source.normalize(record, self.query, ISOLATION_KEY)
+        self.assertEqual(profile.verification_status, NOT_FOUND)
+        self.assertIsNone(profile.property_exists)
+        self.assertEqual(profile.attempted_sources, (FIXTURE_SOURCE_ID,))
+
+    def test_source_outage_is_unavailable_not_not_found(self):
+        outage_records = {
+            PARCEL_ID: {"__raise__": TimeoutError("simulated fixture outage")}
+        }
+        source = FixturePropertySource(outage_records)
+        profile = source.normalize(
+            outage_records[PARCEL_ID], self.query, ISOLATION_KEY
+        )
+        self.assertEqual(profile.verification_status, UNAVAILABLE)
+        self.assertNotEqual(profile.verification_status, NOT_FOUND)
+        self.assertIn(FIXTURE_SOURCE_ID, profile.reason)
+        self.assertIsNone(profile.property_exists)
+        self.assertEqual(profile.attempted_sources, (FIXTURE_SOURCE_ID,))
+
+    def test_malformed_adapter_response_rejected_at_boundary(self):
+        # Missing source_record_id.
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_ADAPTER_RESPONSE_MALFORMED"
+        ):
+            self.source.normalize({"parcel_id": PARCEL_ID}, self.query, ISOLATION_KEY)
+        # Non-ISO source_updated_at.
+        bad_time = dict(_good_record())
+        bad_time["source_updated_at"] = "yesterday-ish"
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_ADAPTER_RESPONSE_MALFORMED"
+        ):
+            self.source.normalize(bad_time, self.query, ISOLATION_KEY)
+        # Not a record at all: no half-built profile escapes.
+        with self.assertRaisesRegex(
+            KtemaError, r"^KTEMA_ADAPTER_RESPONSE_MALFORMED"
+        ):
+            self.source.normalize("not-a-record", self.query, ISOLATION_KEY)
+
+    def test_ambiguous_source_match_preserves_candidates(self):
+        record = {
+            "matches": [
+                {"source_record_id": "A-1", "parcel_id": "A-1"},
+                {"source_record_id": "B-2", "parcel_id": "B-2"},
+            ]
+        }
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_MATCH_AMBIGUOUS.*A-1.*B-2"):
+            self.source.normalize(record, self.query, ISOLATION_KEY)
+
+    def test_empty_matches_is_not_found(self):
+        profile = self.source.normalize({"matches": []}, self.query, ISOLATION_KEY)
+        self.assertEqual(profile.verification_status, NOT_FOUND)
+        self.assertIsNone(profile.property_exists)
+
+
+class BatchPlanTests(unittest.TestCase):
+    def test_batch_requires_explicit_consumer_business(self):
+        items = [_query()]
+        for bad in (None, "", "   "):
+            with self.assertRaisesRegex(KtemaError, r"^KTEMA_BUSINESS_REQUIRED"):
+                plan_ktema_batch(items, "batch-1", bad)
+        # Spoofed business: SAN PEDRO rejects it, the batch fails closed.
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_BUSINESS_INVALID"):
+            plan_ktema_batch(items, "batch-1", "los-duros-evil")
+
+    def test_capability_dispatches_for_non_scan_consumer(self):
+        plan = plan_ktema_batch(
+            [PropertyQuery(business_id="los-duros", zip=ORLANDO_ZIP)],
+            "batch-los-duros-1",
+            "los-duros",
+        )
+        self.assertIsInstance(plan, KtemaBatchPlan)
+        self.assertEqual(plan.business_id, "los-duros")
+        self.assertEqual(plan.isolation_key, "los-duros")
+        self.assertEqual(plan.batch_id, "batch-los-duros-1")
+        self.assertEqual(len(plan.items), 1)
+        item = plan.items[0]
+        self.assertIsInstance(item, KtemaBatchItem)
+        self.assertEqual(item.query.business_id, "los-duros")
+        self.assertRegex(item.query_fingerprint, r"^[0-9a-f]{64}$")
+        # KTEMA shares nothing with SCAN: no SCAN_* attributes, no scan_water
+        # import anywhere in the module namespace.
+        self.assertFalse(
+            [name for name in vars(ktema) if name.startswith("SCAN_")]
+        )
+        self.assertNotIn("scan_water", vars(ktema))
+
+    def test_batch_rejects_mixed_business_items(self):
+        items = [
+            PropertyQuery(business_id="los-duros", zip=ORLANDO_ZIP),
+            PropertyQuery(business_id="zmart-consumer-rights", zip=ORLANDO_ZIP),
+        ]
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_BATCH_BUSINESS_MISMATCH"):
+            plan_ktema_batch(items, "batch-1", "los-duros")
+
+    def test_batch_stamps_missing_item_business(self):
+        plan = plan_ktema_batch(
+            [PropertyQuery(business_id=None, zip=ORLANDO_ZIP)],
+            "batch-1",
+            "los-duros",
+        )
+        self.assertEqual(plan.items[0].query.business_id, "los-duros")
+
+    def test_batch_rejects_empty_items(self):
+        with self.assertRaisesRegex(KtemaError, r"^KTEMA_BATCH_ITEMS_REQUIRED"):
+            plan_ktema_batch([], "batch-1", "los-duros")
+
+
+if __name__ == "__main__":
+    unittest.main()

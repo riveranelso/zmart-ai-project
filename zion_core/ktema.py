@@ -71,15 +71,39 @@ Increment 2: PropertyProfile + SourceProvenance + VerificationStatus.
   - is_fresh judges freshness from source_updated_at, never retrieved_at.
   - Future SCAN water fields exist as None placeholders only; SCAN is NOT
     implemented here and ktema never imports the SCAN water adapter module.
+
+Increment 3: PropertySource protocol, registry, router, FixturePropertySource,
+FetchIntent, and KtemaBatchPlan.
+  - Intent only, no transport: adapters NEVER perform network I/O and never
+    build URLs (the module imports no urllib/requests/http). fetch_intent
+    emits an opaque target_descriptor ("fixture://..." for the fixture); a
+    real adapter's descriptor is equally opaque. The adapter never fetches:
+    normalize() converts an INJECTED record (already obtained by external
+    transport) into a PropertyProfile via validate_property_profile.
+  - Source failures surface as UNAVAILABLE -- never NOT_FOUND. Ambiguous
+    multi-match adapter responses raise KTEMA_MATCH_AMBIGUOUS with the
+    candidate IDs preserved in the message; malformed adapter responses are
+    rejected at the boundary with KTEMA_ADAPTER_RESPONSE_MALFORMED before
+    any profile is half-built.
+  - Only FixturePropertySource is published initially. Real sources enter
+    only with a verified schema/endpoint -- never before.
+  - The router maps a resolved county -> source_id and fails closed with
+    KTEMA_COUNTY_SOURCE_UNREGISTERED when no source is registered for it;
+    it NEVER falls back to a neighboring county's source.
+  - plan_ktema_batch requires an explicit consumer business_id, re-validated
+    through SAN PEDRO (spoofed/unknown IDs fail closed), and shares nothing
+    with SCAN: no SCAN_* names, no SCAN-adapter import.
 """
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from .registry import SanPedroError, sanpedro_resolve
 
@@ -588,3 +612,488 @@ def is_fresh(
         now = now.replace(tzinfo=timezone.utc)
     age_days = (now - updated).total_seconds() / 86400.0
     return age_days <= float(max_age_days)
+
+
+# ---------------------------------------------------------------------------
+# Increment 3: PropertySource protocol, registry, router, fixture, batch plan
+# ---------------------------------------------------------------------------
+#
+# Intent only, no transport. A PropertySource describes WHAT the external
+# transport should fetch (FetchIntent, opaque target_descriptor) and converts
+# an already-fetched record into a PropertyProfile (normalize). The adapter
+# itself never touches the network, never builds URLs, and never guesses.
+
+#: The only source_id published initially. Real sources enter only with a
+#: verified schema/endpoint -- never before.
+FIXTURE_SOURCE_ID = "fixture"
+
+#: Canonical operation name for a parcel-record fetch intent.
+OPERATION_PARCEL_LOOKUP = "parcel_lookup"
+
+_FINGERPRINT_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+@dataclass(frozen=True)
+class FetchIntent:
+    """What the external transport should fetch. Opaque by design.
+
+    target_descriptor describes the lookup target WITHOUT building a URL
+    (e.g. "fixture://fixture/<parcel_id>"); the module never constructs
+    URLs, so a descriptor containing "http" is rejected at construction.
+    query_fingerprint is the sha256 of the normalized query, for cache keys.
+    """
+
+    source_id: str
+    operation: str
+    target_descriptor: str
+    query_fingerprint: str
+    requested_at_iso: str
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _make_fetch_intent(
+    *,
+    source_id: str,
+    operation: str,
+    target_descriptor: str,
+    query_fingerprint: str,
+    requested_at_iso: str,
+) -> FetchIntent:
+    if not isinstance(source_id, str) or not source_id.strip() or source_id != source_id.strip():
+        raise KtemaError("KTEMA_INTENT_SOURCE_REQUIRED")
+    if not isinstance(operation, str) or not operation.strip() or operation != operation.strip():
+        raise KtemaError("KTEMA_INTENT_OPERATION_REQUIRED")
+    if (
+        not isinstance(target_descriptor, str)
+        or not target_descriptor.strip()
+        or target_descriptor != target_descriptor.strip()
+    ):
+        raise KtemaError("KTEMA_INTENT_DESCRIPTOR_REQUIRED")
+    if "http" in target_descriptor.lower():
+        # Intent only: KTEMA never builds URLs. A descriptor carrying one
+        # means a transport concern leaked into the adapter -- reject.
+        raise KtemaError("KTEMA_INTENT_DESCRIPTOR_FORBIDDEN")
+    if not isinstance(query_fingerprint, str) or not _FINGERPRINT_RE.fullmatch(query_fingerprint):
+        raise KtemaError("KTEMA_FINGERPRINT_INVALID")
+    if _parse_iso(requested_at_iso) is None:
+        raise KtemaError("KTEMA_INTENT_TIME_INVALID")
+    return FetchIntent(
+        source_id=source_id,
+        operation=operation,
+        target_descriptor=target_descriptor,
+        query_fingerprint=query_fingerprint,
+        requested_at_iso=requested_at_iso,
+    )
+
+
+def _canonical_query_key(query: PropertyQuery) -> str:
+    """Canonical, normalized string form of a query for fingerprinting.
+
+    business_id is part of the key: two businesses querying the same parcel
+    must never share a cache fingerprint (business isolation).
+    """
+
+    def _s(value: object) -> str:
+        return value.strip().lower() if isinstance(value, str) else ""
+
+    def _n(value: object) -> str:
+        return "" if value is None else repr(float(value))
+
+    return "|".join(
+        (
+            f"business_id={_s(query.business_id)}",
+            f"parcel_id={_s(query.parcel_id)}",
+            f"zip={_s(query.zip)}",
+            f"address={_s(query.address)}",
+            f"latitude={_n(query.latitude)}",
+            f"longitude={_n(query.longitude)}",
+        )
+    )
+
+
+def query_fingerprint(query: PropertyQuery) -> str:
+    """sha256 of the normalized query, for transport cache keys."""
+    if not isinstance(query, PropertyQuery):
+        raise KtemaError("KTEMA_QUERY_INVALID")
+    return hashlib.sha256(_canonical_query_key(query).encode("utf-8")).hexdigest()
+
+
+@runtime_checkable
+class PropertySource(Protocol):
+    """Adapter contract for one property-record source.
+
+    The adapter NEVER fetches: fetch_intent describes the fetch for the
+    external transport; normalize converts an INJECTED record (already
+    fetched) into a PropertyProfile via validate_property_profile.
+    """
+
+    @property
+    def source_id(self) -> str: ...
+
+    def fetch_intent(self, query: PropertyQuery) -> FetchIntent: ...
+
+    def normalize(
+        self, record: dict | None, query: PropertyQuery, isolation_key: str
+    ) -> PropertyProfile: ...
+
+
+class PropertySourceRegistry:
+    """Published property sources, keyed by source_id.
+
+    Initially only FixturePropertySource is published. Unknown source IDs
+    fail closed with KTEMA_SOURCE_UNKNOWN; re-registration fails closed
+    (never silently replaced).
+    """
+
+    def __init__(self) -> None:
+        self._sources: dict[str, PropertySource] = {}
+
+    def register(self, source: PropertySource) -> None:
+        if not isinstance(source, PropertySource):
+            raise KtemaError("KTEMA_SOURCE_PROTOCOL_INVALID")
+        source_id = source.source_id
+        if (
+            not isinstance(source_id, str)
+            or not source_id.strip()
+            or source_id != source_id.strip()
+        ):
+            raise KtemaError("KTEMA_SOURCE_ID_INVALID")
+        if source_id in self._sources:
+            raise KtemaError(f"KTEMA_SOURCE_DUPLICATE:{source_id}")
+        self._sources[source_id] = source
+
+    def get(self, source_id: str) -> PropertySource:
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise KtemaError("KTEMA_SOURCE_UNKNOWN:")
+        try:
+            return self._sources[source_id]
+        except KeyError:
+            raise KtemaError(f"KTEMA_SOURCE_UNKNOWN:{source_id}") from None
+
+
+class PropertySourceRouter:
+    """Maps a resolved county to its registered PropertySource.
+
+    Fail closed: a RESOLVED county with no registered source raises
+    KTEMA_COUNTY_SOURCE_UNREGISTERED. The router NEVER falls back to a
+    neighboring county's source. Non-RESOLVED resolutions cannot be
+    routed at all (KTEMA_COUNTY_UNRESOLVED).
+    """
+
+    def __init__(self, county_to_source_id: dict[str, str] | None = None) -> None:
+        if county_to_source_id is None:
+            county_to_source_id = {county: FIXTURE_SOURCE_ID for county in CANONICAL_COUNTIES}
+        if not isinstance(county_to_source_id, dict):
+            raise KtemaError("KTEMA_ROUTER_MAPPING_INVALID")
+        mapping: dict[str, str] = {}
+        for county, source_id in county_to_source_id.items():
+            if (
+                not isinstance(county, str)
+                or not county.strip()
+                or county != county.strip()
+                or not isinstance(source_id, str)
+                or not source_id.strip()
+                or source_id != source_id.strip()
+            ):
+                raise KtemaError("KTEMA_ROUTER_MAPPING_INVALID")
+            mapping[county] = source_id
+        self._mapping = mapping
+
+    def route(
+        self, county_resolution: CountyResolution, registry: PropertySourceRegistry
+    ) -> PropertySource:
+        if not isinstance(county_resolution, CountyResolution):
+            raise KtemaError("KTEMA_RESOLUTION_INVALID")
+        if not isinstance(registry, PropertySourceRegistry):
+            raise KtemaError("KTEMA_REGISTRY_INVALID")
+        if county_resolution.status != RESOLVED or not county_resolution.county:
+            raise KtemaError(
+                f"KTEMA_COUNTY_UNRESOLVED:status={county_resolution.status}"
+            )
+        county = county_resolution.county
+        source_id = self._mapping.get(county)
+        if source_id is None:
+            raise KtemaError(f"KTEMA_COUNTY_SOURCE_UNREGISTERED:county={county}")
+        try:
+            return registry.get(source_id)
+        except KtemaError as exc:
+            if str(exc).startswith("KTEMA_SOURCE_UNKNOWN"):
+                raise KtemaError(
+                    f"KTEMA_COUNTY_SOURCE_UNREGISTERED:county={county}:source_id={source_id}"
+                ) from exc
+            raise
+
+
+class FixturePropertySource:
+    """In-memory fixture source. Implements PropertySource; never network.
+
+    records maps parcel_id -> raw record dict. A record value of
+    {"__raise__": <BaseException instance>} simulates a source outage.
+    A record with a "matches" list simulates a search response: >1 matches
+    raises KTEMA_MATCH_AMBIGUOUS, exactly 1 is normalized, 0 is NOT_FOUND.
+    """
+
+    def __init__(self, records: dict) -> None:
+        if not isinstance(records, dict):
+            raise KtemaError("KTEMA_FIXTURE_RECORDS_INVALID")
+        for parcel_id, record in records.items():
+            if not isinstance(parcel_id, str) or not parcel_id.strip():
+                raise KtemaError("KTEMA_FIXTURE_RECORDS_INVALID:bad-parcel-id")
+            if not isinstance(record, dict):
+                raise KtemaError("KTEMA_FIXTURE_RECORDS_INVALID:bad-record")
+        self._records = dict(records)
+
+    @property
+    def source_id(self) -> str:
+        return FIXTURE_SOURCE_ID
+
+    def lookup(self, parcel_id: str) -> dict | None:
+        """Fixture-only convenience: fetch the raw record for a parcel_id.
+
+        Returns None when the fixture holds no record (normalize() then
+        produces NOT_FOUND). This is test/transport scaffolding, not a
+        network fetch.
+        """
+        if not isinstance(parcel_id, str):
+            raise KtemaError("KTEMA_FIXTURE_LOOKUP_INVALID")
+        return self._records.get(parcel_id)
+
+    def fetch_intent(self, query: PropertyQuery) -> FetchIntent:
+        if not isinstance(query, PropertyQuery):
+            raise KtemaError("KTEMA_QUERY_INVALID")
+        if _present(query.parcel_id):
+            key = str(query.parcel_id).strip()
+        else:
+            # Fully opaque when no parcel signal is present.
+            key = f"q-{query_fingerprint(query)[:16]}"
+        return _make_fetch_intent(
+            source_id=FIXTURE_SOURCE_ID,
+            operation=OPERATION_PARCEL_LOOKUP,
+            target_descriptor=f"fixture://{FIXTURE_SOURCE_ID}/{key}",
+            query_fingerprint=query_fingerprint(query),
+            requested_at_iso=_now_iso(),
+        )
+
+    # -- normalize ---------------------------------------------------------
+
+    def _profile_base(self, query: PropertyQuery, isolation_key: str) -> dict:
+        parcel_id = str(query.parcel_id).strip() if _present(query.parcel_id) else ""
+        zip_code = str(query.zip).strip() if _present(query.zip) else ""
+        return {
+            "state": "FL",
+            "county": "",
+            "parcel_id": parcel_id,
+            "site_address": "",
+            "zip": zip_code,
+            "source": FIXTURE_SOURCE_ID,
+            "isolation_key": isolation_key.strip(),
+            "confidence": 0.0,
+            "property_exists": None,
+            "attempted_sources": (FIXTURE_SOURCE_ID,),
+        }
+
+    def _not_found(self, query: PropertyQuery, isolation_key: str) -> PropertyProfile:
+        params = self._profile_base(query, isolation_key)
+        params.update(
+            verification_status=NOT_FOUND,
+            reason="KTEMA_FIXTURE_NO_MATCH",
+        )
+        return validate_property_profile(PropertyProfile(**params))
+
+    def _unavailable(
+        self, query: PropertyQuery, isolation_key: str, exc: object
+    ) -> PropertyProfile:
+        exc_name = type(exc).__name__ if isinstance(exc, BaseException) else "UnknownError"
+        params = self._profile_base(query, isolation_key)
+        params.update(
+            verification_status=UNAVAILABLE,
+            # A source outage is never NOT_FOUND: the source did not answer,
+            # so nothing can be claimed about the parcel.
+            reason=f"KTEMA_SOURCE_OUTAGE:{FIXTURE_SOURCE_ID}:{exc_name}",
+        )
+        return validate_property_profile(PropertyProfile(**params))
+
+    def normalize(
+        self, record: dict | None, query: PropertyQuery, isolation_key: str
+    ) -> PropertyProfile:
+        """Convert an INJECTED fixture record into a PropertyProfile.
+
+        record=None (fixture holds nothing for the parcel) -> NOT_FOUND.
+        record={"__raise__": exc} -> UNAVAILABLE (source outage, never
+        NOT_FOUND). Malformed records -> KTEMA_ADAPTER_RESPONSE_MALFORMED
+        at the boundary, before any profile is half-built.
+        """
+        if not isinstance(query, PropertyQuery):
+            raise KtemaError("KTEMA_QUERY_INVALID")
+        if not isinstance(isolation_key, str) or not isolation_key.strip():
+            raise KtemaError("KTEMA_BUSINESS_REQUIRED")
+        if record is None:
+            return self._not_found(query, isolation_key)
+        if not isinstance(record, dict):
+            raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:not-a-record")
+        if "__raise__" in record:
+            return self._unavailable(query, isolation_key, record["__raise__"])
+        if "matches" in record:
+            matches = record["matches"]
+            if not isinstance(matches, list):
+                raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:bad-matches")
+            if len(matches) > 1:
+                candidates = ",".join(
+                    str(m.get("source_record_id", "?"))
+                    if isinstance(m, dict)
+                    else "?"
+                    for m in matches
+                )
+                raise KtemaError(f"KTEMA_MATCH_AMBIGUOUS:candidates={candidates}")
+            if not matches:
+                return self._not_found(query, isolation_key)
+            record = matches[0]
+            if not isinstance(record, dict):
+                raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:bad-match")
+
+        source_record_id = record.get("source_record_id")
+        if (
+            not isinstance(source_record_id, str)
+            or not source_record_id.strip()
+        ):
+            raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:source_record_id-missing")
+        source_updated_at = record.get("source_updated_at")
+        if source_updated_at is not None and _parse_iso(source_updated_at) is None:
+            raise KtemaError("KTEMA_ADAPTER_RESPONSE_MALFORMED:source_updated_at-not-iso")
+        retrieved_at = record.get("retrieved_at") or _now_iso()
+
+        record_id = source_record_id.strip()
+        params = self._profile_base(query, isolation_key)
+        params.update(
+            county=str(record.get("county") or "").strip(),
+            parcel_id=str(record.get("parcel_id") or record_id).strip(),
+            site_address=str(record.get("site_address") or "").strip(),
+            zip=str(record.get("zip") or params["zip"]).strip(),
+            property_type=record.get("property_type"),
+            land_use=record.get("land_use"),
+            year_built=record.get("year_built"),
+            living_sqft=record.get("living_sqft"),
+            lot_acres=record.get("lot_acres"),
+            source_record_id=record_id,
+            source_updated_at=(
+                source_updated_at.strip()
+                if isinstance(source_updated_at, str)
+                else None
+            ),
+            retrieved_at=retrieved_at,
+            confidence=1.0,
+            verification_status=VERIFIED,
+            # The fixture record always uses source_id "fixture", whatever
+            # the injected record claims; raw_reference is the opaque
+            # fixture pointer, never PII-interpolated.
+            raw_reference=f"fixture://{FIXTURE_SOURCE_ID}/{record_id}",
+            property_exists=True,
+            reason="KTEMA_FIXTURE_MATCH",
+        )
+        return validate_property_profile(PropertyProfile(**params))
+
+
+def fixture_registry(records: dict) -> PropertySourceRegistry:
+    """Build a registry with only the FixturePropertySource published."""
+    registry = PropertySourceRegistry()
+    registry.register(FixturePropertySource(records))
+    return registry
+
+
+# ---------------------------------------------------------------------------
+# Batch planning (KTEMA-owned; shares nothing with SCAN)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class KtemaBatchItem:
+    """One normalized batch item: the query plus its cache fingerprint."""
+
+    query: PropertyQuery
+    query_fingerprint: str
+
+
+@dataclass(frozen=True)
+class KtemaBatchPlan:
+    """Plan for a KTEMA batch: explicit consumer business, isolation key,
+    and normalized items. Carries no lookup results."""
+
+    batch_id: str
+    business_id: str
+    isolation_key: str
+    items: tuple[KtemaBatchItem, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "items", tuple(self.items))
+
+
+def _normalize_batch_query(query: PropertyQuery, default_business_id: str) -> PropertyQuery:
+    def _clean(value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped if stripped else None
+        return value  # type: ignore[return-value]
+
+    business_id = _clean(query.business_id) or default_business_id
+    if business_id != default_business_id:
+        # One batch, one consumer: mixing businesses would break isolation.
+        raise KtemaError(
+            f"KTEMA_BATCH_BUSINESS_MISMATCH:item={business_id}:batch={default_business_id}"
+        )
+    return PropertyQuery(
+        business_id=business_id,
+        zip=_clean(query.zip),
+        address=_clean(query.address),
+        latitude=query.latitude,
+        longitude=query.longitude,
+        parcel_id=_clean(query.parcel_id),
+    )
+
+
+def plan_ktema_batch(
+    items,
+    batch_id: str,
+    business_id: str | None,
+    *,
+    registry_path: Path | None = None,
+) -> KtemaBatchPlan:
+    """Plan a KTEMA batch for an explicit consumer business.
+
+    business_id is REQUIRED and re-validated through SAN PEDRO (unknown,
+    disabled, or spoofed IDs fail closed -- the Increment 1 pattern).
+    Returns the plan with the resolved isolation_key and normalized items.
+    Shares nothing with SCAN.
+    """
+    if not isinstance(business_id, str) or not business_id.strip():
+        raise KtemaError("KTEMA_BUSINESS_REQUIRED")
+    try:
+        context = sanpedro_resolve(business_id, registry_path)
+    except SanPedroError as exc:
+        raise KtemaError(f"KTEMA_BUSINESS_INVALID:{exc}") from exc
+    if not isinstance(batch_id, str) or not batch_id.strip():
+        raise KtemaError("KTEMA_BATCH_ID_REQUIRED")
+    try:
+        item_list = list(items)
+    except TypeError as exc:
+        raise KtemaError("KTEMA_BATCH_ITEMS_INVALID") from exc
+    if not item_list:
+        raise KtemaError("KTEMA_BATCH_ITEMS_REQUIRED")
+    normalized: list[KtemaBatchItem] = []
+    for item in item_list:
+        if not isinstance(item, PropertyQuery):
+            raise KtemaError("KTEMA_BATCH_ITEM_INVALID")
+        query = _normalize_batch_query(item, context.business_id)
+        normalized.append(
+            KtemaBatchItem(query=query, query_fingerprint=query_fingerprint(query))
+        )
+    return KtemaBatchPlan(
+        batch_id=batch_id.strip(),
+        business_id=context.business_id,
+        isolation_key=context.isolation_key,
+        items=tuple(normalized),
+    )
