@@ -81,7 +81,7 @@ class RuntimeIdempotencyTests(unittest.TestCase):
             from zion_core.cronicas import CronicaEvent
             from zion_core.persistence import CronicasJsonlSink
             CronicasJsonlSink(root/"cronicas.jsonl")(CronicaEvent(event_id="conflicting-decision",occurred_at="2026-10-03T00:00:00+00:00",event_type="MISSION_DECISION",mission_id="retry-conflicting-history",business_id="zmart-consumer-rights",action="REQUIRE_HUMAN_REVIEW",reason="FORGED_CONFLICT",dispatch_fingerprint=original.dispatch_fingerprint))
-            with self.assertRaisesRegex(ValueError,"MISSION_CONFLICTING_DECISION_HISTORY"):
+            with self.assertRaisesRegex(ValueError,"MISSION_CONFLICTING_HISTORY"):
                 runtime.dispatch(dict(mission))
 
 
