@@ -131,6 +131,6 @@ __all__ += [
     "repo_branch",
 ]
 
-from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, assess_pattern_reuse
+from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, BatchStatus, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, batch_status, assess_pattern_reuse
 
-__all__ += ["BatchItem", "BatchPlan", "BatchDispatchResult", "BatchDispatchFailure", "PatternObservation", "PatternCandidate", "plan_batch", "pending_items", "dispatch_pending", "assess_pattern_reuse"]
+__all__ += ["BatchItem", "BatchPlan", "BatchDispatchResult", "BatchDispatchFailure", "BatchStatus", "PatternObservation", "PatternCandidate", "plan_batch", "pending_items", "dispatch_pending", "batch_status", "assess_pattern_reuse"]
