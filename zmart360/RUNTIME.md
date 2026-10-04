@@ -43,6 +43,7 @@ Production storage is intentionally not selected by this composition.
 - Repeated durable `ANGEL_RESPONSE` records for the same business, mission, and ANGEL must agree on response fingerprint and recorded response shape; contradictory response history fails closed rather than trusting the latest record.
 - Each durable `ANGEL_RESPONSE` must identify exactly one ANGEL. A historical response record that ambiguously attributes one response to multiple ANGELS is invalid authority and fails closed.
 - `close()` requires nonblank business, mission, and ANGEL identity before entering either durable or legacy response handling; malformed identity cannot bypass commission/history guards.
+- `close()` also requires those response identities to already be canonical (no leading/trailing whitespace), preventing validation under one identity and persistence under a different textual identity.
 - Repeated durable `DISPATCH` records must also agree on the dispatch fingerprint; conflicting fingerprints indicate different dispatch-affecting mission/security identity and `close()` fails closed.
 - A repeated owner correction with the same `correction_id` is a technical retry, not a second human correction.
 - The same correction text under a new correction ID may count as a genuine repeated correction.
