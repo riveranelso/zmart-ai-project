@@ -54,11 +54,12 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from .gates import SecurityContext
 from .registry import SanPedroError, sanpedro_resolve
 from . import debate
+from . import dedupe
 from . import jerga
 from . import question as question_mod
 
@@ -946,3 +947,75 @@ def process_comment(
     if attempt_publish and draft is not None:
         publish = publish_reply(draft, comment, security=security)
     return AntiphonResult(comment, brand, classification, draft, publish)
+
+
+# ---------------------------------------------------------------------------
+# Batch processing (screenshot / comment batches) with reply dedupe
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BatchResult:
+    comment_id: str
+    state: str  # dedupe.ELIGIBLE / dedupe.ALREADY_REPLIED / dedupe.AMBIGUOUS
+    result: AntiphonResult | None  # None when suppressed (already replied)
+
+
+def process_batch(
+    payloads: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+    *,
+    answered_ids: Iterable[str] = (),
+    registry_path: Path | None = None,
+    security: SecurityContext | None = None,
+    attempt_publish: bool = False,
+) -> tuple[BatchResult, ...]:
+    """Run the ANTIPHON pipeline over a comment batch with reply dedupe.
+
+    Canonical: LOS_DUROS.md "Screenshots and comments". Comments visibly or
+    already marked as answered never get a new draft (ALREADY_REPLIED,
+    result=None). Comments with unverified identity fail safe to
+    HUMAN_REVIEW/identity_ambiguous (AMBIGUOUS, no draft). Eligible comments
+    run the normal single-comment pipeline, deterministically, in batch
+    order. Payloads may carry screenshot metadata keys "marked_answered"
+    and "identity_verified" (intake_comment ignores unknown keys).
+    """
+    if not isinstance(payloads, (list, tuple)):
+        raise AntiphonError("BATCH_PAYLOADS_SEQUENCE_REQUIRED")
+    comments = [intake_comment(p) for p in payloads]
+    items = [
+        dedupe.BatchComment(
+            comment_id=c.comment_id,
+            marked_answered=bool(p.get("marked_answered", False)),
+            identity_verified=bool(p.get("identity_verified", True)),
+        )
+        for c, p in zip(comments, payloads)
+    ]
+    assessment = dedupe.assess_dedupe(items, answered_ids)
+    out: list[BatchResult] = []
+    for comment, payload, (cid, state) in zip(comments, payloads, assessment.states):
+        if state == dedupe.ALREADY_REPLIED:
+            out.append(BatchResult(comment_id=cid, state=state, result=None))
+            continue
+        if state == dedupe.AMBIGUOUS:
+            brand = resolve_brand(comment, registry_path)
+            classification = Classification(
+                route=HUMAN_REVIEW, subtype="identity_ambiguous",
+                reasons=("DEDUPE_AMBIGUOUS_IDENTITY",),
+            )
+            out.append(
+                BatchResult(
+                    comment_id=cid, state=state,
+                    result=AntiphonResult(comment, brand, classification, None, None),
+                )
+            )
+            continue
+        out.append(
+            BatchResult(
+                comment_id=cid, state=state,
+                result=process_comment(
+                    payload, registry_path=registry_path,
+                    security=security, attempt_publish=attempt_publish,
+                ),
+            )
+        )
+    return tuple(out)
