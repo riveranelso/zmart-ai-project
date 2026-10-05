@@ -58,6 +58,7 @@ from typing import Any
 
 from .gates import SecurityContext
 from .registry import SanPedroError, sanpedro_resolve
+from . import jerga
 
 BUSINESS_ID = "los-duros"
 ISOLATION_KEY = "los-duros"
@@ -441,6 +442,17 @@ def classify_comment(comment: NormalizedComment) -> Classification:
             route=MAIN_BRAIN, subtype="ambiguous",
             reasons=("TOO_SHORT_TO_CLASSIFY",),
         )
+    # LOS_DUROS.md "Puerto Rican slang and ambiguous words" (permanent):
+    # when slang meaning is materially relevant and not canonicalized with
+    # sufficient confidence, DO NOT GUESS -- surface verification required.
+    jerga_assessment = jerga.assess_jerga(text)
+    if jerga_assessment.verification_required:
+        return Classification(
+            route=MAIN_BRAIN, subtype="jerga_unknown",
+            reasons=("JERGA_VERIFY_REQUIRED",)
+            + tuple(f"JERGA_UNKNOWN:{t}" for t in jerga_assessment.unknown),
+        )
+    jerga_reasons = tuple(f"JERGA_KNOWN:{h.term}" for h in jerga_assessment.known)
     if _first_match(text, _COMPILED_CLAIM_HEDGE) is not None:
         return Classification(
             route=HUMAN_REVIEW, subtype="unverifiable_claim",
@@ -465,7 +477,8 @@ def classify_comment(comment: NormalizedComment) -> Classification:
                 reasons=("CAUTION_SIGNAL_OVERLAP:" + ",".join(routine_hits),),
             )
         return Classification(
-            route=ROUTINE, subtype=routine_hits[0], reasons=("ROUTINE_MATCH",),
+            route=ROUTINE, subtype=routine_hits[0],
+            reasons=("ROUTINE_MATCH",) + jerga_reasons,
         )
     return Classification(
         route=MAIN_BRAIN, subtype="ambiguous",
@@ -711,6 +724,13 @@ def draft_reply(
         raise AntiphonError(f"DRAFT_ROUTE_NOT_ROUTINE:{classification.route}")
     if comment.business_id != BUSINESS_ID:
         raise AntiphonError("DRAFT_CROSS_BUSINESS")
+    # Jerga fail-safe holds on every call path, including direct calls:
+    # never draft on a guessed interpretation of unverified slang.
+    _jerga_assessment = jerga.assess_jerga(comment.text)
+    if _jerga_assessment.verification_required:
+        raise AntiphonError(
+            "JERGA_VERIFY_REQUIRED:" + ",".join(_jerga_assessment.unknown)
+        )
     brand_addressed = any(
         re.search(p, comment.text, re.IGNORECASE) for p in _BRAND_SELF_REF
     )
