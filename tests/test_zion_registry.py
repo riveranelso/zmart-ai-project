@@ -4,12 +4,17 @@ import unittest
 from pathlib import Path
 
 from zion_core.biblia import retrieve_biblia
+from zion_core.cronicas import CronicaEvent, CronicasMemorySink
 from zion_core.omar import prepare_mission
 from zion_core.paradosis import (
     MissionPacket,
     TenantBindingError,
     bind_tenant,
     build_mission_packet,
+)
+from zion_core.persistence import (
+    CronicasJsonlSink,
+    read_cronicas,
 )
 from zion_core.router import route_mission
 from zion_core.registry import (
@@ -339,6 +344,150 @@ class ZeroLagMissionAssemblyTests(unittest.TestCase):
         self.assertIs(bind_tenant(packet, "zero-lag-wifi"), packet)
         with self.assertRaises(TenantBindingError):
             bind_tenant(packet, "zerolag")
+
+
+def _zerolag_runtime(root: Path):
+    from zion_core import OmarRuntime
+    (root / "GLOBAL.md").write_text("# Global\n", encoding="utf-8")
+    registry = root / "registry.json"
+    registry.write_text(json.dumps({"businesses": {
+        "zero-lag-wifi": {
+            "enabled": True, "isolation_key": "zero-lag-wifi",
+            "context_refs": ["GLOBAL.md"],
+        },
+        "los-duros": {
+            "enabled": True, "isolation_key": "los-duros",
+            "context_refs": ["GLOBAL.md"],
+        },
+    }}), encoding="utf-8")
+    routes = root / "derekh.yaml"
+    routes.write_text(
+        "routes:\n  - intent: internal_dispatch\n"
+        "    command: SANGABRIEL\n    host: SANGABRIEL.HOST-01\n",
+        encoding="utf-8",
+    )
+    return OmarRuntime(
+        biblia_root=root, registry_path=registry, routes_path=routes,
+        cronicas_path=root / "cronicas.jsonl",
+        correction_memory_path=root / "corrections.json",
+    )
+
+
+def _zerolag_mission(business_id: str, mission_id: str = "m1") -> dict:
+    return {
+        "mission_id": mission_id, "intent": "internal_dispatch",
+        "requested_by": "OMAR", "scope": "WORKFLOW",
+        "business_id": business_id,
+    }
+
+
+class ZeroLagCronicasPartitionTests(unittest.TestCase):
+    """CRONICAS history must share one partition per canonical tenant.
+
+    Regression: the legacy alias 'zerolag' and the canonical 'zero-lag-wifi'
+    used to create separate history partitions (and separate operation
+    locks), so a retry under the other spelling duplicated the dispatch
+    instead of returning IDEMPOTENT_NOOP.
+    """
+
+    def test_alias_and_canonical_share_one_history_partition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = _zerolag_runtime(Path(tmp))
+            first = runtime.dispatch(_zerolag_mission("zerolag"))
+            self.assertEqual(first.decision.action, "DISPATCH")
+            via_alias = runtime.history(
+                business_id="zerolag", event_type="MISSION_DECISION",
+                mission_id="m1",
+            )
+            via_canonical = runtime.history(
+                business_id="zero-lag-wifi", event_type="MISSION_DECISION",
+                mission_id="m1",
+            )
+            self.assertEqual(len(via_alias), 1)
+            self.assertEqual(len(via_canonical), 1)
+            self.assertEqual(via_alias[0].business_id, "zero-lag-wifi")
+            self.assertEqual(
+                via_alias[0].event_id, via_canonical[0].event_id,
+            )
+
+    def test_cross_spelling_retry_is_idempotent_not_duplicate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = _zerolag_runtime(root)
+            first = runtime.dispatch(_zerolag_mission("zerolag"))
+            self.assertEqual(first.decision.action, "DISPATCH")
+            before = (root / "cronicas.jsonl").read_bytes()
+            second = runtime.dispatch(_zerolag_mission("zero-lag-wifi"))
+            self.assertEqual(second.decision.action, "IDEMPOTENT_NOOP")
+            self.assertEqual(second.decision.reason, "MISSION_ALREADY_DECIDED")
+            self.assertEqual((root / "cronicas.jsonl").read_bytes(), before)
+
+    def test_other_brand_cannot_read_zero_lag_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = _zerolag_runtime(Path(tmp))
+            runtime.dispatch(_zerolag_mission("zerolag"))
+            foreign = runtime.history(
+                business_id="los-duros", mission_id="m1",
+            )
+            self.assertEqual(foreign, ())
+
+    def test_invalid_business_id_fails_closed_on_history_read(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = _zerolag_runtime(Path(tmp))
+            for bad in ("nope", "ZeroLag", "zero-lag-wif"):
+                with self.subTest(bad=bad):
+                    with self.assertRaises(SanPedroError):
+                        runtime.history(business_id=bad)
+
+    def test_jsonl_sink_normalizes_alias_on_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry = root / "registry.json"
+            registry.write_text(json.dumps({"businesses": {
+                "zero-lag-wifi": {
+                    "enabled": True, "isolation_key": "zero-lag-wifi",
+                    "context_refs": ["x.md"],
+                },
+            }}), encoding="utf-8")
+            sink = CronicasJsonlSink(
+                root / "c.jsonl", registry_path=registry,
+            )
+            event = CronicaEvent(
+                event_id="e1", occurred_at="2026-10-04T00:00:00+00:00",
+                event_type="MISSION_DECISION", mission_id="m1",
+                action="DISPATCH", reason="ok", business_id="zerolag",
+            )
+            sink(event)
+            stored = read_cronicas(
+                root / "c.jsonl", registry_path=registry,
+            )
+            self.assertEqual(len(stored), 1)
+            self.assertEqual(stored[0].business_id, "zero-lag-wifi")
+            bad = CronicaEvent(
+                event_id="e2", occurred_at="2026-10-04T00:00:00+00:00",
+                event_type="MISSION_DECISION", mission_id="m2",
+                action="DISPATCH", reason="ok", business_id="nope",
+            )
+            with self.assertRaises(SanPedroError):
+                sink(bad)
+
+    def test_memory_sink_normalizes_alias_on_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry = root / "registry.json"
+            registry.write_text(json.dumps({"businesses": {
+                "zero-lag-wifi": {
+                    "enabled": True, "isolation_key": "zero-lag-wifi",
+                    "context_refs": ["x.md"],
+                },
+            }}), encoding="utf-8")
+            sink = CronicasMemorySink(registry_path=registry)
+            sink(CronicaEvent(
+                event_id="e1", occurred_at="2026-10-04T00:00:00+00:00",
+                event_type="MISSION_DECISION", mission_id="m1",
+                action="DISPATCH", reason="ok", business_id="zerolag",
+            ))
+            self.assertEqual(sink.events[0].business_id, "zero-lag-wifi")
 
 if __name__ == "__main__":
     unittest.main()

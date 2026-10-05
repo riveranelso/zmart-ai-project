@@ -87,6 +87,19 @@ def sanpedro_business_ids(path: Path | None = None) -> tuple[str, ...]:
 
 RegistryError = SanPedroError  # compatibility alias
 
+def canonical_business_id(business_id: str | None, path: Path | None = None) -> str | None:
+    """Partition key for CRONICAS history and operation locks: the canonical tenant identity.
+
+    Contractual legacy aliases (e.g. "zerolag") resolve to the canonical id
+    ("zero-lag-wifi") so every spelling shares one history partition and one
+    lock namespace. None stays None. Unknown or malformed ids fail closed
+    instead of creating orphan partitions. No fuzzy matching: only exact
+    registered ids and declared aliases resolve.
+    """
+    if business_id is None:
+        return None
+    return sanpedro_resolve(business_id, path).business_id
+
 def resolve_business(business_id: str, path: Path | None = None) -> BusinessContext:
     """Compatibility alias for SANPEDRO context resolution."""
     return sanpedro_resolve(business_id, path)

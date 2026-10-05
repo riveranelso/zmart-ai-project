@@ -40,6 +40,8 @@ For canonical learning destinations, the registered reference must match the sco
 ## Isolation
 A successful lookup does not authorize cross-business access. The returned isolation key follows the mission through routing so downstream layers can enforce separation.
 
+CRONICAS history and operation locks are keyed by the canonical tenant identity: the persistence layer normalizes event business ids on write and query filters on read, so a contractual legacy alias (e.g. `zerolag`) shares one history partition with its canonical id (`zero-lag-wifi`). Unregistered ids fail closed instead of creating orphan partitions.
+
 ## Boundaries
 SAN PEDRO locates and identifies. It does not execute ANGEL work, grant permissions, dispatch missions, or perform HOLY GHOST learning.
 

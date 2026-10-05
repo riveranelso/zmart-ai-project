@@ -3,7 +3,7 @@
 These adapters are local/runtime primitives. Production storage is intentionally
 not selected here.
 """
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import hashlib
 import json
 import os
@@ -14,6 +14,7 @@ from typing import Any
 
 from .correction_memory import correction_fingerprint
 from .cronicas import CronicaEvent
+from .registry import canonical_business_id
 
 
 def _operation_digest(business_id: str,operation: str,identity: str)->str:
@@ -161,13 +162,24 @@ class LocalOperationLock:
 
 
 class CronicasJsonlSink:
-    """Append privacy-bounded CRONICAS events as serialized JSON Lines."""
-    def __init__(self,path: Path):
+    """Append privacy-bounded CRONICAS events as serialized JSON Lines.
+
+    Events are stored under the canonical tenant identity: a contractual
+    legacy alias (e.g. "zerolag") is normalized to the canonical id
+    ("zero-lag-wifi") on write, so every spelling shares one history
+    partition. Unregistered business ids fail closed.
+    """
+    def __init__(self,path: Path,*,registry_path: Path | None = None):
         self.path=Path(path)
+        self._registry_path=registry_path
 
     def __call__(self,event: CronicaEvent)->None:
         if not isinstance(event,CronicaEvent):
             raise TypeError("CRONICAS_EVENT_REQUIRED")
+        event=replace(
+            event,
+            business_id=canonical_business_id(event.business_id,self._registry_path),
+        )
         self.path.parent.mkdir(parents=True,exist_ok=True)
         lock=LocalOperationLock(self.path.parent/(self.path.name+".append-locks"))
         with lock.hold("CRONICAS","JSONL_APPEND",str(self.path.resolve())):
@@ -252,8 +264,15 @@ def read_cronicas(
     business_id: str | None = None,
     event_type: str | None = None,
     mission_id: str | None = None,
+    registry_path: Path | None = None,
 ) -> tuple[CronicaEvent, ...]:
-    """Read append-only CRONICAS metadata without granting it canonical authority."""
+    """Read append-only CRONICAS metadata without granting it canonical authority.
+
+    The business_id filter is normalized to the canonical tenant identity,
+    so a legacy alias query reads the same partition as the canonical id.
+    Unregistered business ids fail closed.
+    """
+    business_id=canonical_business_id(business_id,registry_path)
     source=Path(path)
     if not source.is_file():
         return ()

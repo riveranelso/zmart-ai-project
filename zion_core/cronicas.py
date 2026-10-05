@@ -1,10 +1,12 @@
 """CRONICAS structured event records and safe event emission."""
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from hashlib import sha256
 import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import uuid4
+
+from .registry import canonical_business_id
 
 @dataclass(frozen=True)
 class CronicaEvent:
@@ -31,16 +33,28 @@ class CronicaEvent:
 CronicasSink = Callable[[CronicaEvent], None]
 
 
-def build_dispatch_fingerprint(mission:dict[str,Any],security_context:Any=None)->str:
-    """Hash dispatch-affecting identity without persisting raw mission/security data."""
+def build_dispatch_fingerprint(mission:dict[str,Any],security_context:Any=None,*,resolved_business_id:Any=None)->str:
+    """Hash dispatch-affecting identity without persisting raw mission/security data.
+
+    The fingerprint keys on the RESOLVED tenant identity: callers that hold
+    the dispatch decision pass its canonical business_id so a legacy alias
+    spelling of the same mission does not fingerprint as a different
+    routing identity.
+    """
     correlation_id=mission.get("correlation_id")
     if isinstance(correlation_id,str):
         correlation_id=correlation_id.strip()
     defaults={"risk_level":"low","angel_count_max":1,"human_approval_required":False,
               "integrity_conflict":False,"policy_conflict":False,"kill_switch":False,
               "runtime_enabled":True}
+    if resolved_business_id is None:
+        resolved_business_id=mission.get("business_id")
     mission_identity={
-        key:(correlation_id if key=="correlation_id" else mission.get(key,defaults.get(key)))
+        key:(
+            correlation_id if key=="correlation_id"
+            else resolved_business_id if key=="business_id"
+            else mission.get(key,defaults.get(key))
+        )
         for key in (
             "mission_id","intent","requested_by","scope","business_id","project_id",
             "risk_level","human_approval_required","target_command","target_host",
@@ -83,7 +97,10 @@ def build_routing_event(mission:dict[str,Any],decision:Any,security_context:Any=
         denied_by=getattr(decision,"denied_by",None),
         angel_ids=tuple(a.angel_id for a in angels),
         correlation_id=correlation_id.strip() if correlation_id is not None else None,
-        dispatch_fingerprint=build_dispatch_fingerprint(mission,security_context),
+        dispatch_fingerprint=build_dispatch_fingerprint(
+            mission,security_context,
+            resolved_business_id=getattr(decision,"business_id",None),
+        ),
     )
 
 def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None,*,security_context:Any=None)->CronicaEvent:
@@ -95,14 +112,22 @@ def cronicas_emit(mission:dict[str,Any],decision:Any,sink:CronicasSink|None=None
 
 
 class CronicasMemorySink:
-    """Append-only in-memory sink for tests and non-persistent runtime use."""
-    def __init__(self)->None:
+    """Append-only in-memory sink for tests and non-persistent runtime use.
+
+    Like the JSONL sink, events are stored under the canonical tenant
+    identity so alias spellings share one partition.
+    """
+    def __init__(self,*,registry_path=None)->None:
         self._events:list[CronicaEvent]=[]
+        self._registry_path=registry_path
 
     def __call__(self,event:CronicaEvent)->None:
         if not isinstance(event,CronicaEvent):
             raise TypeError("CRONICAS_EVENT_REQUIRED")
-        self._events.append(event)
+        self._events.append(replace(
+            event,
+            business_id=canonical_business_id(event.business_id,self._registry_path),
+        ))
 
     @property
     def events(self)->tuple[CronicaEvent,...]:

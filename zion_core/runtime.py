@@ -9,7 +9,7 @@ from typing import Any
 
 from .router import DispatchDecision
 from .cronicas import build_apokrisis_fingerprint, build_dispatch_fingerprint
-from .registry import sanpedro_resolve
+from .registry import canonical_business_id, sanpedro_resolve
 from .holy_ghost import SCOPE_DESTINATION_NAMES
 from .omar import (
     LearningIntent,
@@ -38,7 +38,7 @@ class OmarRuntime:
 
     @property
     def cronicas_sink(self) -> CronicasJsonlSink:
-        return CronicasJsonlSink(self.cronicas_path)
+        return CronicasJsonlSink(self.cronicas_path,registry_path=self.registry_path)
 
     @property
     def correction_memory(self) -> PersistentCorrectionMemory:
@@ -55,7 +55,12 @@ class OmarRuntime:
         business_id=mission.get("business_id")
         if isinstance(mission_id,str) and mission_id.strip() and isinstance(business_id,str) and business_id.strip():
             mid=mission_id.strip()
-            bid=business_id.strip()
+            # Canonicalize once at ingress: alias spellings share one lock
+            # namespace, one history partition, and one dispatch fingerprint.
+            # Unknown business ids fail closed here (same SanPedroError the
+            # old path raised later inside dispatch_mission).
+            bid=canonical_business_id(business_id.strip(),self.registry_path)
+            mission={**mission,"business_id":bid}
             with self.operation_lock.hold(bid,"MISSION_DISPATCH",mid):
                 prior=self.history(business_id=bid,event_type="MISSION_DECISION",mission_id=mid)
                 if prior:
@@ -136,7 +141,10 @@ class OmarRuntime:
         if not all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
             raise ValueError("APOKRISIS_IDENTITY_REQUIRED")
         if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
-            bid=business_id.strip()
+            # History partition and lock key use the canonical identity; the
+            # response object itself keeps the angel's claimed id (the sink
+            # normalizes the recorded event on write).
+            bid=canonical_business_id(business_id.strip(),self.registry_path)
             mid=mission_id.strip()
             aid=angel_id.strip()
             if business_id != bid or mission_id != mid or angel_id != aid:
@@ -283,12 +291,17 @@ class OmarRuntime:
         event_type: str | None = None,
         mission_id: str | None = None,
     ):
-        """Read historical metadata only; never replay or execute recorded actions."""
+        """Read historical metadata only; never replay or execute recorded actions.
+
+        The business_id filter is normalized to the canonical tenant identity,
+        so alias spellings read the same partition.
+        """
         return read_cronicas(
             self.cronicas_path,
-            business_id=business_id,
+            business_id=canonical_business_id(business_id,self.registry_path),
             event_type=event_type,
             mission_id=mission_id,
+            registry_path=self.registry_path,
         )
 
     def mission_history(self, mission_id: str, *, business_id: str | None = None):
@@ -310,7 +323,9 @@ class OmarRuntime:
             raise ValueError("RECONCILIATION_IDENTITY_REQUIRED")
         if business_id != business_id.strip() or mission_id != mission_id.strip() or destination_ref != destination_ref.strip():
             raise ValueError("RECONCILIATION_IDENTITY_NONCANONICAL")
-        bid=business_id
+        # Lock and history use the canonical identity; the decision object
+        # keeps its original identity for traceability.
+        bid=canonical_business_id(business_id,self.registry_path)
         mid=mission_id
         ref=destination_ref
         action=getattr(decision,"action",None)
@@ -361,6 +376,9 @@ class OmarRuntime:
             raise ValueError("CORRECTION_ID_NONCANONICAL")
         if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
             raise ValueError("BUSINESS_ID_REQUIRED")
+        # Canonicalize once: lock, history, correction memory, and the
+        # owner-correction apokrisis all share the canonical partition.
+        business_id=canonical_business_id(business_id,self.registry_path)
         cid=correction_id
         with self.operation_lock.hold(business_id,"OWNER_CORRECTION",cid):
             prior=self.history(
