@@ -55,7 +55,13 @@ def _number(value: object, field: str) -> float | None:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise KtemaError(f"KTEMA_ADAPTER_RESPONSE_MALFORMED:{field}-type")
-    return float(value)
+    result = float(value)
+    if result != result or result in (float("inf"), float("-inf")):
+        # NaN/inf are not measurements: fail closed with the documented
+        # adapter error instead of leaking a raw ValueError or caching
+        # a non-finite profile.
+        raise KtemaError(f"KTEMA_ADAPTER_RESPONSE_MALFORMED:{field}-non-finite")
+    return result
 
 
 def _integer(value: object, field: str) -> int | None:
@@ -63,6 +69,8 @@ def _integer(value: object, field: str) -> int | None:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise KtemaError(f"KTEMA_ADAPTER_RESPONSE_MALFORMED:{field}-type")
+    if value != value or value in (float("inf"), float("-inf")):
+        raise KtemaError(f"KTEMA_ADAPTER_RESPONSE_MALFORMED:{field}-non-finite")
     if int(value) != value:
         raise KtemaError(f"KTEMA_ADAPTER_RESPONSE_MALFORMED:{field}-fractional")
     return int(value)

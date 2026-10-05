@@ -16,6 +16,7 @@ _REF_SCOPE={
     "GLOBAL.md":"GLOBAL",
     "WORKFLOWS.md":"WORKFLOW",
     "BRANDS.md":"BRAND",
+    "LOS_DUROS.md":"BRAND",
     "PROJECTS.md":"PROJECT",
     "ACTIVE_CONTEXT.md":"CAMPAIGN",
 }
@@ -53,7 +54,15 @@ def _scope_for_ref(ref: str)->str:
 def _business_section(
     text: str,business_id: str,known_business_ids: tuple[str,...]
 ) -> str:
-    """Return one exact registered-business section without treating thematic H2s as tenants."""
+    """Return one exact registered-business section.
+
+    The section runs from its exact registered header until the next H2
+    header of any kind (or end of document): an unregistered ## header never
+    leaks foreign text into the business's canonical context. The target
+    header itself must be an exact registered header, so thematic H2s are
+    never mistaken for tenants. Documents with no registered headers are
+    returned whole (global content).
+    """
     lines=text.splitlines(keepends=True)
     business_headers={f"## {item}" for item in known_business_ids}
     business_indexes=tuple(
@@ -69,7 +78,10 @@ def _business_section(
     )
     if target_index is None:
         return ""
-    end_index=next((idx for idx in business_indexes if idx>target_index),len(lines))
+    end_index=next(
+        (idx for idx in range(target_index+1,len(lines)) if lines[idx].startswith("## ")),
+        len(lines),
+    )
     return "".join(lines[target_index:end_index]).rstrip()+"\n"
 
 

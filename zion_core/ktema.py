@@ -133,7 +133,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from .registry import SanPedroError, sanpedro_resolve
+from .registry import SanPedroError, canonical_business_id, sanpedro_resolve
 
 
 class KtemaError(ValueError):
@@ -1131,7 +1131,7 @@ class KtemaBatchPlan:
         object.__setattr__(self, "items", tuple(self.items))
 
 
-def _normalize_batch_query(query: PropertyQuery, default_business_id: str) -> PropertyQuery:
+def _normalize_batch_query(query: PropertyQuery, default_business_id: str, registry_path=None) -> PropertyQuery:
     def _clean(value: object) -> str | None:
         if value is None:
             return None
@@ -1141,6 +1141,12 @@ def _normalize_batch_query(query: PropertyQuery, default_business_id: str) -> Pr
         return value  # type: ignore[return-value]
 
     business_id = _clean(query.business_id) or default_business_id
+    try:
+        # Resolve contractual aliases so the same tenant is never rejected
+        # for a spelling difference; unknown ids fail closed.
+        business_id = canonical_business_id(business_id, registry_path)
+    except SanPedroError as exc:
+        raise KtemaError(f"KTEMA_BUSINESS_INVALID:{exc}") from exc
     if business_id != default_business_id:
         # One batch, one consumer: mixing businesses would break isolation.
         raise KtemaError(
@@ -1200,7 +1206,7 @@ def plan_ktema_batch(
     for item in item_list:
         if not isinstance(item, PropertyQuery):
             raise KtemaError("KTEMA_BATCH_ITEM_INVALID")
-        query = _normalize_batch_query(item, context.business_id)
+        query = _normalize_batch_query(item, context.business_id, registry_path)
         normalized.append(
             KtemaBatchItem(query=query, query_fingerprint=query_fingerprint(query))
         )

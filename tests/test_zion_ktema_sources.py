@@ -347,6 +347,16 @@ class BatchPlanTests(unittest.TestCase):
         )
         self.assertEqual(plan.items[0].query.business_id, "los-duros")
 
+    def test_batch_accepts_legacy_alias_for_same_tenant(self):
+        # The contractual alias resolves to the canonical tenant: same tenant
+        # under a different spelling is not a business mismatch.
+        plan = plan_ktema_batch(
+            [PropertyQuery(business_id="zerolag", zip=ORLANDO_ZIP)],
+            "batch-1",
+            "zero-lag-wifi",
+        )
+        self.assertEqual(plan.items[0].query.business_id, "zero-lag-wifi")
+
     def test_batch_rejects_empty_items(self):
         with self.assertRaisesRegex(KtemaError, r"^KTEMA_BATCH_ITEMS_REQUIRED"):
             plan_ktema_batch([], "batch-1", "los-duros")

@@ -36,6 +36,7 @@
       "context_refs": [
         "zmart360/BIBLIA/GLOBAL.md",
         "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/LOS_DUROS.md",
         "zmart360/BIBLIA/ACTIVE_CONTEXT.md"
       ],
       "isolation_key": "los-duros"

@@ -123,6 +123,40 @@ class BibliaPrecedenceTests(unittest.TestCase):
             self.assertIn("## Repetition prevention",context.text)
             self.assertIn("GLOBAL RULE",context.text)
 
+    def test_unregistered_h2_does_not_leak_into_business_section(self):
+        from zion_core.biblia import _business_section
+        text="## zero-lag-wifi\n- brand rule\n## rogue-brand\nRogue text.\n"
+        section=_business_section(text,"zero-lag-wifi",("zero-lag-wifi","los-duros"))
+        self.assertIn("brand rule",section)
+        self.assertNotIn("Rogue text",section)
+
+    def test_unregistered_h2_ends_section_before_registered_header(self):
+        from zion_core.biblia import _business_section
+        text="## los-duros\n- duros rule\n## rogue-brand\nRogue.\n## zero-lag-wifi\n- lag rule\n"
+        duros=_business_section(text,"los-duros",("los-duros","zero-lag-wifi"))
+        lag=_business_section(text,"zero-lag-wifi",("los-duros","zero-lag-wifi"))
+        self.assertIn("duros rule",duros)
+        self.assertNotIn("Rogue",duros)
+        self.assertNotIn("lag rule",duros)
+        self.assertIn("lag rule",lag)
+        self.assertNotIn("Rogue",lag)
+
+    def test_los_duros_canonical_doc_is_retrievable(self):
+        # The canonical LOS_DUROS.md must be wired into retrieval: it declares
+        # itself canonical knowledge and OMAR retrieves it before execution.
+        repo=Path(__file__).resolve().parent.parent
+        registry=repo/"zmart360"/"san_pedro_registry.json"
+        doc=repo/"zmart360"/"BIBLIA"/"LOS_DUROS.md"
+        if not registry.is_file() or not doc.is_file():
+            self.skipTest("real BIBLIA tree not present")
+        context=retrieve_biblia("los-duros",root=repo,registry_path=registry)
+        self.assertIn("Suscribete pa que no te pierdas lo proximo",context.text)
+        self.assertIn("LOCKED ASSET",context.text)
+        self.assertIn("BRAND",context.precedence)
+        # No cross-brand leakage: another business must not see these rules.
+        other=retrieve_biblia("zero-lag-wifi",root=repo,registry_path=registry)
+        self.assertNotIn("Suscribete pa que no te pierdas lo proximo",other.text)
+
 
 if __name__=="__main__":
     unittest.main()

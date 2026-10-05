@@ -97,6 +97,19 @@ class OrangeKtemaTests(unittest.TestCase):
         with self.assertRaisesRegex(KtemaError, r"AYB-type"):
             self.source.normalize(_response(AYB="1985"), _query(), ISOLATION)
 
+    def test_non_finite_numerics_fail_closed(self):
+        # NaN/inf are not measurements: the adapter contract is KtemaError,
+        # never a raw ValueError and never a cached non-finite profile.
+        nan=float("nan"); inf=float("inf")
+        with self.assertRaisesRegex(KtemaError, r"AYB-non-finite"):
+            self.source.normalize(_response(AYB=nan), _query(), ISOLATION)
+        with self.assertRaisesRegex(KtemaError, r"LIVING_AREA-non-finite"):
+            self.source.normalize(_response(LIVING_AREA=inf), _query(), ISOLATION)
+        with self.assertRaisesRegex(KtemaError, r"ACREAGE-non-finite"):
+            self.source.normalize(_response(ACREAGE=float("-inf")), _query(), ISOLATION)
+        with self.assertRaisesRegex(KtemaError, r"LIVING_AREA-non-finite"):
+            self.source.normalize(_response(LIVING_AREA=nan), _query(), ISOLATION)
+
     def test_no_network_imports(self):
         import zion_core.ktema_orange as module
         tree=ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
