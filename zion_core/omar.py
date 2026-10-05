@@ -106,6 +106,11 @@ def receive_owner_correction(
     """Receive a direct owner correction and pass it through the canonical learning loop."""
     if not isinstance(correction,str) or not correction.strip():
         raise ValueError("OWNER_CORRECTION_REQUIRED")
+    # Canonicalize once at ingress: alias spellings share one correction-memory
+    # partition and one learning destination. Unknown business ids fail closed
+    # here instead of flowing through with a non-canonical identity.
+    from .registry import canonical_business_id
+    business_id=canonical_business_id(business_id,registry_path)
     from .apokrisis import apokrisis
     response=apokrisis(
         angel_id="OMAR.OWNER-INPUT",
