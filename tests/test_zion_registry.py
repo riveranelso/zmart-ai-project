@@ -5,7 +5,13 @@ from pathlib import Path
 
 from zion_core.biblia import retrieve_biblia
 from zion_core.omar import prepare_mission
-from zion_core.paradosis import MissionPacket, TenantBindingError, bind_tenant
+from zion_core.paradosis import (
+    MissionPacket,
+    TenantBindingError,
+    bind_tenant,
+    build_mission_packet,
+)
+from zion_core.router import route_mission
 from zion_core.registry import (
     BUSINESS_ID_ALIASES,
     RegistryError,
@@ -119,10 +125,14 @@ class ZeroLagIdentityTests(unittest.TestCase):
         brand_text = by_ref.get("zmart360/BIBLIA/BRANDS.md", "")
         project_text = by_ref.get("zmart360/BIBLIA/PROJECTS.md", "")
         self.assertIn("Zero Lag WiFi", brand_text)
-        self.assertIn("Meta Instant Forms", brand_text)
+        # Brand file points to the project file for funnel detail (no dupes).
+        self.assertIn("PROJECTS.md", brand_text)
         self.assertIn("UNRESOLVED", brand_text)
         self.assertIn("Meta Instant Forms", project_text)
         self.assertIn("preserve, do not redesign", project_text)
+        # Confirmed sales funnel, distinct from the /fiber-leads webhook.
+        self.assertIn("ZeroLag Connect", project_text)
+        self.assertIn("New Internet Package Requested", project_text)
         # Brand isolation at retrieval: no other brand's section leaks in.
         self.assertNotIn("## los-duros", brand_text)
         self.assertNotIn("## los-duros", project_text)
@@ -298,6 +308,37 @@ class ZeroLagMissionAssemblyTests(unittest.TestCase):
     def test_prepare_mission_still_fails_closed_for_unknown(self):
         with self.assertRaises(SanPedroError):
             prepare_mission("ZeroLag", biblia_root=ROOT)
+
+    def test_router_dispatch_canonicalizes_legacy_alias(self):
+        mission = {"mission_id": "m1", "intent": "threat_detection",
+                   "requested_by": "OMAR", "scope": "zerolag",
+                   "business_id": "zerolag", "risk_level": "low",
+                   "angel_count_max": 2}
+        decision = route_mission(mission)
+        self.assertEqual(decision.action, "DISPATCH")
+        self.assertEqual(decision.business_id, "zero-lag-wifi")
+        self.assertEqual(decision.isolation_key, "zero-lag-wifi")
+
+    def test_router_rejects_spoofed_legacy_alias_combination(self):
+        # Claimed zerolag with another tenant's isolation key fails closed.
+        mission = {"mission_id": "m1", "intent": "threat_detection",
+                   "requested_by": "OMAR", "scope": "zerolag",
+                   "business_id": "zerolag", "isolation_key": "los-duros",
+                   "risk_level": "low", "angel_count_max": 2}
+        decision = route_mission(mission)
+        self.assertNotEqual(decision.action, "DISPATCH")
+
+    def test_paradosis_packet_canonicalizes_legacy_alias(self):
+        packet = build_mission_packet(
+            mission_id="m1", objective="zero lag audit",
+            business_id="zerolag", repo_root=ROOT,
+        )
+        self.assertEqual(packet.business_id, "zero-lag-wifi")
+        self.assertEqual(packet.brand_id, "zero-lag-wifi")
+        # Post-resolution tenant checks use the canonical id only.
+        self.assertIs(bind_tenant(packet, "zero-lag-wifi"), packet)
+        with self.assertRaises(TenantBindingError):
+            bind_tenant(packet, "zerolag")
 
 if __name__ == "__main__":
     unittest.main()
