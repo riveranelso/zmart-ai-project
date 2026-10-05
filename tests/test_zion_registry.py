@@ -14,6 +14,7 @@ from zion_core.paradosis import (
 )
 from zion_core.persistence import (
     CronicasJsonlSink,
+    PersistentCorrectionMemory,
     read_cronicas,
 )
 from zion_core.router import route_mission
@@ -488,6 +489,25 @@ class ZeroLagCronicasPartitionTests(unittest.TestCase):
                 action="DISPATCH", reason="ok", business_id="zerolag",
             ))
             self.assertEqual(sink.events[0].business_id, "zero-lag-wifi")
+
+    def test_correction_memory_shares_partition_across_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry = root / "registry.json"
+            registry.write_text(json.dumps({"businesses": {
+                "zero-lag-wifi": {
+                    "enabled": True, "isolation_key": "zero-lag-wifi",
+                    "context_refs": ["x.md"],
+                },
+            }}), encoding="utf-8")
+            memory = PersistentCorrectionMemory(
+                root / "corrections.json", registry_path=registry,
+            )
+            self.assertEqual(memory.observe("zerolag", "fix the cta"), 1)
+            self.assertEqual(memory.observe("zero-lag-wifi", "fix the cta"), 2)
+            self.assertEqual(memory.count("zerolag", "fix the cta"), 2)
+            with self.assertRaises(SanPedroError):
+                memory.observe("nope", "fix the cta")
 
 if __name__ == "__main__":
     unittest.main()

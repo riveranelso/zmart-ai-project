@@ -191,9 +191,14 @@ class CronicasJsonlSink:
 
 
 class PersistentCorrectionMemory:
-    """Persist only business-scoped correction fingerprints and counts."""
-    def __init__(self,path: Path):
+    """Persist only business-scoped correction fingerprints and counts.
+
+    Keys are namespaced by the canonical tenant identity so a contractual
+    legacy alias shares one counter with its canonical id.
+    """
+    def __init__(self,path: Path,*,registry_path: Path | None = None):
         self.path=Path(path)
+        self._registry_path=registry_path
 
     def _load(self)->dict[str,int]:
         if not self.path.is_file():
@@ -239,6 +244,7 @@ class PersistentCorrectionMemory:
         return business_id+":"+correction_fingerprint(correction)
 
     def observe(self,business_id: str,correction: str)->int:
+        business_id=canonical_business_id(business_id,self._registry_path)
         key=self._key(business_id,correction)
         lock=LocalOperationLock(self.path.parent/(self.path.name+".locks"))
         with lock.hold(business_id,"CORRECTION_MEMORY",correction_fingerprint(correction)):
@@ -248,6 +254,7 @@ class PersistentCorrectionMemory:
             return data[key]
 
     def count(self,business_id: str,correction: str)->int:
+        business_id=canonical_business_id(business_id,self._registry_path)
         key=self._key(business_id,correction)
         lock=LocalOperationLock(self.path.parent/(self.path.name+".locks"))
         with lock.hold(business_id,"CORRECTION_MEMORY",correction_fingerprint(correction)):

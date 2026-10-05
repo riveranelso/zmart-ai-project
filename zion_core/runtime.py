@@ -42,7 +42,9 @@ class OmarRuntime:
 
     @property
     def correction_memory(self) -> PersistentCorrectionMemory:
-        return PersistentCorrectionMemory(self.correction_memory_path)
+        return PersistentCorrectionMemory(
+            self.correction_memory_path,registry_path=self.registry_path,
+        )
 
     @property
     def operation_lock(self) -> LocalOperationLock:
