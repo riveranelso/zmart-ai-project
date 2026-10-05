@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from zion_core.biblia import retrieve_biblia
+from zion_core.omar import prepare_mission
 from zion_core.paradosis import MissionPacket, TenantBindingError, bind_tenant
 from zion_core.registry import (
     BUSINESS_ID_ALIASES,
@@ -129,7 +130,8 @@ class ZeroLagIdentityTests(unittest.TestCase):
     def test_legacy_zerolag_biblia_matches_canonical(self):
         canonical = retrieve_biblia("zero-lag-wifi", root=ROOT)
         legacy = retrieve_biblia("zerolag", root=ROOT)
-        self.assertEqual(legacy.business_id, "zerolag")
+        # The envelope carries the canonical identity, not the legacy alias.
+        self.assertEqual(legacy.business_id, "zero-lag-wifi")
         self.assertEqual(
             [d.text for d in legacy.documents],
             [d.text for d in canonical.documents],
@@ -262,6 +264,40 @@ class ZeroLagAdversarialTests(unittest.TestCase):
             ctx = sanpedro_resolve(oid)
             self.assertEqual(ctx.business_id, oid)
             self.assertEqual(ctx.isolation_key, oid)
+
+
+class ZeroLagMissionAssemblyTests(unittest.TestCase):
+    """prepare_mission must emit one canonical identity.
+
+    Regression: the legacy alias used to survive in the MissionContext and
+    BibliaContext envelopes while exapostello already canonicalized the
+    dispatch decision, so execution_contexts raised
+    ANGEL_CONTEXT_DECISION_BUSINESS_MISMATCH for zerolag missions.
+    """
+
+    def test_prepare_mission_canonicalizes_legacy_alias(self):
+        ctx = prepare_mission("zerolag", biblia_root=ROOT)
+        self.assertEqual(ctx.business_id, "zero-lag-wifi")
+        self.assertEqual(ctx.biblia.business_id, "zero-lag-wifi")
+        self.assertEqual(ctx.isolation_key, "zero-lag-wifi")
+        self.assertIn("Zero Lag WiFi", ctx.knowledge)
+
+    def test_prepare_mission_legacy_matches_canonical(self):
+        legacy = prepare_mission("zerolag", biblia_root=ROOT)
+        canonical = prepare_mission("zero-lag-wifi", biblia_root=ROOT)
+        self.assertEqual(legacy.business_id, canonical.business_id)
+        self.assertEqual(legacy.isolation_key, canonical.isolation_key)
+        self.assertEqual(legacy.knowledge, canonical.knowledge)
+        self.assertEqual(legacy.biblia.refs, canonical.biblia.refs)
+
+    def test_prepare_mission_canonical_id_unchanged(self):
+        ctx = prepare_mission("zero-lag-wifi", biblia_root=ROOT)
+        self.assertEqual(ctx.business_id, "zero-lag-wifi")
+        self.assertEqual(ctx.biblia.business_id, "zero-lag-wifi")
+
+    def test_prepare_mission_still_fails_closed_for_unknown(self):
+        with self.assertRaises(SanPedroError):
+            prepare_mission("ZeroLag", biblia_root=ROOT)
 
 if __name__ == "__main__":
     unittest.main()

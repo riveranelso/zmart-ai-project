@@ -41,7 +41,10 @@ def prepare_mission(
     )
     from .registry import sanpedro_resolve
     authority=sanpedro_resolve(business_id,registry_path)
-    return MissionContext(business_id=business_id,biblia=biblia,mission_id=mission_id,scope=scope,payload_ref=payload_ref,isolation_key=authority.isolation_key)
+    # The mission envelope carries the canonical identity, matching what
+    # exapostello puts on the dispatch decision; a legacy alias must not
+    # survive as a second working identity downstream.
+    return MissionContext(business_id=authority.business_id,biblia=biblia,mission_id=mission_id,scope=scope,payload_ref=payload_ref,isolation_key=authority.isolation_key)
 
 
 @dataclass(frozen=True)

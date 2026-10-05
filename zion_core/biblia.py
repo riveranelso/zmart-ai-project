@@ -103,7 +103,9 @@ def retrieve_biblia(
                 precedence=SCOPE_PRECEDENCE[scope],
             ))
     return BibliaContext(
-        business_id=business_id,
+        # The envelope always carries the canonical identity: a legacy alias
+        # (e.g. "zerolag") must not propagate as a second working identity.
+        business_id=context.business_id,
         refs=context.context_refs,
         documents=tuple(documents),
     )
