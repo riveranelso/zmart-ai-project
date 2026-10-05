@@ -58,6 +58,7 @@ from typing import Any
 
 from .gates import SecurityContext
 from .registry import SanPedroError, sanpedro_resolve
+from . import debate
 from . import jerga
 
 BUSINESS_ID = "los-duros"
@@ -382,6 +383,7 @@ class Classification:
     route: str
     subtype: str
     reasons: tuple[str, ...] = ()
+    debate_level: str = debate.STANDARD
 
 
 def _first_match(text: str, compiled: tuple[tuple[str, tuple], ...]) -> str | None:
@@ -453,16 +455,22 @@ def classify_comment(comment: NormalizedComment) -> Classification:
             + tuple(f"JERGA_UNKNOWN:{t}" for t in jerga_assessment.unknown),
         )
     jerga_reasons = tuple(f"JERGA_KNOWN:{h.term}" for h in jerga_assessment.known)
+    # Response-style classification (LOS_DUROS.md "Response psychology"):
+    # detects when the comment supports a higher-level debate response.
+    debate_assessment = debate.assess_debate_level(text)
+    debate_level = debate_assessment.level
     if _first_match(text, _COMPILED_CLAIM_HEDGE) is not None:
         return Classification(
             route=HUMAN_REVIEW, subtype="unverifiable_claim",
             reasons=("CLAIM_HEDGE_DETECTED",),
+            debate_level=debate_level,
         )
     mainbrain_hit = _first_match(text, _COMPILED_MAINBRAIN)
     if mainbrain_hit is not None:
         return Classification(
             route=MAIN_BRAIN, subtype=mainbrain_hit,
             reasons=(f"MAINBRAIN_TRIGGER:{mainbrain_hit}",),
+            debate_level=debate_level,
         )
     routine_hits = _all_matches(text, _COMPILED_ROUTINE)
     if routine_hits:
@@ -470,19 +478,23 @@ def classify_comment(comment: NormalizedComment) -> Classification:
             return Classification(
                 route=HUMAN_REVIEW, subtype="brand_rule_conflict",
                 reasons=("CONFLICTING_ROUTINE_SIGNALS:" + ",".join(routine_hits),),
+                debate_level=debate_level,
             )
         if _first_match(text, _COMPILED_CAUTION) is not None:
             return Classification(
                 route=HUMAN_REVIEW, subtype="brand_rule_conflict",
                 reasons=("CAUTION_SIGNAL_OVERLAP:" + ",".join(routine_hits),),
+                debate_level=debate_level,
             )
         return Classification(
             route=ROUTINE, subtype=routine_hits[0],
             reasons=("ROUTINE_MATCH",) + jerga_reasons,
+            debate_level=debate_level,
         )
     return Classification(
         route=MAIN_BRAIN, subtype="ambiguous",
         reasons=("NO_ROUTINE_MATCH",),
+        debate_level=debate_level,
     )
 
 
@@ -565,6 +577,55 @@ _FRAMES: dict[str, tuple[tuple[str, str], ...]] = {
 _FALLBACK_FRAMES = (
     ("Eso dio de qué hablar.",
      "¿Tú qué opinas, fue justo o se pasó?"),
+)
+
+# ELEVATED frames (LOS_DUROS.md "Response psychology", owner-approved
+# 2026-10-05). Used when debate.assess_debate_level returns ELEVATED.
+# Same CONNECT -> POSITION/QUESTION pattern with raised reasoning depth.
+# They argue with the ARGUMENT, never attack the person: no insults, no
+# humiliation, no threats, no inferred traits or mental states.
+_ELEVATED_FRAMES: dict[str, tuple[tuple[str, str], ...]] = {
+    "opinion": (
+        ("Ese punto tiene más capas de lo que parece a primera vista.",
+         "¿Cuál es la parte más sólida del argumento y cuál la más floja?"),
+        ("Ahí hay una tesis interesante escondida entre la opinión.",
+         "¿Qué evidencia la sostendría y qué la tumbaría?"),
+    ),
+    "disagreement": (
+        ("Esa objeción apunta a algo real, no es solo ruido.",
+         "¿El problema está en la premisa o en la conclusión?"),
+        ("Discrepar con fundamento siempre suma al debate.",
+         "¿Qué dato te haría reconsiderar esa posición?"),
+    ),
+    "artist_support": (
+        ("La lealtad se respeta más cuando viene con argumentos.",
+         "¿Qué hizo ese artista, concretamente, que los demás no han hecho?"),
+        ("Ser fan de verdad también es saber exigir nivel.",
+         "¿En qué tendría que mejorar para que ni sus haters tengan de qué agarrarse?"),
+    ),
+    "artist_comparison": (
+        ("Comparar sin criterios claros es solo gritar más alto.",
+         "¿En qué métrica gana el tuyo sin que haya discusión?"),
+        ("Ese versus tiene historia, no nació ayer.",
+         "¿Quién ha sido más consistente en los últimos años y por qué?"),
+    ),
+    "entertainment": (
+        ("El humor también dice mucho del momento que vive el género.",
+         "¿Qué fue lo más revelador de ese clip, más allá de la risa?"),
+        ("Reírse está bien, pero el contexto importa.",
+         "¿Ese momento fue espontáneo o calculado para las cámaras?"),
+    ),
+    "simple_question": (
+        ("Buena pregunta, y tiene más fondo del que parece.",
+         "¿Qué teoría tiene más sentido con lo que se sabe hasta ahora?"),
+        ("Eso mismo se han preguntado varios, con razón.",
+         "¿Qué pieza de información resolvería la duda de una vez?"),
+    ),
+}
+
+# Person-attack words: never allowed in elevated frames (or any draft).
+_PERSON_ATTACK_WORDS = (
+    "estupido", "bruto", "ignorante", "idiota", "imbecil", "morboso",
 )
 
 _EMOJI_RE = re.compile(
@@ -686,8 +747,12 @@ class ReplyDraft:
     reasons: tuple[str, ...] = field(default=())
 
 
-def _pick_frame(subtype: str, comment_id: str) -> tuple[str, str]:
-    frames = _FRAMES.get(subtype, _FALLBACK_FRAMES)
+def _pick_frame(
+    subtype: str,
+    comment_id: str,
+    pool: dict[str, tuple[tuple[str, str], ...]],
+) -> tuple[str, str]:
+    frames = pool.get(subtype, _FALLBACK_FRAMES)
     index = int(hashlib.sha256(f"{subtype}:{comment_id}".encode()).hexdigest(), 16) % len(frames)
     return frames[index]
 
@@ -734,7 +799,16 @@ def draft_reply(
     brand_addressed = any(
         re.search(p, comment.text, re.IGNORECASE) for p in _BRAND_SELF_REF
     )
-    connect, question = _pick_frame(classification.subtype, comment.comment_id)
+    # Response-style pool: elevated debate level uses the elevated frames.
+    level = (
+        classification.debate_level
+        if classification.debate_level in debate.LEVELS
+        else debate.STANDARD
+    )
+    pool = (
+        _ELEVATED_FRAMES if level == debate.ELEVATED else _FRAMES
+    )
+    connect, question = _pick_frame(classification.subtype, comment.comment_id, pool)
     artist = (comment.video_artist or "").strip()
     if "{artist}" in question:
         # Brand rule: KEYWORDS in CAPS (artist names are keywords).
