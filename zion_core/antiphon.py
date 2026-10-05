@@ -61,6 +61,7 @@ from .registry import SanPedroError, sanpedro_resolve
 from . import debate
 from . import dedupe
 from . import jerga
+from . import posture as posture_mod
 from . import question as question_mod
 
 BUSINESS_ID = "los-duros"
@@ -839,6 +840,14 @@ def draft_reply(
     text = f"{body} {cta}"
     _check_banned_words(text)
     _check_caps_ratio(text)
+    # LOS_DUROS.md "Editorial neutrality": never convert a commenter's
+    # claim, a rumor, or an inference into Los Duros' own factual/editorial
+    # stance. The check runs on the body only; CTAs are owner-approved
+    # verbatim and carry no editorial claim.
+    _posture = posture_mod.assess_posture(comment.text)
+    _posture_violations = posture_mod.check_draft_posture(body, _posture)
+    if _posture_violations:
+        raise AntiphonError("POSTURE_VIOLATION:" + ",".join(_posture_violations))
     if len(text) > 280:
         raise AntiphonError("DRAFT_TOO_LONG")
     return ReplyDraft(
