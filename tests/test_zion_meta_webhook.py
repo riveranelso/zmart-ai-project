@@ -620,6 +620,32 @@ class HttpAdapterSmokeTests(ReceiverFixture):
             server.shutdown()
             server.server_close()
 
+    def test_health_endpoint_200(self):
+        server = self._serve()
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", server.server_port,
+                                              timeout=5)
+            conn.request("GET", "/health")
+            resp = conn.getresponse()
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode("utf-8"), "ok")
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_health_does_not_require_auth_or_touch_receiver(self):
+        # /health answers even with no query params and never invokes
+        # verification or ingestion.
+        server = self._serve()
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", server.server_port,
+                                              timeout=5)
+            conn.request("GET", "/health?hub.verify_token=x")
+            self.assertEqual(conn.getresponse().status, 200)
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_post_end_to_end_with_raw_body_signature(self):
         server = self._serve()
         try:

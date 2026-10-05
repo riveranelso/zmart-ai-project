@@ -84,6 +84,7 @@ from .glossolalia import (
 # ---------------------------------------------------------------------------
 
 CALLBACK_PATH = "/meta/webhooks/instagram"
+HEALTH_PATH = "/health"
 META_OBJECT_INSTAGRAM = "instagram"
 
 # Meta webhook subscription fields accepted by this increment.
@@ -562,7 +563,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         return urlsplit(self.path).path
 
     def do_GET(self) -> None:  # noqa: N802 (http.server convention)
-        if self._path() != CALLBACK_PATH:
+        path = self._path()
+        if path == HEALTH_PATH:
+            # Liveness probe for the hosting platform. No secrets, no state.
+            self._send(200, b"ok", "text/plain")
+            return
+        if path != CALLBACK_PATH:
             self._send(404, b"not found", "text/plain")
             return
         query = dict(parse_qsl(urlsplit(self.path).query))
@@ -630,8 +636,29 @@ def serve(
     return server
 
 
+def main() -> None:
+    """Container entrypoint: build the Los Duros receiver from env and serve.
+
+    Required env: LOS_DUROS_IG_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET,
+    LOS_DUROS_IG_ACCOUNT_ID. Missing values fail fast with a clear error
+    (never printing the values). PORT overrides the listen port.
+    """
+    port = int(os.environ.get("PORT", "8080"))
+    biblia_root = Path(__file__).resolve().parents[1] / "zmart360" / "BIBLIA"
+    receiver = receiver_from_env(
+        biblia_root=biblia_root if biblia_root.is_dir() else None
+    )
+    server = serve(host="0.0.0.0", port=port, receiver=receiver)
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
+
+
 __all__ = [
     "CALLBACK_PATH",
+    "HEALTH_PATH",
     "META_OBJECT_INSTAGRAM",
     "ACCEPTED_FIELDS",
     "MAX_BODY_BYTES",
@@ -653,4 +680,5 @@ __all__ = [
     "translate_instagram_payload",
     "receiver_from_env",
     "serve",
+    "main",
 ]

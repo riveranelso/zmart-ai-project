@@ -140,6 +140,7 @@ from .meta_webhook import (
     IngestReport,
     MetaWebhookReceiver,
     CALLBACK_PATH,
+    HEALTH_PATH,
     META_OBJECT_INSTAGRAM,
     ACCEPTED_FIELDS,
     LOS_DUROS_BUSINESS_ID,
@@ -155,6 +156,7 @@ from .meta_webhook import (
     translate_instagram_payload,
     receiver_from_env,
     serve,
+    main,
 )
 
 __all__ += [
@@ -164,6 +166,7 @@ __all__ += [
     "IngestReport",
     "MetaWebhookReceiver",
     "CALLBACK_PATH",
+    "HEALTH_PATH",
     "META_OBJECT_INSTAGRAM",
     "ACCEPTED_FIELDS",
     "LOS_DUROS_BUSINESS_ID",
@@ -179,6 +182,7 @@ __all__ += [
     "translate_instagram_payload",
     "receiver_from_env",
     "serve",
+    "main",
 ]
 
 from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, BatchStatus, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, batch_status, assess_pattern_reuse
