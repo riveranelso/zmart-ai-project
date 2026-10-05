@@ -53,14 +53,26 @@ Design notes:
   - Receiving a comment MUST NOT publish a response: ingest_post calls
     process_meta_event with attempt_action=False, so no MetaActionIntent is
     ever built. Drafts end at the human approval boundary.
+  - Safe structured observability: every POST emits JSON INFO records on
+    the zion.meta_webhook logger (also collected on IngestReport.events):
+    webhook_received -> signature_valid/rejected -> payload_parsed/rejected
+    -> translation_complete -> tenant_resolved/rejected -> event_processed
+    (field, duplicate, processing_result, draft_created, action_created)
+    -> webhook_complete (http_status, counts). GET verification emits
+    verification_request. Correlation uses a random per-delivery
+    request_id plus truncated SHA-256 hashes of Meta ids. NEVER logged:
+    secrets, tokens, signatures, bodies, text, usernames, names, raw ids.
+    Routing and security behavior are unchanged by observability.
 """
 from __future__ import annotations
 
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
+import secrets
 import sys
 import threading
 from dataclasses import dataclass, field
@@ -109,6 +121,34 @@ LOS_DUROS_IG_ACCOUNT_ID_ENV = "LOS_DUROS_IG_ACCOUNT_ID"
 
 class MetaWebhookError(ValueError):
     """Rejected webhook request, payload, config, or receiver misuse."""
+
+
+# ---------------------------------------------------------------------------
+# Safe structured observability
+# ---------------------------------------------------------------------------
+
+logger = logging.getLogger("zion.meta_webhook")
+
+
+def _opaque_id(value: str) -> str:
+    """Truncated SHA-256 for safe correlation.
+
+    Lets an operator correlate log lines for one Meta identifier without
+    ever writing the raw identifier -- or any payload content -- to logs.
+    """
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+
+
+def _log_event(event: str, fields: dict[str, Any]) -> dict[str, Any]:
+    """Emit one structured observability record (JSON, INFO level).
+
+    Contract: fields must never contain secrets, tokens, signatures,
+    raw bodies, comment/message text, usernames, names, or raw Meta ids.
+    Opaque truncated hashes (_opaque_id) are the only identifier form.
+    """
+    record = {"event": event, **fields}
+    logger.info(json.dumps(record, sort_keys=True))
+    return record
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +299,9 @@ class TranslationResult:
     accepted: tuple[TranslatedChange, ...]
     skipped_unsupported: int  # field not in ACCEPTED_FIELDS
     skipped_invalid: int  # structurally unusable (missing identifiers)
+    # Field NAMES only (never values, ids, or text): safe for logs.
+    unsupported_fields: tuple[str, ...] = ()
+    invalid_fields: tuple[str, ...] = ()
 
 
 def _nonempty_str(value: Any) -> str | None:
@@ -287,33 +330,43 @@ def translate_instagram_payload(payload: dict[str, Any]) -> TranslationResult:
     accepted: list[TranslatedChange] = []
     skipped_unsupported = 0
     skipped_invalid = 0
+    unsupported_fields: list[str] = []
+    invalid_fields: list[str] = []
 
     for item in entry:
         if not isinstance(item, dict):
             skipped_invalid += 1
+            invalid_fields.append("unknown")
             continue
         entry_id = _nonempty_str(item.get("id"))
         if entry_id is None:
             # No stable account identity: cannot bind to an integration.
             skipped_invalid += 1
+            invalid_fields.append("unknown")
             continue
         time_value = item.get("time")
         timestamp = str(time_value) if isinstance(time_value, int) else None
         changes = item.get("changes")
         if not isinstance(changes, list):
             skipped_invalid += 1
+            invalid_fields.append("unknown")
             continue
         for change in changes:
             if not isinstance(change, dict):
                 skipped_invalid += 1
+                invalid_fields.append("unknown")
                 continue
             field_name = change.get("field")
             if field_name not in ACCEPTED_FIELDS:
                 skipped_unsupported += 1
+                unsupported_fields.append(
+                    field_name if isinstance(field_name, str) else "unknown"
+                )
                 continue
             value = change.get("value")
             if not isinstance(value, dict):
                 skipped_invalid += 1
+                invalid_fields.append(str(field_name))
                 continue
             comment_id = _nonempty_str(value.get("id")) or _nonempty_str(
                 value.get("comment_id")
@@ -333,10 +386,12 @@ def translate_instagram_payload(payload: dict[str, Any]) -> TranslationResult:
             if comment_id is None or sender_id is None:
                 # Missing stable identifiers: fail safe, never draft.
                 skipped_invalid += 1
+                invalid_fields.append(str(field_name))
                 continue
             text = value.get("text")
             if text is not None and not isinstance(text, str):
                 skipped_invalid += 1
+                invalid_fields.append(str(field_name))
                 continue
             raw = {
                 "channel": "instagram",
@@ -365,6 +420,8 @@ def translate_instagram_payload(payload: dict[str, Any]) -> TranslationResult:
         accepted=tuple(accepted),
         skipped_unsupported=skipped_unsupported,
         skipped_invalid=skipped_invalid,
+        unsupported_fields=tuple(unsupported_fields),
+        invalid_fields=tuple(invalid_fields),
     )
 
 
@@ -379,6 +436,9 @@ class IngestReport:
     body: dict[str, Any]
     results: tuple[MetaProcessResult, ...] = ()
     rejected: int = 0
+    # Structured observability records for this delivery, in emission order.
+    # Also written to the zion.meta_webhook logger (JSON, INFO).
+    events: tuple[dict[str, Any], ...] = ()
 
 
 class MetaWebhookReceiver:
@@ -419,9 +479,15 @@ class MetaWebhookReceiver:
 
     # -- GET ------------------------------------------------------------
     def verify_get(self, query: dict[str, str]) -> tuple[int, str]:
-        return handle_verification_request(
+        status, body = handle_verification_request(
             query, expected_verify_token=self._verify_token
         )
+        # Safe: never logs the token or the challenge.
+        _log_event("verification_request", {
+            "result": "accepted" if status == 200 else "rejected",
+            "reason": "OK" if status == 200 else "VERIFY_FAILED",
+        })
+        return status, body
 
     # -- POST -----------------------------------------------------------
     def ingest_post(
@@ -433,27 +499,56 @@ class MetaWebhookReceiver:
           200 -- delivery accepted (processed / duplicate / safely skipped)
           400 -- malformed JSON, non-instagram object, structural problems
           401 -- missing or invalid X-Hub-Signature-256
+
+        Emits structured observability events (also on IngestReport.events):
+        every record carries a per-delivery request_id for correlation and
+        contains NO secrets, tokens, signatures, bodies, text, usernames,
+        names, or raw Meta ids -- only opaque truncated hashes.
         """
+        request_id = secrets.token_hex(8)
+        events: list[dict[str, Any]] = []
+
+        def emit(event: str, **fields: Any) -> None:
+            events.append(_log_event(event, {"request_id": request_id, **fields}))
+
+        def finish(status: int, body: dict[str, Any], *,
+                   results: tuple[MetaProcessResult, ...] = (),
+                   rejected: int = 0,
+                   counts: dict[str, Any] | None = None) -> IngestReport:
+            emit("webhook_complete", http_status=status, actions_created=0,
+                 **(counts or {}))
+            return IngestReport(status=status, body=body, results=results,
+                                rejected=rejected, events=tuple(events))
+
+        emit("webhook_received")
         try:
             verify_post_signature(
                 raw_body, signature_header, app_secret=self._app_secret
             )
         except MetaWebhookError as exc:
-            return IngestReport(
-                status=401, body={"ok": False, "error": str(exc)}
-            )
+            emit("signature_rejected", reason=str(exc))
+            return finish(401, {"ok": False, "error": str(exc)})
+        emit("signature_valid")
         try:
             payload = json.loads(bytes(raw_body).decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            return IngestReport(
-                status=400, body={"ok": False, "error": "MALFORMED_JSON"}
-            )
+            emit("payload_rejected", reason="MALFORMED_JSON")
+            return finish(400, {"ok": False, "error": "MALFORMED_JSON"})
+        emit("payload_parsed")
         try:
             translation = translate_instagram_payload(payload)
         except MetaWebhookError as exc:
-            return IngestReport(
-                status=400, body={"ok": False, "error": str(exc)}
-            )
+            emit("payload_rejected", reason=str(exc))
+            return finish(400, {"ok": False, "error": str(exc)})
+        emit("translation_complete",
+             accepted=len(translation.accepted),
+             skipped_unsupported=translation.skipped_unsupported,
+             skipped_invalid=translation.skipped_invalid,
+             unsupported_fields=list(translation.unsupported_fields))
+        for field_name in translation.unsupported_fields:
+            emit("event_ignored", field=field_name, reason="UNSUPPORTED_FIELD")
+        for field_name in translation.invalid_fields:
+            emit("event_ignored", field=field_name, reason="INVALID_CHANGE")
 
         results: list[MetaProcessResult] = []
         processed = 0
@@ -463,15 +558,24 @@ class MetaWebhookReceiver:
         # process_meta_event stays atomic per delivery batch.
         with self._lock:
             for change in translation.accepted:
+                entry_hash = _opaque_id(change.event_identity["identity"])
+                comment_hash = _opaque_id(change.comment_id)
                 try:
                     resolve_integration(
                         change.event_identity, [self._integration]
                     )
                 except GlossolaliaError:
                     # Unknown identity (spoof / misconfiguration): fail
-                    # closed, count, never route.
+                    # closed, count, never route. The foreign account id is
+                    # logged only as a truncated opaque hash.
+                    emit("tenant_rejected", reason="INTEGRATION_NOT_FOUND",
+                         entry_id_hash=entry_hash)
                     rejected += 1
                     continue
+                emit("tenant_resolved",
+                     integration_id=self._integration.integration_id,
+                     business_id=self._integration.business_id,
+                     entry_id_hash=entry_hash)
                 result = process_meta_event(
                     change.raw,
                     integration=self._integration,
@@ -485,12 +589,25 @@ class MetaWebhookReceiver:
                 results.append(result)
                 if result.duplicate:
                     duplicates += 1
+                    emit("event_processed", field=change.native_field,
+                         comment_id_hash=comment_hash,
+                         entry_id_hash=entry_hash,
+                         duplicate=True, processing_result="IGNORED",
+                         reason="DUPLICATE_DELIVERY",
+                         draft_created=False, action_created=False)
                 else:
                     processed += 1
+                    emit("event_processed", field=change.native_field,
+                         comment_id_hash=comment_hash,
+                         entry_id_hash=entry_hash,
+                         duplicate=False,
+                         processing_result=result.decision.route,
+                         draft_created=result.draft is not None,
+                         action_created=False)
 
-        return IngestReport(
-            status=200,
-            body={
+        return finish(
+            200,
+            {
                 "ok": True,
                 "received": len(translation.accepted),
                 "processed": processed,
@@ -501,6 +618,14 @@ class MetaWebhookReceiver:
             },
             results=tuple(results),
             rejected=rejected,
+            counts={
+                "received": len(translation.accepted),
+                "processed": processed,
+                "duplicates": duplicates,
+                "skipped_unsupported": translation.skipped_unsupported,
+                "skipped_invalid": translation.skipped_invalid,
+                "rejected": rejected,
+            },
         )
 
     def decision_records(self, report: IngestReport) -> tuple[dict[str, Any], ...]:
@@ -643,6 +768,10 @@ def main() -> None:
     LOS_DUROS_IG_ACCOUNT_ID. Missing values fail fast with a clear error
     (never printing the values). PORT overrides the listen port.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
     port = int(os.environ.get("PORT", "8080"))
     biblia_root = Path(__file__).resolve().parents[1] / "zmart360" / "BIBLIA"
     receiver = receiver_from_env(

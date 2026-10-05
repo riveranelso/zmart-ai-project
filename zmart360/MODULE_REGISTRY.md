@@ -199,6 +199,13 @@ glossolalia.meta_event_fingerprint on stable comment ids (in-memory per
 process -- not a distributed exactly-once guarantee); attempt_action=False
 always, so no MetaActionIntent is ever built -- drafts end at the human
 approval boundary, nothing publishes.
+**Observability:** per-delivery structured JSON INFO events on the
+zion.meta_webhook logger and IngestReport.events (webhook_received,
+signature_valid/rejected, payload_parsed/rejected, translation_complete,
+tenant_resolved/rejected, event_processed, event_ignored,
+verification_request, webhook_complete); correlation via random request_id
++ truncated SHA-256 id hashes; never logs secrets, tokens, signatures,
+bodies, text, usernames, names, or raw ids.
 **MUST NOT:** trust caller-supplied business_id; accept unsigned payloads;
 route unsupported fields (mentions/messages skipped); store secrets; choose
 tenants freely; build transport intents.

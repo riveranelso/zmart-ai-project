@@ -684,5 +684,190 @@ class HttpAdapterSmokeTests(ReceiverFixture):
             server.server_close()
 
 
+class ObservabilityTests(ReceiverFixture):
+    """Structured safe observability: every POST emits a correlated,
+    secret-free event chain on IngestReport.events and the logger."""
+
+    def _names(self, report):
+        return [e["event"] for e in report.events]
+
+    def _one(self, report, name):
+        matches = [e for e in report.events if e["event"] == name]
+        self.assertEqual(len(matches), 1,
+                         f"expected exactly one {name} event")
+        return matches[0]
+
+    def _all(self, report, name):
+        return [e for e in report.events if e["event"] == name]
+
+    def _assert_single_request_id(self, report):
+        rids = {e["request_id"] for e in report.events}
+        self.assertEqual(len(rids), 1)
+        self.assertTrue(all(len(r) == 16 for r in rids))
+
+    def _assert_no_leak(self, events, extra=()):
+        blob = json.dumps(events)
+        for forbidden in (VERIFY_TOKEN, APP_SECRET, ACCOUNT_ID,
+                          OTHER_ACCOUNT_ID, "sha256=") + tuple(extra):
+            self.assertNotIn(forbidden, blob)
+
+    def test_1_valid_comments_event_full_chain(self):
+        report, _ = self._post(_payload(comment_id="cmt-obs-1"))
+        names = self._names(report)
+        for expected in ("webhook_received", "signature_valid", "payload_parsed",
+                         "translation_complete", "tenant_resolved",
+                         "event_processed", "webhook_complete"):
+            self.assertIn(expected, names)
+        proc = self._one(report, "event_processed")
+        self.assertEqual(proc["field"], "comments")
+        self.assertFalse(proc["duplicate"])
+        self.assertEqual(proc["processing_result"], "ROUTINE")
+        self.assertTrue(proc["draft_created"])
+        self.assertFalse(proc["action_created"])
+        self.assertIn("comment_id_hash", proc)
+        self.assertIn("entry_id_hash", proc)
+        self.assertEqual(len(proc["comment_id_hash"]), 12)
+        comp = self._one(report, "webhook_complete")
+        self.assertEqual(comp["http_status"], 200)
+        self.assertEqual(comp["actions_created"], 0)
+        self.assertEqual(comp["processed"], 1)
+        self._assert_single_request_id(report)
+        self._assert_no_leak(report.events, extra=(
+            "me encanta", "fanpr", "user-4242", "cmt-obs-1", "media-777"))
+
+    def test_2_valid_live_comments_event(self):
+        report, _ = self._post(
+            _payload(field="live_comments", comment_id="cmt-obs-live-1"))
+        proc = self._one(report, "event_processed")
+        self.assertEqual(proc["field"], "live_comments")
+        self.assertFalse(proc["duplicate"])
+        self.assertFalse(proc["action_created"])
+        self._assert_no_leak(report.events, extra=("cmt-obs-live-1",))
+
+    def test_3_duplicate_delivery_observability(self):
+        payload = _payload(comment_id="cmt-obs-dup-1")
+        first, _ = self._post(payload)
+        self.assertFalse(self._one(first, "event_processed")["duplicate"])
+        second, _ = self._post(payload)
+        proc = self._one(second, "event_processed")
+        self.assertTrue(proc["duplicate"])
+        self.assertEqual(proc["processing_result"], "IGNORED")
+        self.assertEqual(proc["reason"], "DUPLICATE_DELIVERY")
+        self.assertFalse(proc["draft_created"])
+        self.assertFalse(proc["action_created"])
+        comp = self._one(second, "webhook_complete")
+        self.assertEqual(comp["duplicates"], 1)
+        self.assertEqual(comp["processed"], 0)
+
+    def test_4_foreign_account_safe_mismatch_log(self):
+        report, _ = self._post(
+            _payload(entry_id=OTHER_ACCOUNT_ID, comment_id="cmt-obs-for-1"))
+        # Tenant isolation holds AND the mismatch is visible in logs.
+        self.assertEqual(report.body["rejected"], 1)
+        self.assertEqual(report.body["processed"], 0)
+        rej = self._one(report, "tenant_rejected")
+        self.assertEqual(rej["reason"], "INTEGRATION_NOT_FOUND")
+        self.assertIn("entry_id_hash", rej)
+        self.assertEqual(len(rej["entry_id_hash"]), 12)
+        # No tenant_resolved, no event_processed for the foreign change.
+        self.assertEqual(self._all(report, "tenant_resolved"), [])
+        self.assertEqual(self._all(report, "event_processed"), [])
+        comp = self._one(report, "webhook_complete")
+        self.assertEqual(comp["http_status"], 200)
+        self.assertEqual(comp["rejected"], 1)
+        # The foreign account id is never logged in the clear.
+        self._assert_no_leak(report.events,
+                             extra=("cmt-obs-for-1", "user-4242"))
+
+    def test_5_unsupported_field_observability(self):
+        report, _ = self._post(
+            _payload(field="mentions", comment_id="cmt-obs-men-1"))
+        ignored = self._one(report, "event_ignored")
+        self.assertEqual(ignored["field"], "mentions")
+        self.assertEqual(ignored["reason"], "UNSUPPORTED_FIELD")
+        self.assertEqual(self._all(report, "event_processed"), [])
+        trans = self._one(report, "translation_complete")
+        self.assertEqual(trans["skipped_unsupported"], 1)
+        self.assertIn("mentions", trans["unsupported_fields"])
+
+    def test_6_invalid_signature_observability(self):
+        payload = _payload(comment_id="cmt-obs-badsig-1")
+        body = _raw(payload)
+        sig = _sign(body, "wrong-secret")
+        report = self.receiver.ingest_post(body, sig)
+        self.assertEqual(report.status, 401)
+        self.assertEqual(
+            self._names(report),
+            ["webhook_received", "signature_rejected", "webhook_complete"])
+        rej = self._one(report, "signature_rejected")
+        self.assertEqual(rej["reason"], "SIGNATURE_INVALID")
+        comp = self._one(report, "webhook_complete")
+        self.assertEqual(comp["http_status"], 401)
+        self._assert_no_leak(report.events,
+                             extra=(sig, "wrong-secret", "cmt-obs-badsig-1"))
+
+    def test_7_malformed_json_observability(self):
+        body = b'{"object": "instagram", "entry": ['
+        report = self.receiver.ingest_post(body, _sign(body))
+        self.assertEqual(report.status, 400)
+        rej = self._one(report, "payload_rejected")
+        self.assertEqual(rej["reason"], "MALFORMED_JSON")
+        comp = self._one(report, "webhook_complete")
+        self.assertEqual(comp["http_status"], 400)
+
+    def test_8_no_publishing_or_action_creation(self):
+        # A ROUTINE comment drafts, but no action intent may ever exist.
+        report, _ = self._post(
+            _payload(comment_id="cmt-obs-np-1", text="esto está duro, me encanta"))
+        self.assertIsNotNone(report.results[0].draft)
+        for proc in self._all(report, "event_processed"):
+            self.assertFalse(proc["action_created"])
+        comp = self._one(report, "webhook_complete")
+        self.assertEqual(comp["actions_created"], 0)
+        self.assertTrue(all(r.action is None for r in report.results))
+
+    def test_9_event_stream_never_leaks_sensitive_data(self):
+        deliveries = []
+        p1 = _payload(comment_id="cmt-leak-1", text="texto secreto del comentario")
+        b1 = _raw(p1)
+        s1 = _sign(b1)
+        deliveries.append(self.receiver.ingest_post(b1, s1))       # valid
+        deliveries.append(self.receiver.ingest_post(b1, s1))       # duplicate
+        deliveries.append(self.receiver.ingest_post(               # foreign
+            _raw(_payload(entry_id=OTHER_ACCOUNT_ID, comment_id="cmt-leak-2")),
+            _sign(_raw(_payload(entry_id=OTHER_ACCOUNT_ID,
+                                comment_id="cmt-leak-2")))))
+        deliveries.append(self.receiver.ingest_post(b1, "sha256=" + "0" * 64))
+        deliveries.append(self.receiver.ingest_post(               # malformed
+            b"not json", _sign(b"not json")))
+        stream = [e for d in deliveries for e in d.events]
+        self.assertTrue(len(stream) > 10)
+        self._assert_no_leak(stream, extra=(
+            "texto secreto del comentario", "fanpr", "user-4242",
+            "cmt-leak-1", "cmt-leak-2", s1, "media-777"))
+        # opaque hashes are present where correlation is needed
+        proc = [e for e in stream if e["event"] == "event_processed"][0]
+        self.assertRegex(proc["comment_id_hash"], r"^[0-9a-f]{12}$")
+        self.assertRegex(proc["entry_id_hash"], r"^[0-9a-f]{12}$")
+
+    def test_verification_request_observability(self):
+        with self.assertLogs("zion.meta_webhook", level="INFO") as logs:
+            status, _ = self.receiver.verify_get(
+                {"hub.mode": "subscribe", "hub.verify_token": VERIFY_TOKEN,
+                 "hub.challenge": CHALLENGE})
+        self.assertEqual(status, 200)
+        records = [json.loads(line[line.index("{"):]) for line in logs.output]
+        rec = [r for r in records if r["event"] == "verification_request"][0]
+        self.assertEqual(rec["result"], "accepted")
+        self._assert_no_leak(records, extra=(CHALLENGE,))
+
+        with self.assertLogs("zion.meta_webhook", level="INFO") as logs2:
+            status, _ = self.receiver.verify_get({"hub.mode": "subscribe"})
+        self.assertEqual(status, 403)
+        records2 = [json.loads(line[line.index("{"):]) for line in logs2.output]
+        rec2 = [r for r in records2 if r["event"] == "verification_request"][0]
+        self.assertEqual(rec2["result"], "rejected")
+
+
 if __name__ == "__main__":
     unittest.main()
