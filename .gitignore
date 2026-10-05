@@ -1,0 +1,14 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Cron runtime state: the daily lead-report job writes its watermark and
+# phone-enrichment cache under supabase/tools/ by absolute path. The cache
+# holds real lead phone numbers (PII) and must never be committed.
+supabase/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
