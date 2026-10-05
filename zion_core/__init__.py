@@ -213,3 +213,17 @@ __all__ += [
     "rebind_profile_for_tenant",
     "CANONICAL_COUNTIES",
 ]
+
+from .ktema_orange import (
+    ORANGE_PARCELS_BCC_SOURCE_ID,
+    ORANGE_PARCELS_BCC_FIELDS,
+    OrangeParcelsBccSource,
+    orange_property_registry,
+)
+
+__all__ += [
+    "ORANGE_PARCELS_BCC_SOURCE_ID",
+    "ORANGE_PARCELS_BCC_FIELDS",
+    "OrangeParcelsBccSource",
+    "orange_property_registry",
+]
