@@ -136,17 +136,23 @@ class ZeroLagIdentityTests(unittest.TestCase):
         )
         self.assertIn("Zero Lag WiFi", legacy.text)
 
-    def test_unconfirmed_items_stay_marked_por_confirmar(self):
+    def test_fiber_leads_ownership_confirmed_others_stay_por_confirmar(self):
         biblia = retrieve_biblia("zero-lag-wifi", root=ROOT)
         by_ref = {doc.ref: doc.text for doc in biblia.documents}
         brand_text = by_ref.get("zmart360/BIBLIA/BRANDS.md", "")
-        # Unconfirmed ownership stays explicitly marked, never asserted.
-        self.assertIn("POR CONFIRMAR", brand_text)
+        # /fiber-leads ownership is CONFIRMED (Nelson, 2026-10-04): it is
+        # Zero Lag WiFi's fiber-lead funnel webhook, workflow nsZgiapaMOy1IYLI.
+        self.assertIn("OWNERSHIP CONFIRMADO", brand_text)
         self.assertIn("/fiber-leads", brand_text)
-        self.assertIn("recruiting", brand_text)
-        # Verified audit facts are recorded as verified, separate from ownership.
         self.assertIn("nsZgiapaMOy1IYLI", brand_text)
         self.assertIn("New Fiber Lead", brand_text)
+        self.assertNotIn("no verificada por Nelson", brand_text)
+        # Security state stays separate from ownership: known pending risk,
+        # no hardening claimed.
+        self.assertIn("SIN autenticación ni validación", brand_text)
+        # Everything else remains explicitly unconfirmed, never invented.
+        self.assertIn("POR CONFIRMAR", brand_text)
+        self.assertIn("recruiting", brand_text)
 
     def test_invalid_zero_lag_lookalikes_fail_closed(self):
         for bad, reason in [
