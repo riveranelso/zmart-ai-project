@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from zion_core.biblia import retrieve_biblia
+from zion_core.paradosis import MissionPacket, TenantBindingError, bind_tenant
 from zion_core.registry import (
     BUSINESS_ID_ALIASES,
     RegistryError,
@@ -139,9 +140,13 @@ class ZeroLagIdentityTests(unittest.TestCase):
         biblia = retrieve_biblia("zero-lag-wifi", root=ROOT)
         by_ref = {doc.ref: doc.text for doc in biblia.documents}
         brand_text = by_ref.get("zmart360/BIBLIA/BRANDS.md", "")
+        # Unconfirmed ownership stays explicitly marked, never asserted.
         self.assertIn("POR CONFIRMAR", brand_text)
         self.assertIn("/fiber-leads", brand_text)
-        self.assertIn("recruiting vertical", brand_text)
+        self.assertIn("recruiting", brand_text)
+        # Verified audit facts are recorded as verified, separate from ownership.
+        self.assertIn("nsZgiapaMOy1IYLI", brand_text)
+        self.assertIn("New Fiber Lead", brand_text)
 
     def test_invalid_zero_lag_lookalikes_fail_closed(self):
         for bad, reason in [
@@ -158,6 +163,96 @@ class ZeroLagIdentityTests(unittest.TestCase):
             with self.subTest(bad=bad):
                 with self.assertRaisesRegex(SanPedroError, reason):
                     sanpedro_resolve(bad)
+
+def _packet_for(business_id: str) -> MissionPacket:
+    return MissionPacket(
+        mission_id="m", repo="r", branch="b", current_head="h",
+        business_id=business_id, brand_id=business_id, objective="o",
+        allowed_scope=(), forbidden_scope=(), relevant_modules=(),
+        canonical_context_refs=(), security_boundaries=(),
+        production_boundary="", test_requirements=(),
+        write_permissions=(), current_known_state="",
+    )
+
+
+class ZeroLagAdversarialTests(unittest.TestCase):
+    """Try to break Zero Lag tenant isolation. Everything must fail closed."""
+
+    def test_casing_variants_fail_closed(self):
+        for bad in ("ZeroLag", "ZEROLAG", "ZERO-LAG-WIFI", "Zero-Lag-Wifi",
+                    "zErOlAg", "ZERO-lag-WIFI"):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(SanPedroError, "BUSINESS_NOT_REGISTERED"):
+                    sanpedro_resolve(bad)
+
+    def test_whitespace_variants_fail_closed(self):
+        for bad in ("\tzerolag", "zerolag\n", "zerolag\r\n", " zerolag",
+                    "\tzero-lag-wifi", "zero-lag-wifi\n"):
+            with self.subTest(bad=repr(bad)):
+                with self.assertRaisesRegex(SanPedroError, "BUSINESS_ID_REQUIRED"):
+                    sanpedro_resolve(bad)
+
+    def test_punctuation_variants_fail_closed(self):
+        for bad in ("zero--lag-wifi", "zero-lag-wifi!", "-zero-lag-wifi",
+                    "zero-lag-wifi-", ".zero-lag-wifi", "zero-lag-wifi.",
+                    "zero_lag_wifi", "zero lag wifi", "zero-lag_wifi"):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(SanPedroError, "BUSINESS_NOT_REGISTERED"):
+                    sanpedro_resolve(bad)
+
+    def test_near_match_ids_fail_closed(self):
+        for bad in ("zero-lag-wif", "zero-lag-wifii", "azero-lag-wifi",
+                    "zero-lag-wifia", "zero-lag", "zerola", "zerolagg",
+                    "zero-lag-wifі"):  # cyrillic і lookalike
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(SanPedroError, "BUSINESS_NOT_REGISTERED"):
+                    sanpedro_resolve(bad)
+
+    def test_explicit_registry_entry_wins_over_alias(self):
+        # If the registry ever defines "zerolag" itself, the alias must not
+        # silently merge that tenant into zero-lag-wifi.
+        data = {"businesses": {
+            "zerolag": {"enabled": True, "isolation_key": "zerolag-own",
+                        "context_refs": ["x.md"], "display_name": "Other"},
+            "zero-lag-wifi": {"enabled": True, "isolation_key": "zero-lag-wifi",
+                              "context_refs": ["y.md"]},
+        }}
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "registry.json"
+            p.write_text(json.dumps(data), encoding="utf-8")
+            ctx = sanpedro_resolve("zerolag", p)
+            self.assertEqual(ctx.business_id, "zerolag")
+            self.assertEqual(ctx.isolation_key, "zerolag-own")
+
+    def test_post_resolution_checks_use_canonical_id_only(self):
+        # build_mission_packet canonicalizes at ingress, so a packet created
+        # from a "zerolag" claim carries "zero-lag-wifi" downstream.
+        p = _packet_for("zero-lag-wifi")
+        self.assertIs(bind_tenant(p, "zero-lag-wifi", "zero-lag-wifi"), p)
+        # The legacy id no longer matches once canonicalized: fail closed.
+        with self.assertRaises(TenantBindingError):
+            bind_tenant(p, "zerolag")
+        # A foreign tenant claim fails closed too.
+        with self.assertRaises(TenantBindingError):
+            bind_tenant(p, "los-duros")
+        with self.assertRaises(TenantBindingError):
+            bind_tenant(p, "zero-lag-wifi", "los-duros")
+
+    def test_legacy_alias_retrieval_contains_no_foreign_brand_sections(self):
+        legacy = retrieve_biblia("zerolag", root=ROOT)
+        for oid in sanpedro_business_ids():
+            if oid != "zero-lag-wifi":
+                self.assertNotIn(f"## {oid}", legacy.text)
+
+    def test_alias_does_not_weaken_other_tenants(self):
+        # Every other registered tenant still resolves to itself, unaffected
+        # by the alias table.
+        for oid in sanpedro_business_ids():
+            if oid == "zero-lag-wifi":
+                continue
+            ctx = sanpedro_resolve(oid)
+            self.assertEqual(ctx.business_id, oid)
+            self.assertEqual(ctx.isolation_key, oid)
 
 if __name__ == "__main__":
     unittest.main()

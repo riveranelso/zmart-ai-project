@@ -23,6 +23,8 @@ Current aliases:
 
 A claimed `zerolag` therefore resolves to the same `BusinessContext` (canonical ID, isolation key, context refs) as `zero-lag-wifi`. Post-resolution tenant checks keep using the canonical ID and fail closed on any mismatch — the alias does not create a second identity.
 
+Precedence: an explicit registry entry always wins over the alias. The alias applies only when the registry does not define the claimed ID, so a registered tenant can never be silently merged into another tenant's context.
+
 For canonical learning destinations, the registered reference must match the scope's canonical BIBLIA filename by exact basename. Suffix lookalikes are not authorization. Zero matches remain unregistered; multiple matches for the same canonical basename are ambiguous and fail closed rather than selecting one by order.
 
 ## Registered work areas

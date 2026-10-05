@@ -12,10 +12,12 @@ DEFAULT_REGISTRY = SANPEDRO_KEYS  # compatibility alias
 # be renamed, mapped to the one canonical ZION identity. Example: Omar Core's
 # brain/BUSINESS-REGISTRY.json (active on main) and its router/tests use
 # "zerolag", while ZION's canonical registry identity is "zero-lag-wifi".
-# The alias is applied once at ingress inside sanpedro_resolve; every
-# downstream artifact (BusinessContext, MissionPacket, BIBLIA retrieval)
-# carries only the canonical identity, so tenant isolation and fail-closed
-# mismatch checks (e.g. paradosis.bind_tenant) keep working on one identity.
+# The alias is applied once at ingress inside sanpedro_resolve, and only when
+# the registry does not define the id explicitly (an explicit registry entry
+# always wins, so no tenant can be silently merged). Every downstream
+# artifact (BusinessContext, MissionPacket, BIBLIA retrieval) carries only
+# the canonical identity, so tenant isolation and fail-closed mismatch
+# checks (e.g. paradosis.bind_tenant) keep working on one identity.
 BUSINESS_ID_ALIASES: dict[str, str] = {
     "zerolag": "zero-lag-wifi",
 }
@@ -36,11 +38,16 @@ class BusinessContext:
 def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessContext:
     if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
         raise SanPedroError("BUSINESS_ID_REQUIRED")
-    canonical_id = BUSINESS_ID_ALIASES.get(business_id, business_id)
     registry = json.loads((path or DEFAULT_REGISTRY).read_text(encoding="utf-8"))
     businesses = registry.get("businesses")
     if not isinstance(businesses, dict):
         raise SanPedroError("INVALID_REGISTRY")
+    # An explicit registry entry always wins: the alias only applies when the
+    # registry does not define the id, so a registered tenant can never be
+    # silently merged into another tenant's context.
+    canonical_id = business_id
+    if business_id not in businesses:
+        canonical_id = BUSINESS_ID_ALIASES.get(business_id, business_id)
     entry = businesses.get(canonical_id)
     if entry is None:
         raise SanPedroError("BUSINESS_NOT_REGISTERED")
