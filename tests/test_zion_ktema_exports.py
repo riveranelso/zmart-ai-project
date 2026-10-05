@@ -56,13 +56,23 @@ class KtemaExportsTests(unittest.TestCase):
 
     def test_ktema_symbols_match_module_symbols(self):
         import zion_core
-        from zion_core import ktema
+        from zion_core import ktema, ktema_orange
+
+        # The Orange adapter is its own module by design (ktema_orange);
+        # its symbols must resolve there, not in ktema.
+        ORANGE_SYMBOLS = {
+            "ORANGE_PARCELS_BCC_SOURCE_ID",
+            "ORANGE_PARCELS_BCC_FIELDS",
+            "OrangeParcelsBccSource",
+            "orange_property_registry",
+        }
 
         for name in EXPECTED_SYMBOLS:
             with self.subTest(name=name):
+                home = ktema_orange if name in ORANGE_SYMBOLS else ktema
                 self.assertIs(getattr(zion_core, name, None),
-                              getattr(ktema, name, None),
-                              f"{name} does not resolve to ktema.{name}")
+                              getattr(home, name, None),
+                              f"{name} does not resolve to {home.__name__}.{name}")
 
     def test_no_private_ktema_symbols_exported(self):
         import zion_core
