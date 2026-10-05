@@ -36,6 +36,10 @@ EXPECTED_SYMBOLS = [
     "build_ktema_cache_key",
     "rebind_profile_for_tenant",
     "CANONICAL_COUNTIES",
+    "ORANGE_PARCELS_BCC_SOURCE_ID",
+    "ORANGE_PARCELS_BCC_FIELDS",
+    "OrangeParcelsBccSource",
+    "orange_property_registry",
 ]
 
 
