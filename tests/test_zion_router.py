@@ -1,7 +1,8 @@
 import unittest
 import tempfile
 from pathlib import Path
-from zion_core.router import MissionValidationError, validate_mission, route_mission, load_derekh
+from zion_core.router import MissionValidationError, validate_mission, route_mission, load_derekh, exapostello
+from zion_core.cronicas import CronicasMemorySink
 
 class ZionRouterTests(unittest.TestCase):
     def mission(self,**changes):
@@ -16,6 +17,21 @@ class ZionRouterTests(unittest.TestCase):
 
     def test_unknown_business_stops_before_dispatch(self):
         self.assertEqual(route_mission(self.mission(business_id="unknown")).reason,"BUSINESS_NOT_REGISTERED")
+
+    def test_unknown_business_with_sink_still_returns_review_decision(self):
+        # Unregistered businesses have no CRONICAS partition by design (the
+        # sink fails closed instead of creating orphan partitions). exapostello
+        # must return the REQUIRE_HUMAN_REVIEW decision identically whether or
+        # not a sink is attached — never raise from the emit path.
+        sink=CronicasMemorySink()
+        decision=exapostello(self.mission(business_id="unknown"),cronicas_sink=sink)
+        self.assertEqual((decision.action,decision.reason),
+                         ("REQUIRE_HUMAN_REVIEW","BUSINESS_NOT_REGISTERED"))
+        self.assertTrue(decision.human_review_required)
+        self.assertEqual(sink.events,())
+        nosink=exapostello(self.mission(business_id="unknown"))
+        self.assertEqual((nosink.action,nosink.reason),
+                         (decision.action,decision.reason))
 
     def test_unknown_route_stops(self):
         self.assertEqual(route_mission(self.mission(intent="unknown")).reason,"ROUTE_NOT_FOUND")

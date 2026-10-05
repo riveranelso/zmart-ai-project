@@ -49,6 +49,22 @@ class RuntimeRecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"MISSION_ID_REQUIRED"):
                 runtime.mission_history("   ")
 
+    def test_missing_business_id_is_rejected(self):
+        # Without a tenant scope the read would silently cross tenant
+        # boundaries; mission_history requires it (use history() directly
+        # for explicit unfiltered diagnostics).
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            runtime=OmarRuntime(
+                biblia_root=root,
+                cronicas_path=root/"cronicas.jsonl",
+                correction_memory_path=root/"corrections.json",
+            )
+            with self.assertRaisesRegex(ValueError,"BUSINESS_ID_REQUIRED"):
+                runtime.mission_history("m1")
+            with self.assertRaisesRegex(ValueError,"BUSINESS_ID_REQUIRED"):
+                runtime.mission_history("m1",business_id="   ")
+
 
 if __name__=="__main__":
     unittest.main()

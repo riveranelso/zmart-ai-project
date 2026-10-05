@@ -113,7 +113,11 @@ def exapostello(mission:dict[str,Any],routes_path:Path|None=None,registry_path:P
     try: ctx=sanpedro_resolve(bid,registry_path)
     except SanPedroError as exc:
         decision=DispatchDecision(mid,"REQUIRE_HUMAN_REVIEW",str(exc),business_id=bid,human_review_required=True)
-        cronicas_emit(mission,decision,cronicas_sink,security_context=security_context); return decision
+        # Unregistered businesses have no CRONICAS partition by design: the
+        # sink fails closed instead of creating orphan partitions. Return the
+        # review decision without recording it so the contract does not depend
+        # on whether a sink is attached.
+        return decision
     base=dict(business_id=ctx.business_id,isolation_key=ctx.isolation_key,context_refs=ctx.context_refs,
               scope=str(mission["scope"]),payload_ref=mission.get("payload_ref"))
     route=load_derekh(routes_path).get(str(mission["intent"]))

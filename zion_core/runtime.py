@@ -308,9 +308,16 @@ class OmarRuntime:
         )
 
     def mission_history(self, mission_id: str, *, business_id: str | None = None):
-        """Reconstruct the recorded timeline for one mission without side effects."""
+        """Reconstruct the recorded timeline for one mission without side effects.
+
+        The tenant scope is required: without it the read would silently cross
+        tenant boundaries. Use history() directly for explicit unfiltered
+        diagnostics.
+        """
         if not isinstance(mission_id,str) or not mission_id.strip():
             raise ValueError("MISSION_ID_REQUIRED")
+        if not isinstance(business_id,str) or not business_id.strip():
+            raise ValueError("BUSINESS_ID_REQUIRED")
         return self.history(
             business_id=business_id,
             mission_id=mission_id.strip(),
