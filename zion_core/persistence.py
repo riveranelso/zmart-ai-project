@@ -82,7 +82,25 @@ class LocalOperationLock:
     def _recover_dead_owner(self,path: Path)->bool:
         owner=self._read_owner(path)
         if not owner:
-            return False
+            # No readable ownership metadata. Under the atomic link protocol a
+            # live holder can never present an empty lock file (the path only
+            # appears via link with complete metadata), so this is a legacy
+            # artifact from the old create-then-write protocol or corruption.
+            # Recover it once it is older than a grace period no live writer
+            # can still be inside: the floored bound keeps this deterministic
+            # even for very short configured timeouts.
+            grace_period=max(self.timeout_seconds,1.0)
+            try:
+                age_seconds=time.time()-path.stat().st_mtime
+            except OSError:
+                return False
+            if age_seconds < grace_period:
+                return False
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            return True
         pid=owner.get("pid")
         alive=self._owner_alive(pid)
         if alive is True:
@@ -115,50 +133,75 @@ class LocalOperationLock:
         self.root.mkdir(parents=True,exist_ok=True)
         path=self.root/(digest+".lock")
         deadline=time.monotonic()+self.timeout_seconds
-        fd=None
-        while fd is None:
-            try:
-                fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
-            except FileExistsError:
-                if self._recover_dead_owner(path):
-                    continue
-                if time.monotonic()>=deadline:
-                    raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
-                time.sleep(self.poll_seconds)
-        try:
+        while True:
+            # Crash-safe publication: stage COMPLETE ownership metadata under a
+            # unique name first, then atomically link it to the lock path. A
+            # crash can never leave a metadata-less lock file behind — either
+            # the lock path exists with complete, recoverable metadata, or it
+            # does not exist at all. (The old O_EXCL-create-then-write order
+            # left an empty, permanently unrecoverable lock on crash.)
             pid=os.getpid()
             payload={"pid":pid,"process_start":self._process_start_identity(pid),
                      "business_id":business_id.strip(),"operation":operation.strip(),
                      "identity":identity.strip()}
             encoded=json.dumps(payload,sort_keys=True).encode("utf-8")
-            offset=0
-            while offset < len(encoded):
-                written=os.write(fd,encoded[offset:])
-                if not isinstance(written,int) or written <= 0:
-                    raise OSError("LOCK_OWNER_METADATA_SHORT_WRITE")
-                offset+=written
-            os.fsync(fd)
+            staged: Path | None = None
+            fd: int | None = None
+            for _ in range(8):
+                candidate=self.root/(digest+"."+str(pid)+"."+os.urandom(4).hex()+".staging")
+                try:
+                    fd=os.open(candidate,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+                except FileExistsError:
+                    continue
+                staged=candidate
+                break
+            if staged is None or fd is None:
+                raise OSError("LOCK_STAGING_COLLISION")
+            try:
+                offset=0
+                while offset < len(encoded):
+                    written=os.write(fd,encoded[offset:])
+                    if not isinstance(written,int) or written <= 0:
+                        raise OSError("LOCK_OWNER_METADATA_SHORT_WRITE")
+                    offset+=written
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            try:
+                os.link(staged,path)
+            except FileExistsError:
+                staged.unlink()
+                staged=None
+                if self._recover_dead_owner(path):
+                    continue
+                if time.monotonic()>=deadline:
+                    raise TimeoutError("IDEMPOTENCY_LOCK_TIMEOUT")
+                time.sleep(self.poll_seconds)
+                continue
+            break
+        try:
             yield
         finally:
-            os.close(fd)
-            # If ownership publication failed before the protected section was
-            # entered, this process still owns the O_EXCL file and must remove
-            # it; otherwise malformed/empty metadata would fail closed forever.
-            try:
-                path.unlink()
-            except FileNotFoundError:
-                pass
-            else:
+            # This process owns the lock path (and its staging name); remove
+            # both. Orphaned staging files from a pre-link crash are unique,
+            # tiny, and never block acquisition.
+            for candidate in (path,staged):
+                if candidate is None:
+                    continue
                 try:
-                    dir_fd=os.open(self.root,os.O_RDONLY)
-                    try:
-                        os.fsync(dir_fd)
-                    finally:
-                        os.close(dir_fd)
-                except OSError:
-                    # The coordination lock is already removed. Do not turn
-                    # completed protected work into a false retryable failure.
+                    candidate.unlink()
+                except FileNotFoundError:
                     pass
+            try:
+                dir_fd=os.open(self.root,os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+            except OSError:
+                # The coordination lock is already removed. Do not turn
+                # completed protected work into a false retryable failure.
+                pass
 
 
 class CronicasJsonlSink:

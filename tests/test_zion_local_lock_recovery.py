@@ -1,7 +1,10 @@
 import json
+import multiprocessing
 import os
+import signal
 import stat
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -132,6 +135,46 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
                 with lock.hold(business,operation,identity):
                     pass
             self.assertTrue(path.exists())
+
+    def test_stale_malformed_metadata_is_recovered(self):
+        # Under the atomic-link protocol a live holder can never present an
+        # unreadable lock file, so stale garbage is a legacy artifact or
+        # corruption — recoverable, never a permanent brick.
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            root.mkdir()
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="stale-garbage-1"
+            path=self.lock_path(root,business,operation,identity)
+            path.write_text("not-json",encoding="utf-8")
+            old=time.time()-7200
+            os.utime(path,(old,old))
+            lock=LocalOperationLock(root,poll_seconds=0.001,timeout_seconds=0.5)
+            with lock.hold(business,operation,identity):
+                owner=json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(owner["pid"],os.getpid())
+            self.assertFalse(path.exists())
+
+    def test_stale_empty_lock_file_is_recovered(self):
+        # The old create-then-write protocol could leave an empty lock file on
+        # crash; the new protocol never creates one. Stale empties recover.
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            root.mkdir()
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="stale-empty-1"
+            path=self.lock_path(root,business,operation,identity)
+            path.write_bytes(b"")
+            old=time.time()-7200
+            os.utime(path,(old,old))
+            lock=LocalOperationLock(root,poll_seconds=0.001,timeout_seconds=0.5)
+            with lock.hold(business,operation,identity):
+                self.assertTrue(path.exists())
+            self.assertFalse(path.exists())
+
+
 
     def test_owner_metadata_write_failure_does_not_leave_unrecoverable_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -282,6 +325,59 @@ class LocalOperationLockRecoveryTests(unittest.TestCase):
             self.assertTrue(failed_directory_sync)
             self.assertFalse(path.exists())
 
+
+def _hold_and_sleep(root_text,business,operation,identity,flag_text):
+    # Child: acquire the lock, signal the parent, then sleep until killed.
+    # SIGKILL runs no cleanup: this simulates a crash mid-hold.
+    from zion_core.persistence import LocalOperationLock
+    from pathlib import Path
+    lock=LocalOperationLock(Path(root_text))
+    with lock.hold(business,operation,identity):
+        Path(flag_text).write_text("holding",encoding="utf-8")
+        time.sleep(60)
+
+
+class LocalOperationLockCrashTests(unittest.TestCase):
+    def test_sigkill_mid_hold_is_recoverable(self):
+        # Ownership metadata is published atomically with acquisition, so a
+        # crash mid-hold always leaves a recoverable lock — never a brick.
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"locks"
+            root.mkdir()
+            business="zmart-consumer-rights"
+            operation="MISSION_DISPATCH"
+            identity="sigkill-1"
+            flag=Path(tmp)/"holding.flag"
+            ctx=multiprocessing.get_context("spawn")
+            child=ctx.Process(
+                target=_hold_and_sleep,
+                args=(str(root),business,operation,identity,str(flag)),
+            )
+            child.start()
+            try:
+                deadline=time.monotonic()+10
+                digest=_operation_digest(business,operation,identity)
+                path=root/(digest+".lock")
+                while time.monotonic() < deadline:
+                    if flag.exists():
+                        break
+                    time.sleep(0.01)
+                self.assertTrue(flag.exists(),"child never acquired the lock")
+                # The lock file must carry complete, recoverable metadata.
+                owner=json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(owner["pid"],child.pid)
+                os.kill(child.pid,signal.SIGKILL)
+                child.join(10)
+                self.assertFalse(child.is_alive(),"killed child did not exit")
+                lock=LocalOperationLock(root,poll_seconds=0.01,timeout_seconds=5.0)
+                with lock.hold(business,operation,identity):
+                    owner=json.loads(path.read_text(encoding="utf-8"))
+                    self.assertEqual(owner["pid"],os.getpid())
+                self.assertFalse(path.exists())
+            finally:
+                if child.is_alive():
+                    child.terminate()
+                    child.join(5)
 
 if __name__=="__main__":
     unittest.main()
