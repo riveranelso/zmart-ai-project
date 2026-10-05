@@ -200,6 +200,6 @@ coordinates against `ktema_county_data.json`), official-source routing via
 consume it); `PARCEL_PATTERNS` ships empty by design; only the fixture
 source adapter is published.
 **MUST NOT:** call real endpoints; invent parcels or valuations; store PII.
-**Status:** Increments 1-5 complete; Increment 6 adds the first schema-verified real adapter: Orange County Parcels_BCC. It remains transport-free and is not default-routed; Seminole, Volusia, and Lake real adapters remain pending schema/endpoint verification.
+**Status:** FROZEN / FUTURE WORK per Nelson 2026-10-04 — see `zmart360/KTEMA_PROPERTY_FREEZE.md`. DO NOT CONTINUE unless Nelson reactivates. (Increments 1-5 complete; Increment 6 adds the first schema-verified real adapter: Orange County Parcels_BCC. It remains transport-free and is not default-routed; Seminole, Volusia, and Lake real adapters remain pending schema/endpoint verification.)
 **Files:** `zion_core/ktema.py`, `zion_core/ktema_orange.py`, `zion_core/ktema_county_data.json`,
 `tests/test_zion_ktema_*.py`.

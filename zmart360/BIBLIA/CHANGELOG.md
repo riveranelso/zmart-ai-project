@@ -2,6 +2,9 @@
 
 Record material promotions, corrections, supersessions and routing repairs here without secrets or PII.
 
+## 2026-10-05
+- FREEZE (decisión de Nelson): `Orange Parcels_BCC / Property Appraiser` (KTEMA property intelligence) queda en `FROZEN / FUTURE WORK` — no es requerido actualmente para Zero Lag WiFi y no debe consumir tiempo ni bloquear el desarrollo Zero Lag/ZION. Registro durable: `zmart360/KTEMA_PROPERTY_FREEZE.md` (inventario preservado: código, adapters, 139 tests, docs, decisiones, descubrimientos, limitaciones, punto de reanudación). DO NOT CONTINUE PROPERTY APPRAISER WORK UNLESS NELSON REACTIVATES IT. Zero Lag ≠ Property Appraiser: verificado que ningún módulo Zero Lag importa ktema; sin dependencia entre ambos sistemas. Freeze, no delete: todo el trabajo permanece recuperable.
+
 ## 2026-10-04
 - Conocimiento (integridad): `LOS_DUROS.md` se declaraba "canonical BIBLIA knowledge" pero no estaba en los `context_refs` de los-duros — `retrieve_biblia("los-duros")` nunca lo devolvía (regla CTA, voz, logo bloqueado y promotion knowledge invisibles). Ahora está en `context_refs` con scope BRAND (`_REF_SCOPE`); verificado sin leakage cross-brand. Test de regresión `test_los_duros_canonical_doc_is_retrievable`.
 - Bug corregido (aislamiento): `_business_section` solo terminaba la sección en el próximo header de un business REGISTRADO — un `##` no registrado inyectaba su texto en la sección del business anterior. Ahora la sección termina en el próximo H2 de cualquier tipo (semántica estándar de sección); el header objetivo sigue siendo match exacto registrado, y documentos sin headers registrados se devuelven íntegros. Tests (2; verificados que fallan sin el fix).
