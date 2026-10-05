@@ -143,14 +143,15 @@ class OmarRuntime:
         if not all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
             raise ValueError("APOKRISIS_IDENTITY_REQUIRED")
         if all(isinstance(value,str) and value.strip() for value in (business_id,mission_id,angel_id)):
+            stripped=business_id.strip()
+            mid=mission_id.strip()
+            aid=angel_id.strip()
+            if business_id != stripped or mission_id != mid or angel_id != aid:
+                raise ValueError("APOKRISIS_IDENTITY_NONCANONICAL")
             # History partition and lock key use the canonical identity; the
             # response object itself keeps the angel's claimed id (the sink
             # normalizes the recorded event on write).
-            bid=canonical_business_id(business_id.strip(),self.registry_path)
-            mid=mission_id.strip()
-            aid=angel_id.strip()
-            if business_id != bid or mission_id != mid or angel_id != aid:
-                raise ValueError("APOKRISIS_IDENTITY_NONCANONICAL")
+            bid=canonical_business_id(stripped,self.registry_path)
             identity=mid+"\x1f"+aid
             with self.operation_lock.hold(bid,"APOKRISIS",identity):
                 dispatch_events=self.history(

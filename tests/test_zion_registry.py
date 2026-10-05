@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from zion_core import LearningIntent, OmarRuntime, apokrisis
 from zion_core.biblia import retrieve_biblia
 from zion_core.cronicas import CronicaEvent, CronicasMemorySink
 from zion_core.omar import prepare_mission
@@ -508,6 +509,46 @@ class ZeroLagCronicasPartitionTests(unittest.TestCase):
             self.assertEqual(memory.count("zerolag", "fix the cta"), 2)
             with self.assertRaises(SanPedroError):
                 memory.observe("nope", "fix the cta")
+
+    def test_close_accepts_legacy_alias_and_records_canonical(self):
+        # Regression: close() compared the claimed id against the canonical
+        # partition key and wrongly raised APOKRISIS_IDENTITY_NONCANONICAL
+        # for the contractual alias.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "GLOBAL.md").write_text("# Global\n", encoding="utf-8")
+            registry = root / "registry.json"
+            registry.write_text(json.dumps({"businesses": {
+                "zero-lag-wifi": {
+                    "enabled": True, "isolation_key": "zero-lag-wifi",
+                    "context_refs": ["GLOBAL.md"],
+                },
+            }}), encoding="utf-8")
+            runtime = OmarRuntime(
+                biblia_root=root, registry_path=registry,
+                cronicas_path=root / "cronicas.jsonl",
+                correction_memory_path=root / "corrections.json",
+            )
+            response = apokrisis(
+                angel_id="SANGABRIEL.HOST-01.ANGEL-001", mission_id="m1",
+                status="SUCCESS", summary="done", business_id="zerolag",
+            )
+            result = runtime.close(response, learning=LearningIntent())
+            self.assertTrue(result.processed)
+            via_canonical = runtime.history(
+                business_id="zero-lag-wifi", event_type="ANGEL_RESPONSE",
+                mission_id="m1",
+            )
+            self.assertEqual(len(via_canonical), 1)
+            self.assertEqual(via_canonical[0].business_id, "zero-lag-wifi")
+            via_alias = runtime.history(
+                business_id="zerolag", event_type="ANGEL_RESPONSE",
+                mission_id="m1",
+            )
+            self.assertEqual(len(via_alias), 1)
+            self.assertEqual(
+                via_alias[0].event_id, via_canonical[0].event_id,
+            )
 
 if __name__ == "__main__":
     unittest.main()
