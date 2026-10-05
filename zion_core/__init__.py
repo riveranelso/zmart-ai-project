@@ -58,11 +58,13 @@ from .antiphon import (
     MAIN_BRAIN,
     ROUTINE,
     classify_comment,
+    compose_cta_variant,
     draft_reply,
     intake_comment,
     process_comment,
     publish_reply,
     resolve_brand,
+    validate_cta,
 )
 
 from .glossolalia import (

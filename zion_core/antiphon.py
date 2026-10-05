@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -487,12 +488,21 @@ _BRAND_SELF_REF = (
 # Banned from every draft: forced slang / brand-prohibited words.
 _BANNED_WORDS = ("acho", "mojate", "mójate")
 
-# CTA rotation pool (owner-supplied variants; equivalents allowed).
+# YOUTUBE COMMENT CTA ROTATION (permanent brand rule, owner-approved 2026-10-04).
+# Every YouTube comment reply MUST close with a contextual SUBSCRIBE + SHARE
+# CTA. Never repeat the same CTA mechanically across comments: the pool
+# rotates and adapts to the comment's content and tone. ZION may compose new
+# variants only if they sound natural and boricua, relate to the comment,
+# carry SUBSCRIBE + SHARE intent, invite interaction, do not look like
+# copy/paste, and respect every existing Los Duros rule (voice, caps, emoji
+# budget, NO CHOTIAERA, no street codes, no automatic artist defense).
+# New variants MUST pass validate_cta(); the approved pool below is pinned
+# verbatim and also validated at draft time (fail closed).
 CTA_VARIANTS: tuple[str, ...] = (
-    "Suscribete pa que no te pierdas lo proximo.",
-    "Suscribete pa que no te pierdas la parte 2.",
-    "Comparte esto con un pana que se enfogone.",
-    "Mandaselo a ese pana que siempre discute esto.",
+    "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con tu pana a ver que dice 😂",
+    "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con ese pana que sabe la que hay.",
+    "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con el pana que va a entender esa 😂",
+    "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con tu pana pa que vea el revolu 😂",
 )
 
 # CONNECT -> POSITION/QUESTION frames per ROUTINE subtype.
@@ -579,6 +589,78 @@ def _check_caps_ratio(text: str) -> None:
         raise AntiphonError("DRAFT_CAPS_RATIO")
 
 
+# ---------------------------------------------------------------------------
+# CTA policy: intent markers and hard limits for every variant (approved pool
+# and ZION-composed). Brand voice: no accent marks in social copy.
+# ---------------------------------------------------------------------------
+
+_SUBSCRIBE_MARKERS = ("suscrib",)
+_SHARE_MARKERS = ("compart", "mandaselo", "mándaselo", "pasalo", "pásalo", "enviaselo")
+# Matches the loosest owner-approved variant (bell + laugh emoji).
+_CTA_MAX_EMOJIS = 2
+
+
+def _strip_accents(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in normalized if not unicodedata.combining(c))
+
+
+def _cta_emoji_count(text: str) -> int:
+    return len(_EMOJI_RE.findall(text))
+
+
+def validate_cta(cta: str) -> tuple[str, ...]:
+    """Policy violations for a CTA variant; empty tuple means compliant.
+
+    Every variant (approved pool or ZION-composed) must carry SUBSCRIBE +
+    SHARE intent, respect the emoji budget, avoid banned words and accent
+    marks, and never be all-caps. Pure and deterministic.
+    """
+    violations: list[str] = []
+    lowered = cta.lower()
+    if not any(m in lowered for m in _SUBSCRIBE_MARKERS):
+        violations.append("CTA_MISSING_SUBSCRIBE_INTENT")
+    if not any(m in lowered for m in _SHARE_MARKERS):
+        violations.append("CTA_MISSING_SHARE_INTENT")
+    if _cta_emoji_count(cta) > _CTA_MAX_EMOJIS:
+        violations.append("CTA_TOO_MANY_EMOJIS")
+    for word in _BANNED_WORDS:
+        if re.search(rf"\b{re.escape(word)}\b", lowered):
+            violations.append(f"CTA_BANNED_WORD:{word}")
+    if any(c.isalpha() for c in cta) and cta == cta.upper():
+        violations.append("CTA_ALL_CAPS")
+    if re.search(r"[áéíóúñüÁÉÍÓÚÑÜ]", cta):
+        violations.append("CTA_ACCENTED_CHARS")
+    return tuple(violations)
+
+
+_COMPOSE_TEMPLATES = (
+    "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con tu pana pa que vea {phrase}.",
+    "🔔 Suscribete pa que no te pierdas lo proximo y mandaselo al pana que {phrase}.",
+)
+
+
+def compose_cta_variant(context_phrase: str) -> str:
+    """Compose a new contextual CTA variant from a comment-derived phrase.
+
+    The phrase is sanitized (whitespace-collapsed, lowercased,
+    accent-stripped, length-capped) and the composed variant MUST pass
+    validate_cta(); otherwise AntiphonError is raised. The composed variant
+    is returned for one reply only -- it is never added to CTA_VARIANTS
+    implicitly.
+    """
+    phrase = _strip_accents(" ".join(str(context_phrase).split()).lower())
+    if not phrase:
+        raise AntiphonError("CTA_EMPTY_PHRASE")
+    phrase = phrase[:48].rstrip()
+    index = int(hashlib.sha256(f"compose:{phrase}".encode()).hexdigest(), 16) % len(_COMPOSE_TEMPLATES)
+    cta = _COMPOSE_TEMPLATES[index].format(phrase=phrase)
+    violations = validate_cta(cta)
+    if violations:
+        raise AntiphonError(f"CTA_POLICY_VIOLATION:{','.join(violations)}")
+    return cta
+
+
 @dataclass(frozen=True)
 class ReplyDraft:
     comment_id: str
@@ -597,8 +679,14 @@ def _pick_frame(subtype: str, comment_id: str) -> tuple[str, str]:
     return frames[index]
 
 
-def _pick_cta(comment_id: str) -> str:
-    index = int(hashlib.sha256(f"cta:{comment_id}".encode()).hexdigest(), 16) % len(CTA_VARIANTS)
+def _pick_cta(comment_id: str, subtype: str = "") -> str:
+    """Deterministic CTA rotation, adapted to the comment's tone via subtype.
+
+    The same (comment_id, subtype) always yields the same variant; different
+    comments and tones rotate across the pool instead of repeating the same
+    CTA mechanically.
+    """
+    index = int(hashlib.sha256(f"cta:{subtype}:{comment_id}".encode()).hexdigest(), 16) % len(CTA_VARIANTS)
     return CTA_VARIANTS[index]
 
 
@@ -613,7 +701,9 @@ def draft_reply(
     Pattern: CONNECT -> POSITION/QUESTION -> CTA. Deterministic: the same
     comment always yields the same draft. Raises AntiphonError if the comment
     is not ROUTINE, the brand is unresolved, or a brand rule is violated.
-    The owner's example reply is NEVER returned verbatim.
+    The CTA always closes the reply, appended verbatim from the rotation
+    pool (validated by validate_cta(); fail closed). The owner's example
+    reply is NEVER returned verbatim.
     """
     if not brand.resolved or brand.business_id != BUSINESS_ID:
         raise AntiphonError("DRAFT_BRAND_UNRESOLVED")
@@ -629,9 +719,14 @@ def draft_reply(
     if "{artist}" in question:
         # Brand rule: KEYWORDS in CAPS (artist names are keywords).
         question = question.format(artist=artist.upper()) if artist else question.replace("{artist}", "el artista")
-    cta = _pick_cta(comment.comment_id)
-    text = f"{connect} {question} {cta}"
-    text = _enforce_single_emoji(text)
+    cta = _pick_cta(comment.comment_id, classification.subtype)
+    cta_violations = validate_cta(cta)
+    if cta_violations:
+        raise AntiphonError(f"CTA_POLICY_VIOLATION:{','.join(cta_violations)}")
+    # The single-emoji rule applies to the reply body; the CTA is appended
+    # verbatim (owner-approved variants carry their own emoji).
+    body = _enforce_single_emoji(f"{connect} {question}")
+    text = f"{body} {cta}"
     _check_banned_words(text)
     _check_caps_ratio(text)
     if len(text) > 280:

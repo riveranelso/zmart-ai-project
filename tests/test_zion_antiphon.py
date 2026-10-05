@@ -9,6 +9,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from zion_core import (
     AntiphonError,
@@ -17,12 +18,15 @@ from zion_core import (
     MAIN_BRAIN,
     ROUTINE,
     classify_comment,
+    compose_cta_variant,
     draft_reply,
     intake_comment,
     process_comment,
     publish_reply,
     resolve_brand,
+    validate_cta,
 )
+from zion_core import antiphon as antiphon_module
 from zion_core.gates import SecurityContext
 
 
@@ -238,7 +242,13 @@ class DraftTests(unittest.TestCase):
         emoji_re = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
         for text in ("esto está duro", "jajajaja qué risa", "Anuel vs Bad Bunny"):
             draft = self._routine(text)
-            self.assertLessEqual(len(emoji_re.findall(draft.text)), 1)
+            # Owner-approved CTA variants are appended verbatim (they carry
+            # up to 2 emojis: bell + laugh); the single-emoji rule applies
+            # to the reply body, and the CTA must close the reply intact.
+            self.assertIn(draft.cta_variant, CTA_VARIANTS)
+            self.assertTrue(draft.text.endswith(draft.cta_variant))
+            body = draft.text[: -len(draft.cta_variant)]
+            self.assertLessEqual(len(emoji_re.findall(body)), 1)
 
     def test_draft_no_banned_words(self):
         for text in ("esto está duro me encanta", "no estoy de acuerdo",
@@ -307,6 +317,106 @@ class DraftTests(unittest.TestCase):
             classification = classify_comment(comment)
             with self.assertRaises(AntiphonError):
                 draft_reply(comment, classification, brand=brand)
+
+
+class CTARotationTests(unittest.TestCase):
+    """Pin the permanent YOUTUBE COMMENT CTA ROTATION brand rule."""
+
+    def test_cta_pool_matches_approved_variants(self):
+        self.assertEqual(
+            CTA_VARIANTS,
+            (
+                "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con tu pana a ver que dice 😂",
+                "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con ese pana que sabe la que hay.",
+                "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con el pana que va a entender esa 😂",
+                "🔔 Suscribete pa que no te pierdas lo proximo y compartelo con tu pana pa que vea el revolu 😂",
+            ),
+        )
+
+    def test_cta_pool_carries_subscribe_plus_share(self):
+        for variant in CTA_VARIANTS:
+            lowered = variant.lower()
+            self.assertIn("suscrib", lowered, variant)
+            self.assertTrue(
+                any(m in lowered for m in ("compart", "mandaselo", "pasalo")),
+                variant,
+            )
+
+    def test_cta_pool_passes_policy(self):
+        for variant in CTA_VARIANTS:
+            self.assertEqual(validate_cta(variant), (), variant)
+
+    def test_validate_cta_rejects_missing_intent(self):
+        self.assertIn(
+            "CTA_MISSING_SHARE_INTENT",
+            validate_cta("Suscribete pa que no te pierdas lo proximo."),
+        )
+        self.assertIn(
+            "CTA_MISSING_SUBSCRIBE_INTENT",
+            validate_cta("Comparte esto con un pana que se enfogone."),
+        )
+
+    def test_validate_cta_rejects_banned_word_caps_and_accents(self):
+        self.assertTrue(
+            any(v.startswith("CTA_BANNED_WORD") for v in validate_cta(
+                "🔔 Suscribete acho y compartelo con tu pana.")),
+        )
+        self.assertIn(
+            "CTA_ALL_CAPS",
+            validate_cta("🔔 SUSCRIBETE Y COMPARTELO CON TU PANA"),
+        )
+        self.assertIn(
+            "CTA_ACCENTED_CHARS",
+            validate_cta("🔔 Suscríbete y compártelo con tu pana."),
+        )
+        self.assertIn(
+            "CTA_TOO_MANY_EMOJIS",
+            validate_cta("🔔😂🤣 Suscribete y compartelo con tu pana."),
+        )
+
+    def test_compose_cta_variant_is_policy_clean(self):
+        cta = compose_cta_variant("entienda la tiraera")
+        self.assertEqual(validate_cta(cta), ())
+        self.assertIn("entienda la tiraera", cta)
+        self.assertIn("suscrib", cta.lower())
+
+    def test_compose_cta_variant_strips_accents(self):
+        cta = compose_cta_variant("vea el revolú")
+        self.assertNotRegex(cta, "[áéíóúñü]")
+        self.assertEqual(validate_cta(cta), ())
+
+    def test_compose_cta_variant_rejects_banned_phrase(self):
+        with self.assertRaises(AntiphonError):
+            compose_cta_variant("acho que se moje")
+
+    def test_compose_cta_variant_rejects_empty_phrase(self):
+        with self.assertRaises(AntiphonError):
+            compose_cta_variant("   ")
+
+    def test_cta_pick_adapts_to_subtype_and_stays_deterministic(self):
+        pick = antiphon_module._pick_cta
+        self.assertEqual(pick("c-1", "opinion"), pick("c-1", "opinion"))
+        seen = {
+            pick(f"c-{i}", subtype)
+            for i in range(12)
+            for subtype in ("opinion", "disagreement", "artist_support")
+        }
+        self.assertGreater(len(seen), 1)
+
+    def test_draft_rejects_policy_violating_cta(self):
+        # Runtime guard: a tampered pool can never produce a draft.
+        with tempfile.TemporaryDirectory() as tmp:
+            reg = _los_duros_registry(tmp)
+            comment = _comment("esto está duro", comment_id="tamper-1")
+            brand = resolve_brand(comment, reg)
+            classification = classify_comment(comment)
+            self.assertEqual(classification.route, ROUTINE)
+            with mock.patch.object(
+                antiphon_module, "CTA_VARIANTS", ("Suscribete ya.",)
+            ):
+                with self.assertRaises(AntiphonError) as ctx:
+                    draft_reply(comment, classification, brand=brand)
+            self.assertIn("CTA_POLICY_VIOLATION", str(ctx.exception))
 
 
 class WriteGateTests(unittest.TestCase):
@@ -538,7 +648,11 @@ class AdversarialTests(unittest.TestCase):
                 lowered = draft.text.lower()
                 self.assertNotIn("acho", lowered, text)
                 self.assertNotIn("mojate", lowered, text)
-                self.assertLessEqual(len(emoji_re.findall(draft.text)), 1, text)
+                # CTA appended verbatim (up to 2 emojis); single-emoji rule
+                # applies to the body.
+                self.assertTrue(draft.text.endswith(draft.cta_variant), text)
+                body = draft.text[: -len(draft.cta_variant)]
+                self.assertLessEqual(len(emoji_re.findall(body)), 1, text)
                 self.assertLessEqual(len(draft.text), 280, text)
                 self.assertIn(draft.cta_variant, CTA_VARIANTS, text)
                 self.assertNotEqual(draft.text, OWNER_EXAMPLE, text)
