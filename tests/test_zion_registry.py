@@ -153,6 +153,9 @@ class ZeroLagIdentityTests(unittest.TestCase):
         # Everything else remains explicitly unconfirmed, never invented.
         self.assertIn("POR CONFIRMAR", brand_text)
         self.assertIn("recruiting", brand_text)
+        # Nelson-supplied editorial/compliance boundary is present verbatim.
+        self.assertIn("PROHIBIDO inventar", brand_text)
+        self.assertIn("velocidades, cobertura, precios, comisiones, roles o ingresos", brand_text)
 
     def test_invalid_zero_lag_lookalikes_fail_closed(self):
         for bad, reason in [
