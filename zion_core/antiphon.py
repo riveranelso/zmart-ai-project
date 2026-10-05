@@ -60,6 +60,7 @@ from .gates import SecurityContext
 from .registry import SanPedroError, sanpedro_resolve
 from . import debate
 from . import jerga
+from . import question as question_mod
 
 BUSINESS_ID = "los-duros"
 ISOLATION_KEY = "los-duros"
@@ -813,6 +814,20 @@ def draft_reply(
     if "{artist}" in question:
         # Brand rule: KEYWORDS in CAPS (artist names are keywords).
         question = question.format(artist=artist.upper()) if artist else question.replace("{artist}", "el artista")
+    # LOS_DUROS.md "Engagement questions": the closing question must grow
+    # from the actual comment/context. Fail closed instead of appending a
+    # generic or unanchored question.
+    _context_tokens = question_mod.content_tokens(
+        f"{comment.video_artist or ''} {comment.video_title or ''}"
+    )
+    _q_violations = question_mod.validate_question(
+        question,
+        comment.text,
+        context_tokens=_context_tokens,
+        subtype=classification.subtype,
+    )
+    if _q_violations:
+        raise AntiphonError("QUESTION_QUALITY:" + ",".join(_q_violations))
     cta = _pick_cta(comment.comment_id, classification.subtype)
     cta_violations = validate_cta(cta)
     if cta_violations:
