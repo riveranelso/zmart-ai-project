@@ -93,8 +93,11 @@ def retrieve_biblia(
             scope=_scope_for_ref(ref)
             documents.append(BibliaDocument(
                 ref=ref,
+                # Use the canonical identity for section extraction so a
+                # legacy alias (e.g. "zerolag" -> "zero-lag-wifi") retrieves
+                # the same knowledge as the canonical id.
                 text=_business_section(
-                    path.read_text(encoding="utf-8"),business_id,known_business_ids
+                    path.read_text(encoding="utf-8"),context.business_id,known_business_ids
                 ),
                 scope=scope,
                 precedence=SCOPE_PRECEDENCE[scope],

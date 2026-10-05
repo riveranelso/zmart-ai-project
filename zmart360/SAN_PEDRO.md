@@ -15,6 +15,14 @@ Resolution returns:
 
 Unknown, disabled or contextless businesses fail closed to human review.
 
+### Compatibility aliases
+Some business IDs are contractual in external runtimes and cannot be renamed. ZION keeps ONE canonical identity per business; legacy IDs are mapped once at ingress and every downstream artifact carries only the canonical identity.
+
+Current aliases:
+- `zerolag` → `zero-lag-wifi` (Omar Core's `brain/BUSINESS-REGISTRY.json`, router, and tests use `zerolag`; ZION's canonical identity is `zero-lag-wifi`).
+
+A claimed `zerolag` therefore resolves to the same `BusinessContext` (canonical ID, isolation key, context refs) as `zero-lag-wifi`. Post-resolution tenant checks keep using the canonical ID and fail closed on any mismatch — the alias does not create a second identity.
+
 For canonical learning destinations, the registered reference must match the scope's canonical BIBLIA filename by exact basename. Suffix lookalikes are not authorization. Zero matches remain unregistered; multiple matches for the same canonical basename are ambiguous and fail closed rather than selecting one by order.
 
 ## Registered work areas

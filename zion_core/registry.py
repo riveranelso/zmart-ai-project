@@ -8,6 +8,18 @@ ROOT = Path(__file__).resolve().parents[1]
 SANPEDRO_KEYS = ROOT / "zmart360" / "san_pedro_registry.json"
 DEFAULT_REGISTRY = SANPEDRO_KEYS  # compatibility alias
 
+# Legacy business IDs that are CONTRACTUAL outside ZION and therefore cannot
+# be renamed, mapped to the one canonical ZION identity. Example: Omar Core's
+# brain/BUSINESS-REGISTRY.json (active on main) and its router/tests use
+# "zerolag", while ZION's canonical registry identity is "zero-lag-wifi".
+# The alias is applied once at ingress inside sanpedro_resolve; every
+# downstream artifact (BusinessContext, MissionPacket, BIBLIA retrieval)
+# carries only the canonical identity, so tenant isolation and fail-closed
+# mismatch checks (e.g. paradosis.bind_tenant) keep working on one identity.
+BUSINESS_ID_ALIASES: dict[str, str] = {
+    "zerolag": "zero-lag-wifi",
+}
+
 
 class SanPedroError(RuntimeError):
     pass
@@ -24,11 +36,12 @@ class BusinessContext:
 def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessContext:
     if not isinstance(business_id,str) or not business_id.strip() or business_id != business_id.strip():
         raise SanPedroError("BUSINESS_ID_REQUIRED")
+    canonical_id = BUSINESS_ID_ALIASES.get(business_id, business_id)
     registry = json.loads((path or DEFAULT_REGISTRY).read_text(encoding="utf-8"))
     businesses = registry.get("businesses")
     if not isinstance(businesses, dict):
         raise SanPedroError("INVALID_REGISTRY")
-    entry = businesses.get(business_id)
+    entry = businesses.get(canonical_id)
     if entry is None:
         raise SanPedroError("BUSINESS_NOT_REGISTERED")
     if entry.get("enabled") is not True:
@@ -45,8 +58,8 @@ def sanpedro_resolve(business_id: str, path: Path | None = None) -> BusinessCont
             or isolation_key != isolation_key.strip()):
         raise SanPedroError("ISOLATION_KEY_MISSING")
     return BusinessContext(
-        business_id=business_id,
-        display_name=str(entry.get("display_name") or business_id),
+        business_id=canonical_id,
+        display_name=str(entry.get("display_name") or canonical_id),
         isolation_key=isolation_key,
         context_refs=tuple(refs),
     )
