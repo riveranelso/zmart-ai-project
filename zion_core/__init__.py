@@ -149,6 +149,7 @@ from .meta_webhook import (
     META_APP_SECRET_REF,
     LOS_DUROS_IG_VERIFY_TOKEN_REF,
     LOS_DUROS_IG_ACCOUNT_ID_ENV,
+    LOS_DUROS_APPROVAL_STORE_ENV,
     resolve_secret_ref,
     build_los_duros_instagram_integration,
     handle_verification_request,
@@ -175,6 +176,7 @@ __all__ += [
     "META_APP_SECRET_REF",
     "LOS_DUROS_IG_VERIFY_TOKEN_REF",
     "LOS_DUROS_IG_ACCOUNT_ID_ENV",
+    "LOS_DUROS_APPROVAL_STORE_ENV",
     "resolve_secret_ref",
     "build_los_duros_instagram_integration",
     "handle_verification_request",
@@ -183,6 +185,38 @@ __all__ += [
     "receiver_from_env",
     "serve",
     "main",
+]
+
+from .approval_queue import (
+    PENDING,
+    APPROVED,
+    EDITED,
+    REJECTED,
+    STATUSES,
+    TERMINAL_STATUSES,
+    ApprovalError,
+    ApprovalStoreError,
+    ApprovalTransition,
+    ApprovalRecord,
+    ApprovalStore,
+    ApprovalQueue,
+    approval_id_for_fingerprint,
+)
+
+__all__ += [
+    "PENDING",
+    "APPROVED",
+    "EDITED",
+    "REJECTED",
+    "STATUSES",
+    "TERMINAL_STATUSES",
+    "ApprovalError",
+    "ApprovalStoreError",
+    "ApprovalTransition",
+    "ApprovalRecord",
+    "ApprovalStore",
+    "ApprovalQueue",
+    "approval_id_for_fingerprint",
 ]
 
 from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, BatchStatus, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, batch_status, assess_pattern_reuse

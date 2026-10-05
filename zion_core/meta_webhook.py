@@ -90,6 +90,11 @@ from .glossolalia import (
     resolve_integration,
     validate_integration_config,
 )
+from .approval_queue import (
+    ApprovalQueue,
+    ApprovalStore,
+    approval_id_for_fingerprint,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -117,6 +122,9 @@ LOS_DUROS_IG_INTEGRATION_ID = "ig-losduros-webhook-1"
 META_APP_SECRET_REF = "env:META_APP_SECRET"
 LOS_DUROS_IG_VERIFY_TOKEN_REF = "env:LOS_DUROS_IG_WEBHOOK_VERIFY_TOKEN"
 LOS_DUROS_IG_ACCOUNT_ID_ENV = "LOS_DUROS_IG_ACCOUNT_ID"
+# Optional: file path for the durable human approval queue. When unset the
+# queue is disabled and webhook behavior is unchanged (no approval records).
+LOS_DUROS_APPROVAL_STORE_ENV = "LOS_DUROS_APPROVAL_STORE"
 
 
 class MetaWebhookError(ValueError):
@@ -455,6 +463,7 @@ class MetaWebhookReceiver:
         integration: IntegrationConfig,
         biblia_root: Path | None = None,
         registry_path: Path | None = None,
+        approval_store_path: Path | None = None,
     ) -> None:
         if integration.channel != "instagram":
             raise MetaWebhookError("RECEIVER_REQUIRES_INSTAGRAM_INTEGRATION")
@@ -472,10 +481,23 @@ class MetaWebhookReceiver:
         self._registry_path = registry_path
         self._seen: set[str] = set()
         self._lock = threading.Lock()
+        # Durable human approval queue (optional). When unset, webhook
+        # behavior is unchanged: drafts are produced, nothing is persisted.
+        # APPROVED never means published -- see approval_queue module.
+        self._approval_queue: ApprovalQueue | None = None
+        if approval_store_path is not None:
+            store = ApprovalStore(Path(approval_store_path))
+            store.ensure_ready()  # fail fast on a misconfigured path
+            self._approval_queue = ApprovalQueue(store)
 
     @property
     def integration(self) -> IntegrationConfig:
         return self._integration
+
+    @property
+    def approval_queue(self) -> ApprovalQueue | None:
+        """The human approval queue, or None when no store is configured."""
+        return self._approval_queue
 
     # -- GET ------------------------------------------------------------
     def verify_get(self, query: dict[str, str]) -> tuple[int, str]:
@@ -586,6 +608,54 @@ class MetaWebhookReceiver:
                 )
                 # Hard invariant: this receiver never builds transport intents.
                 assert result.action is None, "RECEIVER_MUST_NOT_BUILD_ACTIONS"
+                # Durable human approval queue: a drafted (ROUTINE) result gets
+                # exactly one PENDING record per event fingerprint.
+                # attempt_action stays False; approval never publishes.
+                if (
+                    self._approval_queue is not None
+                    and not result.duplicate
+                    and result.draft is not None
+                ):
+                    try:
+                        record, created = (
+                            self._approval_queue.enqueue_from_result(
+                                result, self._integration
+                            )
+                        )
+                    except Exception as exc:
+                        # Durability failure: the event was NOT durably
+                        # captured. Keep the delivery retryable by withdrawing
+                        # the fingerprint (otherwise the Meta retry would be
+                        # marked a duplicate and the draft silently lost),
+                        # then fail the delivery loudly so Meta retries.
+                        self._seen.discard(result.fingerprint)
+                        emit(
+                            "approval_failed",
+                            approval_id=approval_id_for_fingerprint(
+                                result.fingerprint
+                            ),
+                            reason=type(exc).__name__,
+                            comment_id_hash=comment_hash,
+                        )
+                        return finish(
+                            500,
+                            {
+                                "ok": False,
+                                "error": "APPROVAL_STORE_FAILED",
+                                "received": len(translation.accepted),
+                                "processed": processed,
+                                "duplicates": duplicates,
+                                "rejected": rejected,
+                            },
+                            results=tuple(results),
+                            rejected=rejected,
+                        )
+                    emit(
+                        "approval_created" if created else "approval_reused",
+                        approval_id=record.approval_id,
+                        status=record.status,
+                        comment_id_hash=comment_hash,
+                    )
                 results.append(result)
                 if result.duplicate:
                     duplicates += 1
@@ -661,8 +731,12 @@ def receiver_from_env(
     integration = build_los_duros_instagram_integration(
         instagram_account_id=account_id or ""
     )
+    store_path = os.environ.get(LOS_DUROS_APPROVAL_STORE_ENV)
     return MetaWebhookReceiver(
-        integration=integration, biblia_root=biblia_root, registry_path=registry_path
+        integration=integration,
+        biblia_root=biblia_root,
+        registry_path=registry_path,
+        approval_store_path=Path(store_path) if store_path else None,
     )
 
 
@@ -797,6 +871,7 @@ __all__ = [
     "META_APP_SECRET_REF",
     "LOS_DUROS_IG_VERIFY_TOKEN_REF",
     "LOS_DUROS_IG_ACCOUNT_ID_ENV",
+    "LOS_DUROS_APPROVAL_STORE_ENV",
     "MetaWebhookError",
     "TranslatedChange",
     "TranslationResult",

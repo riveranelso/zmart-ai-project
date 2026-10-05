@@ -251,6 +251,17 @@ _reg(ModuleRecord(
     keywords=("meta", "whatsapp", "instagram", "facebook", "channel", "adapter", "glossolalia", "dm", "messenger"),
     context_refs=BASE_REFS + ("zmart360/MODULE_REGISTRY.md",),
 ))
+_reg(ModuleRecord(
+    name="approval_queue", canonical="APPROVAL QUEUE",
+    responsibility="Durable human approval gate for Los Duros reply drafts: one PENDING record per event fingerprint (ROUTINE drafts only), human APPROVE / EDIT / REJECT with auditable transitions. APPROVED never means published.",
+    inputs=("MetaProcessResult (drafted)", "IntegrationConfig"),
+    outputs=("ApprovalRecord", "approval_created/reused/approved/edited/rejected events"),
+    dependencies=("glossolalia", "persistence"),
+    boundaries=("tenant fixed from integration", "idempotent by fingerprint", "PENDING -> terminal only", "no transport"),
+    must_not=("publish", "build action intents", "call Meta endpoints", "convert MAIN_BRAIN/HUMAN_REVIEW to ROUTINE", "log secrets or PII"),
+    keywords=("approval", "human review", "draft", "los duros", "queue", "instagram"),
+    context_refs=BASE_REFS + ("zmart360/MODULE_REGISTRY.md",),
+))
 
 CORE_MODULES = ("registry", "gates", "omar")
 

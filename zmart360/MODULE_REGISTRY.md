@@ -209,6 +209,46 @@ bodies, text, usernames, names, or raw ids.
 **MUST NOT:** trust caller-supplied business_id; accept unsigned payloads;
 route unsupported fields (mentions/messages skipped); store secrets; choose
 tenants freely; build transport intents.
+**Approval queue:** when constructed with `approval_store_path` (or
+`LOS_DUROS_APPROVAL_STORE` env), each drafted non-duplicate result is
+enqueued into the durable human approval queue (see APPROVAL QUEUE below)
+and `approval_created`/`approval_reused` (or `approval_failed`, HTTP 500
+with the delivery kept retryable) is emitted; when unset, behavior is
+unchanged. attempt_action=False always.
+
+## APPROVAL QUEUE — `zion_core/approval_queue.py`
+
+**Responsibility:** Durable human approval gate for Los Duros reply drafts.
+`ApprovalQueue.enqueue_from_result()` creates (or reuses) exactly one
+PENDING `ApprovalRecord` per GLOSSOLALIA event fingerprint, and only when a
+draft exists (ROUTINE). Human operations: list pending (FIFO), inspect,
+approve, edit+approve, reject — every mutation auditable via a history
+trail plus structured events.
+**Inputs:** `MetaProcessResult` with draft; resolved `IntegrationConfig`.
+**Outputs:** `ApprovalRecord` (PENDING → APPROVED | EDITED | REJECTED;
+terminal states have no exits); `(record, created)` tuples.
+**Dependencies:** glossolalia (fingerprint, draft model — never duplicated),
+persistence (`LocalOperationLock`, atomic temp+fsync+replace pattern).
+**Persistence:** single JSON file keyed by deterministic
+`approval_id = "appr_" + fingerprint[:16]`; crash-safe local lock;
+single-host atomicity only (a future multi-machine deployment needs a real
+DB — stated, not built). No external database.
+**Tenant isolation:** business_id/brand_id/integration_id fixed from the
+resolved integration, never the payload; the fingerprint basis includes the
+tenant, so cross-tenant collisions are impossible; spoofed claims fail
+closed in `resolve_integration`.
+**Routing semantics:** MAIN_BRAIN / HUMAN_REVIEW produce no draft and no
+record; the route is stored explicitly on every record, never converted.
+**Privacy:** source identifiers stored as truncated SHA-256 hashes only;
+the inbound comment text is intentionally NOT persisted or logged; draft
+text is ZION-generated and safe to persist.
+**Observability:** structured JSON INFO on the `zion.approval_queue` logger
+(approval_created, approval_reused, approval_approved, approval_edited,
+approval_rejected); never logs secrets, tokens, signatures, bodies, text,
+usernames, names, or raw ids.
+**MUST NOT:** publish; build action intents; call Meta endpoints; convert
+non-ROUTINE routes; log secrets or PII. APPROVED does NOT mean published —
+there is no code path from approval to publication.
 
 ## PARADOSIS — `zion_core/paradosis.py`
 

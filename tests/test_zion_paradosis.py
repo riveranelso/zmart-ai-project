@@ -58,8 +58,8 @@ def make_packet(**kw):
 
 
 class TestRegistryIntegrity(unittest.TestCase):
-    def test_registry_has_16_modules(self):  # P1
-        self.assertEqual(len(MODULE_REGISTRY), 16)
+    def test_registry_has_17_modules(self):  # P1
+        self.assertEqual(len(MODULE_REGISTRY), 17)
 
     def test_every_record_complete(self):  # P1
         for name, rec in MODULE_REGISTRY.items():
