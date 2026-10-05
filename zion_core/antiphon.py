@@ -62,6 +62,7 @@ from . import debate
 from . import dedupe
 from . import jerga
 from . import posture as posture_mod
+from . import provenance as provenance_mod
 from . import question as question_mod
 
 BUSINESS_ID = "los-duros"
@@ -458,6 +459,17 @@ def classify_comment(comment: NormalizedComment) -> Classification:
             + tuple(f"JERGA_UNKNOWN:{t}" for t in jerga_assessment.unknown),
         )
     jerga_reasons = tuple(f"JERGA_KNOWN:{h.term}" for h in jerga_assessment.known)
+    # LOS_DUROS.md "Facts vs context vs opinion": label the comment's
+    # semantic provenance for the audit trail (no silent upgrades).
+    _prov_ctx = question_mod.content_tokens(
+        f"{comment.video_artist or ''} {comment.video_title or ''}"
+    )
+    _prov = provenance_mod.classify_statement(
+        text,
+        context_tokens=_prov_ctx,
+        established=posture_mod.established_positions(),
+    )
+    provenance_reasons = (f"PROVENANCE:{_prov.label}",)
     # Response-style classification (LOS_DUROS.md "Response psychology"):
     # detects when the comment supports a higher-level debate response.
     debate_assessment = debate.assess_debate_level(text)
@@ -491,7 +503,7 @@ def classify_comment(comment: NormalizedComment) -> Classification:
             )
         return Classification(
             route=ROUTINE, subtype=routine_hits[0],
-            reasons=("ROUTINE_MATCH",) + jerga_reasons,
+            reasons=("ROUTINE_MATCH",) + jerga_reasons + provenance_reasons,
             debate_level=debate_level,
         )
     return Classification(
@@ -848,6 +860,16 @@ def draft_reply(
     _posture_violations = posture_mod.check_draft_posture(body, _posture)
     if _posture_violations:
         raise AntiphonError("POSTURE_VIOLATION:" + ",".join(_posture_violations))
+    # LOS_DUROS.md "Facts vs context vs opinion": never silently upgrade
+    # an inference/opinion/unknown-sourced claim to fact in the reply.
+    _prov = provenance_mod.classify_statement(
+        comment.text,
+        context_tokens=_context_tokens,
+        established=posture_mod.established_positions(),
+    )
+    _prov_violations = provenance_mod.check_upgrade(body, _prov.label)
+    if _prov_violations:
+        raise AntiphonError("PROVENANCE_UPGRADE:" + ",".join(_prov_violations))
     if len(text) > 280:
         raise AntiphonError("DRAFT_TOO_LONG")
     return ReplyDraft(
