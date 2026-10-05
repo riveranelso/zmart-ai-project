@@ -180,6 +180,29 @@ channel-validated action intents. Reuses antiphon classification for text.
 **MUST NOT:** reason independently of the Brain; choose tenants freely;
 real HTTP currently; store secrets.
 
+## META WEBHOOK RECEIVER — `zion_core/meta_webhook.py`
+
+**Responsibility:** Meta-native HTTP ingress for webhook subscriptions:
+answer Meta's GET verification challenge and ingest POSTed Instagram
+deliveries (comments / live_comments) for one fixed integration, then
+translate them into GLOSSOLALIA canonical events. Pure handlers
+(GET verify, X-Hub-Signature-256 over raw bytes, payload translation)
+plus a thin stdlib http.server mount at `/meta/webhooks/instagram`.
+**Inputs:** query params / raw POST bytes + signature header; Los Duros
+Instagram integration config (tenant fixed in trusted configuration).
+**Outputs:** (status, body) responses; IngestReport with per-event
+MetaProcessResult; sanitized decision records.
+**Dependencies:** glossolalia (never duplicates its pipeline), registry.
+**Boundaries:** los-duros only; env: secret refs only, never logged or
+echoed; signature required and fail-closed; Meta retries deduped via
+glossolalia.meta_event_fingerprint on stable comment ids (in-memory per
+process -- not a distributed exactly-once guarantee); attempt_action=False
+always, so no MetaActionIntent is ever built -- drafts end at the human
+approval boundary, nothing publishes.
+**MUST NOT:** trust caller-supplied business_id; accept unsigned payloads;
+route unsupported fields (mentions/messages skipped); store secrets; choose
+tenants freely; build transport intents.
+
 ## PARADOSIS — `zion_core/paradosis.py`
 
 **Responsibility:** Canonical mission context loader: build the shared

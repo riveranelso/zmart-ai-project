@@ -133,6 +133,54 @@ __all__ += [
     "repo_branch",
 ]
 
+from .meta_webhook import (
+    MetaWebhookError,
+    TranslatedChange,
+    TranslationResult,
+    IngestReport,
+    MetaWebhookReceiver,
+    CALLBACK_PATH,
+    META_OBJECT_INSTAGRAM,
+    ACCEPTED_FIELDS,
+    LOS_DUROS_BUSINESS_ID,
+    LOS_DUROS_BRAND_ID,
+    LOS_DUROS_IG_INTEGRATION_ID,
+    META_APP_SECRET_REF,
+    LOS_DUROS_IG_VERIFY_TOKEN_REF,
+    LOS_DUROS_IG_ACCOUNT_ID_ENV,
+    resolve_secret_ref,
+    build_los_duros_instagram_integration,
+    handle_verification_request,
+    verify_post_signature,
+    translate_instagram_payload,
+    receiver_from_env,
+    serve,
+)
+
+__all__ += [
+    "MetaWebhookError",
+    "TranslatedChange",
+    "TranslationResult",
+    "IngestReport",
+    "MetaWebhookReceiver",
+    "CALLBACK_PATH",
+    "META_OBJECT_INSTAGRAM",
+    "ACCEPTED_FIELDS",
+    "LOS_DUROS_BUSINESS_ID",
+    "LOS_DUROS_BRAND_ID",
+    "LOS_DUROS_IG_INTEGRATION_ID",
+    "META_APP_SECRET_REF",
+    "LOS_DUROS_IG_VERIFY_TOKEN_REF",
+    "LOS_DUROS_IG_ACCOUNT_ID_ENV",
+    "resolve_secret_ref",
+    "build_los_duros_instagram_integration",
+    "handle_verification_request",
+    "verify_post_signature",
+    "translate_instagram_payload",
+    "receiver_from_env",
+    "serve",
+]
+
 from .batch import BatchItem, BatchPlan, BatchDispatchResult, BatchDispatchFailure, BatchStatus, PatternObservation, PatternCandidate, plan_batch, pending_items, dispatch_pending, batch_status, assess_pattern_reuse
 
 __all__ += ["BatchItem", "BatchPlan", "BatchDispatchResult", "BatchDispatchFailure", "BatchStatus", "PatternObservation", "PatternCandidate", "plan_batch", "pending_items", "dispatch_pending", "batch_status", "assess_pattern_reuse"]
