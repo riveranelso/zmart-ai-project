@@ -385,6 +385,14 @@ def translate_instagram_payload(payload: dict[str, Any]) -> TranslationResult:
                 if isinstance(from_block, dict)
                 else None
             )
+            # Contextual handle only (e.g. Instagram username). Never a stable
+            # identifier and never tenant identity; sender_id stays canonical.
+            # Never logged (see module privacy contract).
+            sender_username = (
+                _nonempty_str(from_block.get("username"))
+                if isinstance(from_block, dict)
+                else None
+            )
             media_block = value.get("media")
             media_id = (
                 _nonempty_str(media_block.get("id"))
@@ -405,6 +413,7 @@ def translate_instagram_payload(payload: dict[str, Any]) -> TranslationResult:
                 "channel": "instagram",
                 "event_type": "comment",
                 "sender_id": sender_id,
+                "sender_username": sender_username,
                 "message_id": comment_id,
                 "parent_id": _nonempty_str(value.get("parent_id")),
                 "conversation_id": media_id,

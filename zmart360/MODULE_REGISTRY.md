@@ -157,12 +157,17 @@ infrastructure.
 
 ## ANTIPHON — `zion_core/antiphon.py`
 
-**Responsibility:** Los Duros YouTube-comment adapter: intake, brand-scoped
-classification (ROUTINE / MAIN_BRAIN / HUMAN_REVIEW per the approved
-2026-10-03 routing canon), safety/chotiaera gate, deterministic brand-voiced
-reply drafts, write-gated publish intents.
+**Responsibility:** Los Duros comment adapter (YouTube + Instagram): intake,
+brand-scoped classification (ROUTINE / MAIN_BRAIN / HUMAN_REVIEW per the
+approved 2026-10-03 routing canon), safety/chotiaera gate, deterministic
+brand-voiced reply drafts, write-gated publish intents.
 **Inputs:** comment payload, business_id=los-duros.
 **Outputs:** NormalizedComment, Classification, ReplyDraft, PublishResult.
+**Platform-aware drafting:** `NormalizedComment.platform` carries the channel
+("youtube" | "instagram"); the YouTube subscribe/share CTA rotation is
+appended only for YouTube (or unset platform, preserving legacy behavior).
+Instagram drafts never receive the YouTube CTA automatically
+(`cta_variant=None`).
 **Dependencies:** registry, gates.
 **Boundaries:** los-duros only; drafts end at human review; intent only, no transport.
 **MUST NOT:** transport HTTP; OAuth; arbitrary tenant resolution; production
@@ -175,6 +180,12 @@ Facebook events into one canonical event; convert ZION decisions into
 channel-validated action intents. Reuses antiphon classification for text.
 **Inputs:** raw Meta payload, IntegrationConfig.
 **Outputs:** MetaNormalizedEvent, MetaRouteDecision, MetaActionIntent, MetaActionResult.
+**Username context:** `MetaNormalizedEvent.sender_username` preserves Meta's
+`from.username` when present as contextual metadata only — never tenant
+identity (sender_id stays canonical), never in the dedupe fingerprint, never
+logged. No public-figure verification exists in this path; the username is
+exposed at the Brain/context boundary (`NormalizedComment.author_username`)
+so the rule can be applied by future mechanisms or human review.
 **Dependencies:** antiphon, registry, gates, omar.
 **Boundaries:** integration fixes tenant; write gates default OFF; intent only, no transport.
 **MUST NOT:** reason independently of the Brain; choose tenants freely;

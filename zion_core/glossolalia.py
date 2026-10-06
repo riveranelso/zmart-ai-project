@@ -313,6 +313,12 @@ class MetaNormalizedEvent:
     media_refs: tuple[str, ...]
     timestamp: str | None
     raw_event_ref: str | None
+    # Contextual sender handle (e.g. Instagram username) when Meta provides
+    # it. Optional metadata only: never tenant identity, never the stable
+    # identifier (sender_id), never part of the dedupe fingerprint, and never
+    # logged. Exposed so Brain rules that depend on "who is speaking" can
+    # see it; it does NOT by itself prove public-figure status.
+    sender_username: str | None = None
 
 
 def _raw_str(raw: dict[str, Any], key: str, required: bool = True) -> str | None:
@@ -405,6 +411,7 @@ def intake_meta_event(
         brand_id_internal=integration.brand_id,
         integration_id=integration.integration_id,
         sender_id=_raw_str(raw, "sender_id"),
+        sender_username=_raw_str(raw, "sender_username", required=False),
         conversation_id=_raw_str(raw, "conversation_id", required=False),
         message_id=_raw_str(raw, "message_id"),
         parent_id=_raw_str(raw, "parent_id", required=False),
@@ -464,8 +471,10 @@ def _as_antiphon_comment(event: MetaNormalizedEvent) -> antiphon.NormalizedComme
         comment_id=event.message_id,
         video_id=event.conversation_id or event.parent_id or event.message_id,
         author=event.sender_id,
+        author_username=event.sender_username,
         text=event.text or "",
         business_id=event.business_id_internal,
+        platform=event.channel,
         channel_id=None,
         author_channel_id=None,
         published_at=event.timestamp,
@@ -494,8 +503,10 @@ def route_meta_event(
             comment_id=event.message_id,
             video_id=event.message_id,
             author=event.sender_id,
+            author_username=event.sender_username,
             text=event.text or "x",
             business_id=event.business_id_internal,
+            platform=event.channel,
         ),
         registry_path,
     )

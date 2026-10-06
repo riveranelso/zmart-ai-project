@@ -77,6 +77,11 @@ MAIN_BRAIN = "MAIN_BRAIN"
 HUMAN_REVIEW = "HUMAN_REVIEW"
 ROUTES = (ROUTINE, MAIN_BRAIN, HUMAN_REVIEW)
 
+# Drafting platforms. The YouTube subscribe/share CTA rotation is
+# YouTube-only; Instagram drafts never receive it automatically.
+PLATFORM_YOUTUBE = "youtube"
+PLATFORM_INSTAGRAM = "instagram"
+
 # ---------------------------------------------------------------------------
 # Normalized comment
 # ---------------------------------------------------------------------------
@@ -102,6 +107,14 @@ class NormalizedComment:
     video_title: str | None = None
     video_artist: str | None = None
     truncated: bool = False
+    # Drafting platform ("youtube" | "instagram" | None). None preserves the
+    # legacy YouTube behavior (CTA appended); "instagram" never receives the
+    # YouTube CTA automatically.
+    platform: str | None = None
+    # Contextual author handle (e.g. Instagram username). Never a stable
+    # identifier and never tenant identity; used only so Brain rules that
+    # depend on "who is speaking" (e.g. public-figure awareness) can see it.
+    author_username: str | None = None
 
 
 def _require_str(payload: dict[str, Any], key: str) -> str:
@@ -150,6 +163,7 @@ def intake_comment(payload: dict[str, Any]) -> NormalizedComment:
         author=author,
         text=text,
         business_id=business_id,
+        platform=PLATFORM_YOUTUBE,
         channel_id=_optional_str(payload, "channel_id"),
         author_channel_id=_optional_str(payload, "author_channel_id"),
         published_at=_optional_str(payload, "published_at"),
@@ -757,7 +771,9 @@ class ReplyDraft:
     route: str
     subtype: str
     text: str
-    cta_variant: str
+    # YouTube CTA variant appended, or None when no CTA was appended
+    # (e.g. Instagram drafts never receive the YouTube CTA).
+    cta_variant: str | None
     brand_addressed: bool
     reasons: tuple[str, ...] = field(default=())
 
@@ -794,9 +810,11 @@ def draft_reply(
     Pattern: CONNECT -> POSITION/QUESTION -> CTA. Deterministic: the same
     comment always yields the same draft. Raises AntiphonError if the comment
     is not ROUTINE, the brand is unresolved, or a brand rule is violated.
-    The CTA always closes the reply, appended verbatim from the rotation
-    pool (validated by validate_cta(); fail closed). The owner's example
-    reply is NEVER returned verbatim.
+    Platform-aware CTA: the YouTube subscribe/share CTA rotation is appended
+    verbatim only when comment.platform is YouTube (or unset, preserving the
+    legacy YouTube behavior). Instagram drafts (platform="instagram") never
+    receive the YouTube CTA automatically. The owner's example reply is NEVER
+    returned verbatim.
     """
     if not brand.resolved or brand.business_id != BUSINESS_ID:
         raise AntiphonError("DRAFT_BRAND_UNRESOLVED")
@@ -842,14 +860,22 @@ def draft_reply(
     )
     if _q_violations:
         raise AntiphonError("QUESTION_QUALITY:" + ",".join(_q_violations))
-    cta = _pick_cta(comment.comment_id, classification.subtype)
-    cta_violations = validate_cta(cta)
-    if cta_violations:
-        raise AntiphonError(f"CTA_POLICY_VIOLATION:{','.join(cta_violations)}")
-    # The single-emoji rule applies to the reply body; the CTA is appended
-    # verbatim (owner-approved variants carry their own emoji).
-    body = _enforce_single_emoji(f"{connect} {question}")
-    text = f"{body} {cta}"
+    cta_variant: str | None
+    if comment.platform == PLATFORM_INSTAGRAM:
+        # Instagram: never the YouTube subscribe/share CTA. Body only.
+        cta_variant = None
+        body = _enforce_single_emoji(f"{connect} {question}")
+        text = body
+    else:
+        cta = _pick_cta(comment.comment_id, classification.subtype)
+        cta_violations = validate_cta(cta)
+        if cta_violations:
+            raise AntiphonError(f"CTA_POLICY_VIOLATION:{','.join(cta_violations)}")
+        # The single-emoji rule applies to the reply body; the CTA is appended
+        # verbatim (owner-approved variants carry their own emoji).
+        body = _enforce_single_emoji(f"{connect} {question}")
+        text = f"{body} {cta}"
+        cta_variant = cta
     _check_banned_words(text)
     _check_caps_ratio(text)
     # LOS_DUROS.md "Editorial neutrality": never convert a commenter's
@@ -878,7 +904,7 @@ def draft_reply(
         route=ROUTINE,
         subtype=classification.subtype,
         text=text,
-        cta_variant=cta,
+        cta_variant=cta_variant,
         brand_addressed=brand_addressed,
         reasons=classification.reasons,
     )
