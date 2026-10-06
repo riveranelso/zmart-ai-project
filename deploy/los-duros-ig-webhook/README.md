@@ -63,48 +63,37 @@ Full signed-POST smoke tests live in
 - To fully remove: `fly apps destroy los-duros-ig-webhook`
   (no other service depends on this app).
 
-## Durable approval storage — STAGED, NOT YET APPLIED
+## Durable approval storage — APPLIED 2026-10-06
 
-The approval queue (`zion_core/approval_queue.py`) now persists to a
-single SQLite database (stdlib `sqlite3`, WAL mode) with atomic
-enqueue: one transaction establishes event-fingerprint uniqueness and
-creates the approval record, so a retried delivery — even after a
-machine restart — can never create a duplicate approval, and human
-decisions (APPROVED/EDITED/REJECTED) survive restarts.
+The approval queue (`zion_core/approval_queue.py`) persists to a single
+SQLite database (stdlib `sqlite3`, WAL mode) with atomic enqueue: one
+transaction establishes event-fingerprint uniqueness and creates the
+approval record, so a retried delivery — even after a machine restart —
+can never create a duplicate approval, and human decisions
+(APPROVED/EDITED/REJECTED) survive restarts.
 
-The database file MUST live on a Fly persistent volume; without one it
-is as ephemeral as the rest of the machine disk. The volume and mount
-are **documented here but deliberately NOT applied** to `fly.toml` yet:
-adding `[mounts]` before the volume exists would make the next deploy
-fail, so the branch stays in a safe deploy state until the volume is
-created.
+The database lives on the Fly persistent volume `losduros_approvals`
+(1GB, iad, encrypted, scheduled snapshots), mounted at `/data`:
 
-### Steps (run in this order, each needs explicit authorization)
+```toml
+# deploy/los-duros-ig-webhook/fly.toml
+[mounts]
+  source = "losduros_approvals"
+  destination = "/data"
+```
 
-1. Create the volume (once, same region as the app):
+```sh
+# created once 2026-10-06 (do NOT create a second one):
+fly volumes create losduros_approvals --app los-duros-ig-webhook \
+  --region iad --size 1
+```
 
-   ```sh
-   fly volumes create losduros_approvals --region iad --size 1 -a los-duros-ig-webhook
-   ```
+The path is plain (non-secret) env config in `fly.toml`:
 
-2. Add the mount to `deploy/los-duros-ig-webhook/fly.toml`:
-
-   ```toml
-   [mounts]
-     source = "losduros_approvals"
-     destination = "/data"
-   ```
-
-3. Point the receiver at the durable path:
-
-   ```sh
-   fly secrets set -a los-duros-ig-webhook LOS_DUROS_APPROVAL_STORE=/data/approvals.db
-   ```
-
-4. Deploy (mount changes require a deploy), then verify:
-   health → GET verification → signed POST → duplicate POST reuses the
-   approval → restart the machine → redelivery still reuses the approval
-   and any prior human decision is intact.
+```toml
+[env]
+  LOS_DUROS_APPROVAL_STORE = "/data/approvals.db"
+```
 
 Without `LOS_DUROS_APPROVAL_STORE` set, webhook behavior is unchanged
 (drafts are created in memory and discarded; nothing is published).

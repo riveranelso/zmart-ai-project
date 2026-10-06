@@ -35,3 +35,14 @@ primary_region = "iad"
 
 [env]
   PORT = "8080"
+  # Durable approval queue storage. The path is not a credential, so it
+  # lives in plain env config (not secrets). Requires the losduros_approvals
+  # volume mounted at /data (see [mounts] below).
+  LOS_DUROS_APPROVAL_STORE = "/data/approvals.db"
+
+# Persistent volume for the SQLite approval queue / idempotency store.
+# Created once: fly volumes create losduros_approvals --app
+# los-duros-ig-webhook --region iad --size 1
+[mounts]
+  source = "losduros_approvals"
+  destination = "/data"

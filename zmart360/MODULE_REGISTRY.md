@@ -248,8 +248,10 @@ fingerprint returns the stored approval unchanged; otherwise event +
 approval + initial history are inserted together, then COMMIT. Any
 failure rolls back completely — never an event row without its approval,
 never a duplicate approval for one fingerprint, never orphan history.
-Deploy target is a Fly persistent volume (e.g. `/data/approvals.db`);
-without a volume the file is ephemeral like the rest of the machine disk.
+Deploy target is the Fly persistent volume `losduros_approvals` (1GB, iad),
+mounted at `/data` with `LOS_DUROS_APPROVAL_STORE=/data/approvals.db` in
+`deploy/los-duros-ig-webhook/fly.toml` (applied 2026-10-06); without a
+volume the file would be ephemeral like the rest of the machine disk.
 Single-host atomicity only (a future multi-machine deployment needs a
 real DB — stated, not built). No external database.
 **Tenant isolation:** business_id/brand_id/integration_id fixed from the
