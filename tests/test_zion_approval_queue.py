@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -334,9 +335,15 @@ class TransitionTests(ApprovalFixture):
 
     def test_corrupt_store_fails_closed(self):
         self._pending()
-        self.store_path.write_text("{not json", encoding="utf-8")
+        # Simulate a fresh process facing a corrupt database file.
+        self.store.close()
+        self.store_path.write_bytes(b"\x00\x01\x02not a sqlite database")
+        fresh = ApprovalStore(self.store_path)
         with self.assertRaises(ApprovalStoreError):
-            self.queue.list_pending()
+            fresh.ensure_ready()
+        # Operations also fail closed (never silently recreate).
+        with self.assertRaises(ApprovalStoreError):
+            ApprovalQueue(fresh).list_pending()
 
 
 class NoPublishTests(ApprovalFixture):
@@ -402,13 +409,18 @@ class NoPublishTests(ApprovalFixture):
 
     def test_source_text_not_persisted(self):
         record, _ = self.queue.enqueue_from_result(self._result(), self.integration)
-        raw = json.loads(self.store_path.read_text(encoding="utf-8"))
-        stored = raw[record.approval_id]
-        blob = json.dumps(stored, ensure_ascii=False)
-        self.assertNotIn(ROUTINE_TEXT, blob)
-        self.assertNotIn("fanpr", blob)
-        # Draft text (ZION-generated) IS persisted.
-        self.assertIn(record.draft_text, blob)
+        # Scan the database file (and WAL sidecar if present): the inbound
+        # comment text and username must appear nowhere.
+        blobs = [self.store_path.read_bytes()]
+        wal = self.store_path.with_suffix(self.store_path.suffix + "-wal")
+        if wal.is_file():
+            blobs.append(wal.read_bytes())
+        for blob in blobs:
+            self.assertNotIn(ROUTINE_TEXT.encode("utf-8"), blob)
+            self.assertNotIn(b"fanpr", blob)
+        # Draft text (ZION-generated) IS persisted and retrievable.
+        self.assertEqual(self.queue.inspect(record.approval_id).draft_text,
+                         record.draft_text)
 
 
 class WebhookWiringTests(ApprovalFixture):
@@ -469,19 +481,150 @@ class WebhookWiringTests(ApprovalFixture):
 
     def test_enqueue_failure_keeps_delivery_retryable(self):
         receiver = self._receiver(with_store=True)
-        # Corrupt the store AFTER construction (construction validates).
-        self.store_path.write_text("{corrupt", encoding="utf-8")
+        # Corrupt the database file as a fresh process would see it
+        # (close first so the next open hits the corrupt file).
+        receiver.approval_queue.store.close()
+        self.store_path.write_bytes(b"\x00\x01\x02not a sqlite database")
         failed = self._posted(receiver)
         self.assertEqual(failed.status, 500)
         self.assertEqual(failed.body["error"], "APPROVAL_STORE_FAILED")
         self.assertEqual(len(self._events(failed, "approval_failed")), 1)
-        # Fix the store; the Meta retry must process normally (no silent loss).
-        self.store_path.write_text("{}", encoding="utf-8")
+        # Restore a fresh database; the Meta retry must process normally
+        # (no silent loss, no duplicate).
+        self.store_path.unlink()
         retried = self._posted(receiver)
         self.assertEqual(retried.status, 200)
         self.assertEqual(retried.body["duplicates"], 0)
         self.assertEqual(len(self._events(retried, "approval_created")), 1)
         self.assertEqual(len(receiver.approval_queue.list_pending()), 1)
+
+
+class DurabilityTests(ApprovalFixture):
+    """SQLite-backed durability: atomicity, restart, rollback, corruption."""
+
+    def _row_counts(self):
+        import sqlite3
+        conn = sqlite3.connect(str(self.store_path))
+        try:
+            return {
+                table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in ("events", "approvals", "approval_history")
+            }
+        finally:
+            conn.close()
+
+    def _reopen(self):
+        """Simulate a machine restart: new store instance, same file."""
+        self.store.close()
+        fresh_store = ApprovalStore(self.store_path)
+        fresh_store.ensure_ready()
+        return ApprovalQueue(fresh_store), fresh_store
+
+    def test_concurrent_enqueue_single_winner(self):
+        # Fresh database: N threads race to enqueue the same fingerprint.
+        result = self._result()
+        self.store.close()
+        self.store_path.unlink(missing_ok=True)
+        store = ApprovalStore(self.store_path)
+        store.ensure_ready()
+        queue = ApprovalQueue(store)
+
+        outcomes = []
+        errors = []
+
+        def worker():
+            try:
+                rec, created = queue.enqueue_from_result(result, self.integration)
+                outcomes.append((rec.approval_id, created))
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(16)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(outcomes), 16)
+        self.assertEqual(len({aid for aid, _ in outcomes}), 1)
+        self.assertEqual(sum(1 for _, c in outcomes if c), 1)
+        counts = self._row_counts()
+        self.assertEqual(counts, {"events": 1, "approvals": 1,
+                                  "approval_history": 1})
+
+    def test_restart_preserves_approval_decision(self):
+        result = self._result()
+        record, _ = self.queue.enqueue_from_result(result, self.integration)
+        self.queue.approve(record.approval_id, reviewer="panda")
+
+        queue2, _ = self._reopen()
+        reused, created = queue2.enqueue_from_result(result, self.integration)
+        self.assertFalse(created)
+        self.assertEqual(reused.approval_id, record.approval_id)
+        self.assertEqual(reused.status, APPROVED)
+        self.assertEqual(reused.reviewer, "panda")
+        self.assertEqual(len(reused.history), 2)
+        self.assertEqual(self._row_counts()["approvals"], 1)
+
+    def test_restart_preserves_edit_and_reject(self):
+        r1, _ = self.queue.enqueue_from_result(
+            self._result(comment_id="cmt-e1"), self.integration)
+        self.queue.edit_and_approve(r1.approval_id, reviewer="panda",
+                                    edited_text="Editado.")
+        r2, _ = self.queue.enqueue_from_result(
+            self._result(comment_id="cmt-r1"), self.integration)
+        self.queue.reject(r2.approval_id, reviewer="panda", reason="no")
+
+        queue2, _ = self._reopen()
+        self.assertEqual(queue2.inspect(r1.approval_id).status, EDITED)
+        self.assertEqual(queue2.inspect(r1.approval_id).edited_text, "Editado.")
+        self.assertEqual(queue2.inspect(r2.approval_id).status, REJECTED)
+        self.assertEqual(len(queue2.list_pending()), 0)
+
+    def test_rollback_on_injected_failure(self):
+        from unittest import mock
+        result = self._result()
+        with mock.patch.object(
+            self.store, "_insert_approval_rows",
+            side_effect=RuntimeError("injected mid-transaction failure"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.queue.enqueue_from_result(result, self.integration)
+        # Complete rollback: no event row, no approval, no orphan history.
+        self.assertEqual(
+            self._row_counts(),
+            {"events": 0, "approvals": 0, "approval_history": 0},
+        )
+        # The store is still usable afterwards.
+        record, created = self.queue.enqueue_from_result(result, self.integration)
+        self.assertTrue(created)
+        self.assertEqual(record.status, PENDING)
+
+    def test_no_orphan_event_without_approval(self):
+        # Direct invariant check on the events table after normal use.
+        result = self._result()
+        self.queue.enqueue_from_result(result, self.integration)
+        import sqlite3
+        conn = sqlite3.connect(str(self.store_path))
+        try:
+            orphans = conn.execute(
+                "SELECT COUNT(*) FROM events e LEFT JOIN approvals a"
+                " ON e.approval_id = a.approval_id WHERE a.approval_id IS NULL"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(orphans, 0)
+
+    def test_wal_mode_active(self):
+        self.store.ensure_ready()
+        import sqlite3
+        conn = sqlite3.connect(str(self.store_path))
+        try:
+            mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(mode.lower(), "wal")
 
 
 if __name__ == "__main__":

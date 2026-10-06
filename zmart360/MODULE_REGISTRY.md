@@ -227,12 +227,20 @@ trail plus structured events.
 **Inputs:** `MetaProcessResult` with draft; resolved `IntegrationConfig`.
 **Outputs:** `ApprovalRecord` (PENDING → APPROVED | EDITED | REJECTED;
 terminal states have no exits); `(record, created)` tuples.
-**Dependencies:** glossolalia (fingerprint, draft model — never duplicated),
-persistence (`LocalOperationLock`, atomic temp+fsync+replace pattern).
-**Persistence:** single JSON file keyed by deterministic
-`approval_id = "appr_" + fingerprint[:16]`; crash-safe local lock;
-single-host atomicity only (a future multi-machine deployment needs a real
-DB — stated, not built). No external database.
+**Dependencies:** glossolalia (fingerprint, draft model — never duplicated).
+**Persistence:** single SQLite database file (stdlib sqlite3, WAL mode):
+`events` table (durable idempotency — one row per event fingerprint,
+PRIMARY KEY), `approvals` table (the records), `approval_history`
+(append-only audit trail). Enqueue is one atomic transaction
+(BEGIN IMMEDIATE): fingerprint uniqueness established first; a known
+fingerprint returns the stored approval unchanged; otherwise event +
+approval + initial history are inserted together, then COMMIT. Any
+failure rolls back completely — never an event row without its approval,
+never a duplicate approval for one fingerprint, never orphan history.
+Deploy target is a Fly persistent volume (e.g. `/data/approvals.db`);
+without a volume the file is ephemeral like the rest of the machine disk.
+Single-host atomicity only (a future multi-machine deployment needs a
+real DB — stated, not built). No external database.
 **Tenant isolation:** business_id/brand_id/integration_id fixed from the
 resolved integration, never the payload; the fingerprint basis includes the
 tenant, so cross-tenant collisions are impossible; spoofed claims fail

@@ -6,8 +6,9 @@ Isolated Fly.io service for the Los Duros Instagram webhook receiver
 - Callback path: `POST/GET /meta/webhooks/instagram`
 - Health: `GET /health` → `200 ok`
 - Tenant: **los-duros only** — never mount another tenant here.
-- Instances: **exactly 1** (dedupe is process-local; do not scale out
-  until shared dedupe exists).
+- Instances: **exactly 1** (dedupe is process-local L1 + per-machine
+  SQLite L2 on the volume; a Fly volume attaches to one machine only —
+  do not scale out).
 
 ## Required secrets (names only — values never go in git)
 
@@ -61,3 +62,72 @@ Full signed-POST smoke tests live in
   `fly deploy --image <previous-image>` to roll back.
 - To fully remove: `fly apps destroy los-duros-ig-webhook`
   (no other service depends on this app).
+
+## Durable approval storage — STAGED, NOT YET APPLIED
+
+The approval queue (`zion_core/approval_queue.py`) now persists to a
+single SQLite database (stdlib `sqlite3`, WAL mode) with atomic
+enqueue: one transaction establishes event-fingerprint uniqueness and
+creates the approval record, so a retried delivery — even after a
+machine restart — can never create a duplicate approval, and human
+decisions (APPROVED/EDITED/REJECTED) survive restarts.
+
+The database file MUST live on a Fly persistent volume; without one it
+is as ephemeral as the rest of the machine disk. The volume and mount
+are **documented here but deliberately NOT applied** to `fly.toml` yet:
+adding `[mounts]` before the volume exists would make the next deploy
+fail, so the branch stays in a safe deploy state until the volume is
+created.
+
+### Steps (run in this order, each needs explicit authorization)
+
+1. Create the volume (once, same region as the app):
+
+   ```sh
+   fly volumes create losduros_approvals --region iad --size 1 -a los-duros-ig-webhook
+   ```
+
+2. Add the mount to `deploy/los-duros-ig-webhook/fly.toml`:
+
+   ```toml
+   [mounts]
+     source = "losduros_approvals"
+     destination = "/data"
+   ```
+
+3. Point the receiver at the durable path:
+
+   ```sh
+   fly secrets set -a los-duros-ig-webhook LOS_DUROS_APPROVAL_STORE=/data/approvals.db
+   ```
+
+4. Deploy (mount changes require a deploy), then verify:
+   health → GET verification → signed POST → duplicate POST reuses the
+   approval → restart the machine → redelivery still reuses the approval
+   and any prior human decision is intact.
+
+Without `LOS_DUROS_APPROVAL_STORE` set, webhook behavior is unchanged
+(drafts are created in memory and discarded; nothing is published).
+
+### Backup strategy
+
+- **Primary (off-volume, real disaster recovery): Fly volume snapshots.**
+  Take them on a schedule (e.g. daily) and keep several generations.
+  Restore = create a new volume from a snapshot and attach it. This is
+  the only backup that survives volume loss.
+- **Secondary (same-volume, operational convenience — NOT disaster
+  recovery):** a periodic `VACUUM INTO '/data/backups/approvals-<date>.db'`
+  copy. Useful for quick local restore of an accidentally corrupted file,
+  but it dies with the volume, so it must never be the only backup.
+- **Tertiary (portable, human-readable):** a periodic JSONL export of the
+  `approvals` + `approval_history` tables, stored off the machine. Cheap
+  insurance and the easiest path for future migrations.
+
+### Restore
+
+1. Stop the machine (single instance — no writes during restore).
+2. Restore the volume from the latest snapshot (or copy a good
+   `VACUUM INTO` backup over `/data/approvals.db`).
+3. Start the machine; `ensure_ready()` validates the database and fails
+   closed (no silent recreate) if it is corrupt.
+4. Re-run the signed-POST + redelivery verification above.
