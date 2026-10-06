@@ -1,0 +1,27 @@
+{
+  "asset": "FULL_NELSON",
+  "version": 1,
+  "status": "ACTIVE",
+  "character_master": {
+    "face_head_master": {
+      "library_path": "/ZION/FULL_NELSON/CHARACTER_MASTER/FACE_HEAD_MASTER.jpeg",
+      "library_file_id": "libfile_6f4399c728088191bcee05b6579a43a5",
+      "role": "FACE_HEAD_MASTER",
+      "authority": "identity_face_head"
+    },
+    "body_look_reference": {
+      "library_path": "/ZION/FULL_NELSON/CHARACTER_MASTER/BODY_LOOK_REFERENCE.jpeg",
+      "library_file_id": "libfile_50fa7b227c288191978586b60fa30065",
+      "role": "BODY_LOOK_REFERENCE",
+      "authority": "body_look_only",
+      "tattoos_verified": false
+    }
+  },
+  "rules": {
+    "face_head_master_overrides_body_reference_for_identity": true,
+    "generated_outputs_are_not_source_of_truth": true,
+    "never_invent_tattoos": true,
+    "bald_shaved_head": true,
+    "strong_defined_beard": true
+  }
+}
