@@ -157,6 +157,35 @@ class BibliaPrecedenceTests(unittest.TestCase):
         other=retrieve_biblia("zero-lag-wifi",root=repo,registry_path=registry)
         self.assertNotIn("Suscribete pa que no te pierdas lo proximo",other.text)
 
+    def test_nelson_datos_verificados_is_retrievable(self):
+        # NELSON_DATOS_VERIFICADOS.md is canonical founder knowledge: wired
+        # into retrieval for every business at GLOBAL scope, the same routing
+        # repair applied to LOS_DUROS.md on 2026-10-04.
+        repo=Path(__file__).resolve().parent.parent
+        registry=repo/"zmart360"/"san_pedro_registry.json"
+        doc=repo/"zmart360"/"BIBLIA"/"NELSON_DATOS_VERIFICADOS.md"
+        if not registry.is_file() or not doc.is_file():
+            self.skipTest("real BIBLIA tree not present")
+        data=json.loads(registry.read_text(encoding="utf-8"))
+        for business_id in data["businesses"]:
+            context=retrieve_biblia(business_id,root=repo,registry_path=registry)
+            self.assertIn(
+                "zmart360/BIBLIA/NELSON_DATOS_VERIFICADOS.md",context.refs
+            )
+            self.assertIn("GLOBAL",context.precedence)
+            # Full Sail A.S. graduation per diploma (supersedes 2006).
+            self.assertIn("5 de mayo de 2005",context.text)
+        home=retrieve_biblia(
+            "zmart-home-solutions",root=repo,registry_path=registry
+        )
+        # Verified brand start (Zmart Consumer Rights, direct confirmation).
+        self.assertIn("Agosto 2026",home.text)
+        # Los Duros LLC: Pennsylvania entity #6431372.
+        self.assertIn("6431372",home.text)
+        # Zmart Home Solutions status per Sunbiz (verified 2026-11-09).
+        self.assertIn("INACTIVE",home.text)
+        self.assertIn("L25000368600",home.text)
+
 
 if __name__=="__main__":
     unittest.main()
