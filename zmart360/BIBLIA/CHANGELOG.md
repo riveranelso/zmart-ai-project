@@ -2,6 +2,9 @@
 
 Record material promotions, corrections, supersessions and routing repairs here without secrets or PII.
 
+## 2026-11-09
+- Nuevo registro canónico: `NELSON_DATOS_VERIFICADOS.md` — fechas verificadas de educación y negocios de Nelson, cada una con su fuente explícita. Corrección material: A.S. Digital Media (Full Sail) graduación **2005** (diploma, 5 de mayo de 2005) supersede el 2006 que decían el résumé y LinkedIn; résumé fuente y PDFs corregidos el mismo día. Año de inicio del A.S. queda PENDIENTE (LinkedIn 2005–2006 inconsistente con el diploma; sin expediente en archivo — no adivinar). Inicios de negocio confirmados: Zmart Consumer Rights ago 2026 y ZeroLag WiFi jul 2026 (confirmación directa de Nelson); ZMART AI jul 2026 (LinkedIn, entrada Zmatai.net). Full Nelson AI es marca separada sin fecha propia verificada.
+
 ## 2026-10-05
 - FREEZE (decisión de Nelson): `Orange Parcels_BCC / Property Appraiser` (KTEMA property intelligence) queda en `FROZEN / FUTURE WORK` — no es requerido actualmente para Zero Lag WiFi y no debe consumir tiempo ni bloquear el desarrollo Zero Lag/ZION. Registro durable: `zmart360/KTEMA_PROPERTY_FREEZE.md` (inventario preservado: código, adapters, 139 tests, docs, decisiones, descubrimientos, limitaciones, punto de reanudación). DO NOT CONTINUE PROPERTY APPRAISER WORK UNLESS NELSON REACTIVATES IT. Zero Lag ≠ Property Appraiser: verificado que ningún módulo Zero Lag importa ktema; sin dependencia entre ambos sistemas. Freeze, no delete: todo el trabajo permanece recuperable.
 
