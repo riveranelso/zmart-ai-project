@@ -1,0 +1,107 @@
+---
+tags: [zion, registry, data]
+source: zmart360/san_pedro_registry.json
+snapshot: 1f2665a
+snapshot_date: 2026-11-12
+mirror: read-only — edit zmart360/ in the repo, then rebuild
+---
+
+# san_pedro_registry.json
+
+Source data file `san_pedro_registry.json` wrapped for Obsidian search.
+
+```json
+{
+  "version": "1.0",
+  "system": "ZION_CORE",
+  "registry": "SAN_PEDRO",
+  "defaults": {
+    "deny_unknown_business": true,
+    "deny_disabled_business": true,
+    "require_context_refs": true
+  },
+  "businesses": {
+    "zmart-consumer-rights": {
+      "display_name": "Zmart Consumer Rights",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/WORKFLOWS.md",
+        "zmart360/BIBLIA/ACTIVE_CONTEXT.md"
+      ],
+      "isolation_key": "zmart-consumer-rights"
+    },
+    "scan-water-intelligence": {
+      "display_name": "SCAN Water Intelligence / ScanTapWater",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/PROJECTS.md",
+        "zmart360/BIBLIA/ACTIVE_CONTEXT.md"
+      ],
+      "isolation_key": "scan-water-intelligence"
+    },
+    "los-duros": {
+      "display_name": "Los Duros",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/LOS_DUROS.md",
+        "zmart360/BIBLIA/ACTIVE_CONTEXT.md"
+      ],
+      "isolation_key": "los-duros"
+    },
+    "yek-family": {
+      "display_name": "Yek Family",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md"
+      ],
+      "isolation_key": "yek-family"
+    },
+    "zero-lag-wifi": {
+      "display_name": "Zero Lag WiFi",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/PROJECTS.md"
+      ],
+      "isolation_key": "zero-lag-wifi"
+    },
+    "zmart-home-solutions": {
+      "display_name": "Zmart Home Solutions",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md"
+      ],
+      "isolation_key": "zmart-home-solutions"
+    },
+    "full-nelson-ai": {
+      "display_name": "Full Nelson AI",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/BRANDS.md",
+        "zmart360/BIBLIA/PROJECTS.md"
+      ],
+      "isolation_key": "full-nelson-ai"
+    },
+    "zmart-ai-jessica": {
+      "display_name": "Zmart AI / Jessica",
+      "enabled": true,
+      "context_refs": [
+        "zmart360/BIBLIA/GLOBAL.md",
+        "zmart360/BIBLIA/PROJECTS.md",
+        "zmart360/BIBLIA/WORKFLOWS.md"
+      ],
+      "isolation_key": "zmart-ai-jessica"
+    }
+  }
+}
+```

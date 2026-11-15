@@ -1,2 +1,16 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Cron runtime state: the daily lead-report job writes its watermark and
+# phone-enrichment cache next to the scripts in supabase/tools/. The cache
+# holds real lead phone numbers (PII) and must never be committed.
+# Only these two files are ignored; the rest of supabase/ is versioned.
 .lead_report_watermark.json
 .enrich_cache.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

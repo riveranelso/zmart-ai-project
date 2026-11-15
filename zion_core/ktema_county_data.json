@@ -1,0 +1,376 @@
+{
+  "meta": {
+    "built_at": "2026-10-04",
+    "built_from": [
+      "Orange County Parcels_BCC FeatureServer layer 5 (services1.arcgis.com/0U8EQ1FrumPeIqDb, Orange County Government GIS org), distinct SITUS_ZIP values, queried 2026-10-04",
+      "Seminole County Property Appraiser daily CAMA parcel CSV (files.scpafl.org/data/cama/SeminoleCounty.zip, file vintage 2026-10-03), trailing 5-digit ZIP extracted from PrimaryAddress situs string, processed 2026-10-04",
+      "Volusia County GIS Address Situs FeatureServer layer 2 (maps5.vcgov.org/arcgis/rest/services/Open_Data/Open_Data_3, County of Volusia org), distinct ZIP values, queried 2026-10-04",
+      "Lake County GIS Address Locations FeatureServer layer 11 (gis.lakecountyfl.gov/lakegis/rest/services/OpenData/OpenData1, via geohub-lcgis.opendata.arcgis.com), distinct ZipCode values, queried 2026-10-04"
+    ],
+    "coverage": [
+      "Orange",
+      "Seminole",
+      "Volusia",
+      "Lake"
+    ],
+    "blockers": [],
+    "notes": [
+      "ZIPs present in 2 counties are genuinely cross-county (verified on both sides from official sources); the resolver raises KTEMA_COUNTY_AMBIGUOUS with candidates for these.",
+      "Seminole extraction: 181,244 parcels; 16,461 had empty PrimaryAddress and contributed no ZIP (fail-closed, not guessed).",
+      "Orange SITUS_ZIP=32776 (2 parcels) and 32751 (5 parcels) are small but verified present in the official layer; kept, AMBIGUOUS is the safe outcome."
+    ]
+  },
+  "zips": {
+    "32102": [
+      "Lake",
+      "Volusia"
+    ],
+    "32114": [
+      "Volusia"
+    ],
+    "32117": [
+      "Volusia"
+    ],
+    "32118": [
+      "Volusia"
+    ],
+    "32119": [
+      "Volusia"
+    ],
+    "32120": [
+      "Volusia"
+    ],
+    "32124": [
+      "Volusia"
+    ],
+    "32127": [
+      "Volusia"
+    ],
+    "32128": [
+      "Volusia"
+    ],
+    "32129": [
+      "Volusia"
+    ],
+    "32130": [
+      "Volusia"
+    ],
+    "32132": [
+      "Volusia"
+    ],
+    "32134": [
+      "Lake"
+    ],
+    "32136": [
+      "Volusia"
+    ],
+    "32141": [
+      "Volusia"
+    ],
+    "32159": [
+      "Lake"
+    ],
+    "32163": [
+      "Lake"
+    ],
+    "32168": [
+      "Volusia"
+    ],
+    "32169": [
+      "Volusia"
+    ],
+    "32174": [
+      "Volusia"
+    ],
+    "32175": [
+      "Volusia"
+    ],
+    "32176": [
+      "Volusia"
+    ],
+    "32180": [
+      "Volusia"
+    ],
+    "32190": [
+      "Volusia"
+    ],
+    "32195": [
+      "Lake"
+    ],
+    "32701": [
+      "Seminole"
+    ],
+    "32702": [
+      "Lake"
+    ],
+    "32703": [
+      "Orange",
+      "Seminole"
+    ],
+    "32707": [
+      "Seminole"
+    ],
+    "32708": [
+      "Seminole"
+    ],
+    "32709": [
+      "Orange"
+    ],
+    "32712": [
+      "Orange"
+    ],
+    "32713": [
+      "Volusia"
+    ],
+    "32714": [
+      "Seminole"
+    ],
+    "32720": [
+      "Lake",
+      "Volusia"
+    ],
+    "32723": [
+      "Volusia"
+    ],
+    "32724": [
+      "Volusia"
+    ],
+    "32725": [
+      "Volusia"
+    ],
+    "32726": [
+      "Lake"
+    ],
+    "32730": [
+      "Seminole"
+    ],
+    "32732": [
+      "Seminole"
+    ],
+    "32735": [
+      "Lake"
+    ],
+    "32736": [
+      "Lake"
+    ],
+    "32738": [
+      "Volusia"
+    ],
+    "32744": [
+      "Volusia"
+    ],
+    "32746": [
+      "Seminole"
+    ],
+    "32750": [
+      "Seminole"
+    ],
+    "32751": [
+      "Orange",
+      "Seminole"
+    ],
+    "32754": [
+      "Volusia"
+    ],
+    "32757": [
+      "Lake",
+      "Orange"
+    ],
+    "32759": [
+      "Volusia"
+    ],
+    "32763": [
+      "Volusia"
+    ],
+    "32764": [
+      "Volusia"
+    ],
+    "32765": [
+      "Seminole"
+    ],
+    "32766": [
+      "Seminole"
+    ],
+    "32767": [
+      "Lake"
+    ],
+    "32771": [
+      "Seminole"
+    ],
+    "32773": [
+      "Seminole"
+    ],
+    "32776": [
+      "Lake",
+      "Orange"
+    ],
+    "32778": [
+      "Lake"
+    ],
+    "32779": [
+      "Seminole"
+    ],
+    "32784": [
+      "Lake"
+    ],
+    "32789": [
+      "Orange",
+      "Seminole"
+    ],
+    "32792": [
+      "Orange",
+      "Seminole"
+    ],
+    "32798": [
+      "Orange"
+    ],
+    "32801": [
+      "Orange"
+    ],
+    "32803": [
+      "Orange"
+    ],
+    "32804": [
+      "Orange"
+    ],
+    "32805": [
+      "Orange"
+    ],
+    "32806": [
+      "Orange"
+    ],
+    "32807": [
+      "Orange"
+    ],
+    "32808": [
+      "Orange"
+    ],
+    "32809": [
+      "Orange"
+    ],
+    "32810": [
+      "Orange"
+    ],
+    "32811": [
+      "Orange"
+    ],
+    "32812": [
+      "Orange"
+    ],
+    "32817": [
+      "Orange"
+    ],
+    "32818": [
+      "Orange"
+    ],
+    "32819": [
+      "Orange"
+    ],
+    "32820": [
+      "Orange"
+    ],
+    "32821": [
+      "Orange"
+    ],
+    "32822": [
+      "Orange"
+    ],
+    "32824": [
+      "Orange"
+    ],
+    "32825": [
+      "Orange"
+    ],
+    "32826": [
+      "Orange"
+    ],
+    "32827": [
+      "Orange"
+    ],
+    "32828": [
+      "Orange"
+    ],
+    "32829": [
+      "Orange"
+    ],
+    "32831": [
+      "Orange"
+    ],
+    "32832": [
+      "Orange"
+    ],
+    "32833": [
+      "Orange"
+    ],
+    "32834": [
+      "Orange"
+    ],
+    "32835": [
+      "Orange"
+    ],
+    "32836": [
+      "Orange"
+    ],
+    "32837": [
+      "Orange"
+    ],
+    "32839": [
+      "Orange"
+    ],
+    "34705": [
+      "Lake"
+    ],
+    "34711": [
+      "Lake"
+    ],
+    "34714": [
+      "Lake"
+    ],
+    "34715": [
+      "Lake"
+    ],
+    "34731": [
+      "Lake"
+    ],
+    "34734": [
+      "Orange"
+    ],
+    "34736": [
+      "Lake"
+    ],
+    "34737": [
+      "Lake"
+    ],
+    "34748": [
+      "Lake"
+    ],
+    "34753": [
+      "Lake"
+    ],
+    "34756": [
+      "Lake"
+    ],
+    "34760": [
+      "Orange"
+    ],
+    "34761": [
+      "Orange"
+    ],
+    "34762": [
+      "Lake"
+    ],
+    "34786": [
+      "Orange"
+    ],
+    "34787": [
+      "Lake",
+      "Orange"
+    ],
+    "34788": [
+      "Lake"
+    ],
+    "34797": [
+      "Lake"
+    ]
+  }
+}

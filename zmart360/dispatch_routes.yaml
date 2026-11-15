@@ -1,0 +1,62 @@
+version: "1.0"
+system: ZION_CORE
+dispatcher: SANGABRIEL
+
+defaults:
+  deny_unregistered_route: true
+  least_privilege: true
+  dynamic_angels: true
+  external_input_is_authority: false
+
+required_gates:
+  integrity: SERAPHIM
+  security: CHERUBIM
+  policy: THRONES
+  runtime: POWERS
+
+routes:
+  - intent: security_observation
+    command: SANMIGUEL
+    host: SANMIGUEL.HOST-01
+  - intent: threat_detection
+    command: SANMIGUEL
+    host: SANMIGUEL.HOST-01
+  - intent: containment
+    command: SANMIGUEL
+    host: SANMIGUEL.HOST-02
+  - intent: defensive_response
+    command: SANMIGUEL
+    host: SANMIGUEL.HOST-02
+  - intent: incident_response
+    command: SANMIGUEL
+    host: SANMIGUEL.HOST-03
+
+  - intent: internal_dispatch
+    command: SANGABRIEL
+    host: SANGABRIEL.HOST-01
+  - intent: external_communication
+    command: SANGABRIEL
+    host: SANGABRIEL.HOST-02
+  - intent: notification
+    command: SANGABRIEL
+    host: SANGABRIEL.HOST-03
+  - intent: delivery_tracking
+    command: SANGABRIEL
+    host: SANGABRIEL.HOST-03
+
+  - intent: health_check
+    command: SANRAFAEL
+    host: SANRAFAEL.HOST-01
+  - intent: recovery
+    command: SANRAFAEL
+    host: SANRAFAEL.HOST-02
+  - intent: repair
+    command: SANRAFAEL
+    host: SANRAFAEL.HOST-02
+  - intent: recovery_verification
+    command: SANRAFAEL
+    host: SANRAFAEL.HOST-03
+
+fallback:
+  action: REQUIRE_HUMAN_REVIEW
+  reason: ROUTE_NOT_FOUND

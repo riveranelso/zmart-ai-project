@@ -1,0 +1,90 @@
+import tempfile
+import multiprocessing
+import threading
+import unittest
+from pathlib import Path
+
+from zion_core.persistence import PersistentCorrectionMemory
+
+
+def _observe_process(path_text,queue):
+    memory=PersistentCorrectionMemory(Path(path_text))
+    try:
+        queue.put(("ok",memory.observe("zmart-consumer-rights","Preserve this reusable workflow.")))
+    except Exception as exc:
+        queue.put(("error",type(exc).__name__+":"+str(exc)))
+
+
+class CorrectionMemoryConcurrencyTests(unittest.TestCase):
+    def test_concurrent_distinct_human_events_do_not_lose_repetition_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            memory=PersistentCorrectionMemory(Path(tmp)/"corrections.json")
+            barrier=threading.Barrier(8)
+            counts=[]
+            errors=[]
+            guard=threading.Lock()
+            rule="Preserve this reusable workflow."
+
+            def worker():
+                try:
+                    barrier.wait()
+                    count=memory.observe("zmart-consumer-rights",rule)
+                    with guard: counts.append(count)
+                except Exception as exc:
+                    with guard: errors.append(exc)
+
+            threads=[threading.Thread(target=worker) for _ in range(8)]
+            for thread in threads: thread.start()
+            for thread in threads: thread.join()
+
+            self.assertEqual(errors,[])
+            self.assertEqual(sorted(counts),list(range(1,9)))
+            self.assertEqual(memory.count("zmart-consumer-rights",rule),8)
+
+
+
+
+    def test_count_waits_for_same_correction_write_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"corrections.json"
+            memory=PersistentCorrectionMemory(path)
+            business="zmart-consumer-rights"
+            rule="Preserve this reusable workflow."
+            self.assertEqual(memory.observe(business,rule),1)
+            from zion_core.correction_memory import correction_fingerprint
+            from zion_core.persistence import LocalOperationLock
+            lock=LocalOperationLock(path.parent/(path.name+".locks"))
+            result=[]
+            thread=threading.Thread(target=lambda: result.append(memory.count(business,rule)))
+            with lock.hold(business,"CORRECTION_MEMORY",correction_fingerprint(rule)):
+                thread.start()
+                import time
+                time.sleep(0.1)
+                self.assertTrue(thread.is_alive())
+                self.assertEqual(result,[])
+            thread.join(5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(result,[1])
+
+
+    def test_multiprocess_observe_does_not_lose_repetition_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"corrections.json"
+            ctx=multiprocessing.get_context("spawn")
+            queue=ctx.Queue()
+            processes=[ctx.Process(target=_observe_process,args=(str(path),queue)) for _ in range(6)]
+            for process in processes: process.start()
+            for process in processes:
+                process.join(20)
+                self.assertFalse(process.is_alive(),"correction-memory child process hung")
+                self.assertEqual(process.exitcode,0)
+            results=[queue.get(timeout=5) for _ in processes]
+            self.assertFalse([item for item in results if item[0]=="error"],results)
+            self.assertEqual(sorted(item[1] for item in results),list(range(1,7)))
+            memory=PersistentCorrectionMemory(path)
+            self.assertEqual(
+                memory.count("zmart-consumer-rights","Preserve this reusable workflow."),6
+            )
+
+if __name__=="__main__":
+    unittest.main()
