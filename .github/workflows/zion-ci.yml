@@ -21,8 +21,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install test runner
-        run: python -m pip install "pytest>=8,<9"
+      - name: Install dependencies and test runner
+        run: python -m pip install -r requirements.txt "pytest>=8,<9"
 
       # pytest runs both styles in tests/: the unittest.TestCase classes and the
       # plain pytest functions (13 files) that unittest discovery cannot collect.
