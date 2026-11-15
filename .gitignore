@@ -9,6 +9,10 @@ __pycache__/
 # holds real lead phone numbers (PII) and must never be committed.
 supabase/
 
+# Lead-report state files (from main)
+.lead_report_watermark.json
+.enrich_cache.json
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

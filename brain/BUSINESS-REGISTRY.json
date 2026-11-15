@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "status": "ACTIVE",
+  "owner": "Nelson Rivera",
+  "core": {
+    "id": "omar",
+    "name": "Omar Core",
+    "source": "brain/OMAR-CORE.md",
+    "role": "central_router_and_source_of_truth_gate"
+  },
+  "businesses": [
+    {
+      "business_id": "zmart-consumer",
+      "name": "Zmart Consumer Rights",
+      "status": "active",
+      "repository": "riveranelso/zmart-consumer-rights",
+      "brain_mode": "project_rules",
+      "rules": [
+        "brand/COMPLIANCE.md"
+      ],
+      "asset_registry": "riveranelso/LosDuros:brain/asset-registry.md",
+      "isolation": [
+        "scan",
+        "zerolag",
+        "los-duros"
+      ],
+      "notes": "Consumer advocacy/consulting; not a law firm. Promise the process, not the result."
+    },
+    {
+      "business_id": "scan",
+      "name": "SCAN Water Intelligence",
+      "status": "active",
+      "repository": "riveranelso/scan-water-intelligence",
+      "brain_mode": "project_rules",
+      "rules": [
+        "brand/BRAND-GUIDE.md",
+        "brand/assets/README.md",
+        "brand/assets/SOURCE-ASSET-MANIFEST.md"
+      ],
+      "asset_registry": "riveranelso/LosDuros:brain/asset-registry.md",
+      "isolation": [
+        "zmart-consumer",
+        "zerolag",
+        "los-duros"
+      ],
+      "notes": "Water intelligence. Use approved SCAN assets only; avoid unsupported home-specific contaminant claims."
+    },
+    {
+      "business_id": "zerolag",
+      "name": "ZeroLag WiFi",
+      "status": "active",
+      "repository": "riveranelso/zerolag",
+      "brain_mode": "project_rules",
+      "rules": [
+        "brand/README.md"
+      ],
+      "asset_registry": "riveranelso/LosDuros:brain/asset-registry.md",
+      "isolation": [
+        "zmart-consumer",
+        "scan",
+        "los-duros"
+      ],
+      "asset_status": "CONFLICT_REQUIRES_RESOLUTION",
+      "notes": "Central registry says an approved ZeroLag branded reference exists; ZeroLag repo says no official assets verified. Do not invent a logo until reconciled."
+    },
+    {
+      "business_id": "los-duros",
+      "name": "Los Duros con Los Duros",
+      "status": "active",
+      "repository": "riveranelso/LosDuros",
+      "brain_mode": "brand_brain",
+      "rules": [
+        "brain/brand-rules.md",
+        "brain/asset-registry.md"
+      ],
+      "asset_registry": "riveranelso/LosDuros:brain/asset-registry.md",
+      "isolation": [
+        "zmart-consumer",
+        "scan",
+        "zerolag"
+      ],
+      "notes": "Official logo is a locked asset. Asset gate is mandatory for automated creative/rendering workflows."
+    }
+  ],
+  "routing": {
+    "required_input": "business_id",
+    "unknown_business": "STOP_AND_RESOLVE",
+    "missing_business": "RESOLVE_FROM_TRUSTED_CONTEXT_OR_STOP",
+    "cross_brand": "LOAD_EACH_PROJECT_SEPARATELY_AND_VALIDATE",
+    "visual_work": "LOAD_ASSET_REGISTRY_BEFORE_GENERATION"
+  },
+  "safety": {
+    "production_changes": "NOT_AUTHORIZED_BY_THIS_REGISTRY",
+    "invent_missing_assets": false,
+    "merge_brand_contexts": false
+  }
+}
