@@ -134,7 +134,9 @@ class ZeroLagIdentityTests(unittest.TestCase):
         self.assertIn("Zero Lag WiFi", brand_text)
         # Brand file points to the project file for funnel detail (no dupes).
         self.assertIn("PROJECTS.md", brand_text)
-        self.assertIn("UNRESOLVED", brand_text)
+        # Logo state was resolved by Nelson on 2026-10-06 (official asset lock).
+        self.assertIn("OFFICIAL ASSET LOCK", brand_text)
+        self.assertNotIn("ASSET_STATUS = UNRESOLVED", brand_text)
         self.assertIn("Meta Instant Forms", project_text)
         self.assertIn("preserve, do not redesign", project_text)
         # Confirmed sales funnel, distinct from the /fiber-leads webhook.
