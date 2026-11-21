@@ -287,3 +287,18 @@ Use this when relevant to discussions about promotion, payola, Randy, Indio, or 
 - If the exact asset is unavailable, declare that it is missing instead of
   improvising it. (Takes precedence over the prior "leave the logo out or
   request the official asset" formulation.)
+
+## Branded sales documents and outbound communication (owner correction, 2026-11-21)
+- For any Los Duros-branded commercial proposal, HTML email, sales flyer, media kit, or presentation, use the exact owner-approved official Los Duros logo asset; styled lettering, a plain-text brand heading, or a newly generated image is NOT a replacement for the actual logo.
+- Apply the official black/red/white visual system consistently; check mobile readability and validate that the image actually appears in the delivered artifact.
+- Before creating or sending an outbound artifact, resolve the official logo through the existing approved asset registry and confirm it is available in a usable supported format. If the asset cannot be embedded reliably, report the blocker and request an approved delivery alternative; never silently send a logo-less substitute.
+- Drafting/editing is separate from sending. Do not send or resend a message, quote, proposal, or file to anyone unless Nelson explicitly authorizes that delivery. A request to correct or optimize an already-sent message is NOT authorization to resend it.
+- These are durable owner instructions about brand execution, not permission for any automatic publishing, marketing outreach, or changing live agent permissions.
+
+## Philadelphia commercial representation (owner decision, 2026-11-21)
+- Ellio/Elliot Martinez is the Philadelphia commercial representative for Los Duros. Treat him as a trusted business partner; do not imply that he is primarily motivated by a commission or invent quotas.
+- For the existing fixed-deliverable Los Duros promotion packages, the owner approved a REDLINE arrangement: the verified base amount belongs to Los Duros, and the difference between the price actually collected and the redline belongs to Ellio. Do not add a second 20% commission.
+- Base redlines approved for existing offers: PROMO $125 (1 post + 1 story); MEDIANO $300 (2 posts, including 1 collaborative, 1 reel, 2 stories); MENSUAL $600 (4 stories across the month, 1 reel, 1 post, and one El Kikeo mention in that month); EL KIKEO standalone $300. Suggested higher prices are flexible sales guidance, not new minimums or guarantees.
+- Buyer payments must go to approved official Los Duros collection methods. Reconcile collections, refunds and Ellio's redline difference before payout; do not promise guaranteed reach, views, sales or conversions.
+- VIDEO EXPRESS ($299 proposed minimum), VIDEO PRO ($499 proposed minimum), and any Blaze on-site commercial are NOT approved fixed-price offers. Confirm cost, production scope, logistics, narrator availability and Nelson's authorization before giving a firm quotation or accepting payment for those video packages.
+- Neither the REDLINE model nor this brand memory authorizes agents to contact new prospects, send sales emails, publish assets, change business prices below the redline or collect funds without the applicable human approvals.
