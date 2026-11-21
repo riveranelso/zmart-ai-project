@@ -1,0 +1,59 @@
+# ZeroLag Meta Lead Ads webhook receiver — ISOLATED Fly.io service.
+#
+# TENANT: zerolag ONLY. This app must never host another tenant's
+# receiver, and the receiver must never be mounted on omar-core,
+# zmart-intake, or los-duros-ig-webhook.
+#
+# NO-CUTOVER: this service only becomes live traffic when a human
+# subscribes the Zero Lag WiFi Page's `leadgen` field to its callback URL
+# in the Meta dashboard. Deploying the app alone changes nothing in
+# production Meta. GoHighLevel stays connected until the canary proves
+# the owned path.
+#
+# ONE-INSTANCE CONSTRAINT: leadgen_id dedupe lives in SQLite at
+# /data/leadgen.db, so exactly one machine runs
+# (min_machines_running = 1, auto_stop_machines = "off").
+# Do NOT scale this app horizontally until shared dedupe exists.
+app = "zerolag-meta-webhook"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+    timeout = "5s"
+
+[env]
+  PORT = "8080"
+  # Durable leadgen_id dedupe storage. The path is not a credential, so it
+  # lives in plain env config (not secrets). Requires the
+  # zerolag_leadgen_data volume mounted at /data (see [mounts] below).
+  LEAD_STORE_PATH = "/data/leadgen.db"
+  # Form allowlist for canary: ONLY this Instant Form is processed.
+  # "ZeroLag WiFi — Full Availability Check" (consumer). Recruiting forms
+  # (e.g. OSL Gainesville Hiring V1) and any other form are safely ignored:
+  # no Graph fetch, no n8n forward, no Gmail. Form IDs are not secrets.
+  # Expand only after cross-checking against real campaigns/ads.
+  ZEROLAG_FORM_ALLOWLIST = "1545172253282381"
+
+[[mounts]]
+  source = "zerolag_leadgen_data"
+  destination = "/data"
+  initial_size = "1gb"
